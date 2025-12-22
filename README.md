@@ -1,19 +1,12 @@
-# CarvingKnife
+# CarvingKnife 雕刀：一个极简风格的习惯打卡APP
+ 
 
-A new Flutter project created with FlutLab - https://flutlab.io
+## Introduction 功能介绍
 
-## Getting Started
+1.习惯打卡：一键创建自己的习惯；打卡记录整理，方便查看打卡记录；日程提醒，支持设置日程，remember every day！
+2.习惯库：支持一键添加常用习惯
+3.其他功能：主题设置，为APP设置自己喜欢的颜色；备份开发中···
 
-A few resources to get you started if this is your first Flutter project:
+## 使用纯AI开发的APP
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
-
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-## Getting Started: FlutLab - Flutter Online IDE
-
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+APP使用纯AI开发，dart语言➕flutter框架，高效快捷

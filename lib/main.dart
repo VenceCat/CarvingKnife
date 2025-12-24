@@ -13,7 +13,7 @@ void main() async {
   runApp(HabitApp(initialColorIndex: colorIndex));
 }
 
-// 主题颜色配置 - 使用明确的颜色值
+// 主题颜色配置
 class ThemeConfig {
   static const List<ThemeColorOption> colorOptions = [
     ThemeColorOption(
@@ -44,7 +44,7 @@ class ThemeConfig {
     ThemeColorOption(
       name: '玫瑰粉',
       color: Color(0xFFEC407A),
-      backgroundColor: Color(0xFFFFF5F7),
+      backgroundColor: Color(0xFFF5F7),
     ),
     ThemeColorOption(
       name: '薄荷青',
@@ -106,14 +106,13 @@ class HabitAppState extends State<HabitApp> {
     final theme = currentTheme;
 
     return MaterialApp(
-      title: '极简打卡',
+      title: '雕刀',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        // 使用 ColorScheme.fromSeed 并覆盖 primary 颜色
         colorScheme: ColorScheme.fromSeed(
           seedColor: theme.color,
-          primary: theme.color, // 强制使用我们定义的颜色
+          primary: theme.color,
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: theme.backgroundColor,
@@ -135,6 +134,7 @@ class Habit {
   String description;
   List<String> checkInTimes;
   String? reminderTime;
+  String createdAt;
 
   Habit({
     required this.id,
@@ -142,23 +142,26 @@ class Habit {
     this.description = '',
     required this.checkInTimes,
     this.reminderTime,
-  });
+    String? createdAt,
+  }) : createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'checkInTimes': checkInTimes,
-        'reminderTime': reminderTime,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'checkInTimes': checkInTimes,
+    'reminderTime': reminderTime,
+    'createdAt': createdAt,
+  };
 
   factory Habit.fromJson(Map<String, dynamic> json) => Habit(
-        id: json['id'],
-        title: json['title'],
-        description: json['description'] ?? '',
-        checkInTimes: List<String>.from(json['checkInTimes'] ?? []),
-        reminderTime: json['reminderTime'],
-      );
+    id: json['id'],
+    title: json['title'],
+    description: json['description'] ?? '',
+    checkInTimes: List<String>.from(json['checkInTimes'] ?? []),
+    reminderTime: json['reminderTime'],
+    createdAt: json['createdAt'],
+  );
 }
 
 // ========== 主页面 ==========
@@ -409,17 +412,17 @@ class _CheckInPageState extends State<CheckInPage> {
           SliverAppBar.large(
             title: const Text("雕刀",
                 style:
-                    TextStyle(letterSpacing: 4, fontWeight: FontWeight.w300)),
+                TextStyle(letterSpacing: 4, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
           SliverToBoxAdapter(
             child: GestureDetector(
               onTap: () => setState(
-                  () => currentQuote = quotes[Random().nextInt(quotes.length)]),
+                      () => currentQuote = quotes[Random().nextInt(quotes.length)]),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+                const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
                 child: Text(
                   currentQuote,
                   textAlign: TextAlign.center,
@@ -434,14 +437,14 @@ class _CheckInPageState extends State<CheckInPage> {
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) {
+                  (context, index) {
                 final habit = widget.habits[index];
                 final isTodayDone = habit.checkInTimes.any((t) => t.startsWith(
                     DateFormat('yyyy-MM-dd').format(DateTime.now())));
 
                 return Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: InkWell(
                     onTap: () => Navigator.push(
                       context,
@@ -548,7 +551,7 @@ class HabitLibraryPage extends StatelessWidget {
           SliverAppBar.large(
             title: const Text("习惯库",
                 style:
-                    TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
+                TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
@@ -569,7 +572,7 @@ class HabitLibraryPage extends StatelessWidget {
                 childAspectRatio: 1.3,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) {
+                    (context, index) {
                   final t = templates[index];
                   return GestureDetector(
                     onTap: () {
@@ -637,7 +640,7 @@ class ProfilePage extends StatelessWidget {
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
     int todayCheckIns = habits
         .where((h) => h.checkInTimes.any((t) =>
-            t.startsWith(DateFormat('yyyy-MM-dd').format(DateTime.now()))))
+        t.startsWith(DateFormat('yyyy-MM-dd').format(DateTime.now()))))
         .length;
 
     return Scaffold(
@@ -646,7 +649,7 @@ class ProfilePage extends StatelessWidget {
           SliverAppBar.large(
             title: const Text("我的",
                 style:
-                    TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
+                TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
@@ -790,7 +793,7 @@ class ThemeSettingsPage extends StatelessWidget {
                         ),
                         child: isSelected
                             ? const Icon(Icons.check,
-                                color: Colors.white, size: 22)
+                            color: Colors.white, size: 22)
                             : null,
                       ),
                       const SizedBox(width: 16),
@@ -834,7 +837,6 @@ class ThemeSettingsPage extends StatelessWidget {
             );
           }),
           const SizedBox(height: 24),
-          // 预览区域
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -855,7 +857,7 @@ class ThemeSettingsPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color:
-                          (currentTheme?.color ?? Colors.grey).withOpacity(0.4),
+                      (currentTheme?.color ?? Colors.grey).withOpacity(0.4),
                     ),
                   ),
                   child: Row(
@@ -912,117 +914,117 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       ),
       body: widget.habits.isEmpty
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off_outlined,
-                      size: 48, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text("暂无习惯", style: TextStyle(color: Colors.grey[400])),
-                ],
-              ),
-            )
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.notifications_off_outlined,
+                size: 48, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text("暂无习惯", style: TextStyle(color: Colors.grey[400])),
+          ],
+        ),
+      )
           : ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: widget.habits.length,
-              itemBuilder: (context, index) {
-                final habit = widget.habits[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(habit.title,
-                                style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w500)),
-                          ),
-                          if (habit.reminderTime != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: themeColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                habit.reminderTime!,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: themeColor,
-                                    fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final picked = await showTimePicker(
-                                  context: context,
-                                  initialTime: TimeOfDay.now(),
-                                );
-                                if (picked != null) {
-                                  setState(() => habit.reminderTime =
-                                      '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
-                                  widget.onSave();
-                                }
-                              },
-                              icon: const Icon(Icons.schedule, size: 18),
-                              label: Text(
-                                  habit.reminderTime == null ? "设置提醒" : "修改时间"),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: themeColor,
-                                side: BorderSide(
-                                    color: themeColor.withOpacity(0.5)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: habit.reminderTime != null
-                                  ? () => _addToCalendar(habit)
-                                  : null,
-                              icon: const Icon(Icons.calendar_month, size: 18),
-                              label: const Text("添加日历"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: themeColor,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: Colors.grey[200],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (habit.reminderTime != null)
-                        Center(
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() => habit.reminderTime = null);
-                              widget.onSave();
-                            },
-                            child: Text("清除提醒",
-                                style: TextStyle(
-                                    color: Colors.grey[400], fontSize: 12)),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+        padding: const EdgeInsets.all(20),
+        itemCount: widget.habits.length,
+        itemBuilder: (context, index) {
+          final habit = widget.habits[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(habit.title,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w500)),
+                    ),
+                    if (habit.reminderTime != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          habit.reminderTime!,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: themeColor,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (picked != null) {
+                            setState(() => habit.reminderTime =
+                            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+                            widget.onSave();
+                          }
+                        },
+                        icon: const Icon(Icons.schedule, size: 18),
+                        label: Text(
+                            habit.reminderTime == null ? "设置提醒" : "修改时间"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: themeColor,
+                          side: BorderSide(
+                              color: themeColor.withOpacity(0.5)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: habit.reminderTime != null
+                            ? () => _addToCalendar(habit)
+                            : null,
+                        icon: const Icon(Icons.calendar_month, size: 18),
+                        label: const Text("添加日历"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColor,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey[200],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (habit.reminderTime != null)
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() => habit.reminderTime = null);
+                        widget.onSave();
+                      },
+                      child: Text("清除提醒",
+                          style: TextStyle(
+                              color: Colors.grey[400], fontSize: 12)),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1067,7 +1069,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
           'description': '来自「雕刀」App',
           'beginTime': startDate.millisecondsSinceEpoch,
           'endTime':
-              startDate.add(const Duration(minutes: 30)).millisecondsSinceEpoch,
+          startDate.add(const Duration(minutes: 30)).millisecondsSinceEpoch,
           'allDay': false,
           'rrule': 'FREQ=DAILY;COUNT=365',
         },
@@ -1128,7 +1130,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.0.0",
+            Text("版本 1.1.1",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1146,9 +1148,9 @@ class AboutPage extends StatelessWidget {
                 children: [
                   _infoRow("开发者", "Vence的猫"),
                   const Divider(height: 20),
-                  _infoRow("联系方式", "vence_cat@163.com"),
+                  _infoRow("联系邮箱", "vence_cat@163.com"),
                   const Divider(height: 20),
-                  _infoRow("更新日期", "2025年1月"),
+                  _infoRow("更新日期", "2025年12月"),
                 ],
               ),
             ),
@@ -1184,83 +1186,286 @@ class DetailPage extends StatelessWidget {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: backgroundColor,
-        title: Text(habit.title),
+        title: const Text("习惯详情", style: TextStyle(fontSize: 16)),
       ),
-      body: habit.checkInTimes.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.event_available,
-                      size: 48, color: Colors.grey[300]),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // ===== 习惯信息卡片 =====
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: themeColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 习惯名称
+                Row(
+                  children: [
+                    Icon(Icons.flag_outlined, color: themeColor, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        habit.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // 习惯描述
+                if (habit.description.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  Text("暂无打卡记录", style: TextStyle(color: Colors.grey[400])),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.notes_outlined,
+                          color: Colors.grey[400], size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          habit.description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // 创建时间
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_outlined,
+                        color: Colors.grey[400], size: 20),
+                    const SizedBox(width: 10),
+                    Text(
+                      "创建于 ${_formatCreatedAt(habit.createdAt)}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // 统计信息
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: themeColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _statItem(
+                          "累计打卡", "${habit.checkInTimes.length}次", themeColor),
+                      Container(
+                          width: 1,
+                          height: 30,
+                          color: themeColor.withOpacity(0.2)),
+                      _statItem("连续天数", "${_calculateStreak()}天", themeColor),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ===== 打卡记录标题 =====
+          Row(
+            children: [
+              Icon(Icons.history, color: themeColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                "打卡记录",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                "共 ${habit.checkInTimes.length} 次",
+                style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ===== 打卡记录列表 =====
+          if (habit.checkInTimes.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.event_available, size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text("暂无打卡记录",
+                      style: TextStyle(color: Colors.grey[400])),
+                  const SizedBox(height: 8),
+                  Text("快去完成第一次打卡吧！",
+                      style: TextStyle(fontSize: 12, color: Colors.grey[300])),
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: habit.checkInTimes.length,
-              itemBuilder: (context, index) {
-                final timeStr = habit.checkInTimes.reversed.toList()[index];
-                final dateTime = DateTime.parse(timeStr);
-                final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
-                    DateFormat('yyyy-MM-dd').format(DateTime.now());
+          else
+            ...habit.checkInTimes.reversed.map((timeStr) {
+              final dateTime = DateTime.parse(timeStr);
+              final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
+                  DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isToday
-                          ? themeColor.withOpacity(0.4)
-                          : Colors.grey[200]!,
-                    ),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isToday
+                        ? themeColor.withOpacity(0.4)
+                        : Colors.grey[200]!,
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              DateFormat('yyyy-MM-dd').format(dateTime),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isToday ? themeColor : Colors.grey[600],
-                                fontWeight: isToday
-                                    ? FontWeight.w500
-                                    : FontWeight.normal,
-                              ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isToday ? themeColor : Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat('yyyy年MM月dd日').format(dateTime),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isToday ? themeColor : Colors.grey[700],
+                              fontWeight:
+                              isToday ? FontWeight.w500 : FontWeight.normal,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              DateFormat('HH:mm:ss').format(dateTime),
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey[400]),
-                            ),
-                          ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat('HH:mm:ss').format(dateTime),
+                            style:
+                            TextStyle(fontSize: 12, color: Colors.grey[400]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isToday)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "今天",
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: themeColor,
+                              fontWeight: FontWeight.w500),
                         ),
                       ),
-                      if (isToday)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: themeColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text("今天",
-                              style:
-                                  TextStyle(fontSize: 11, color: themeColor)),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                  ],
+                ),
+              );
+            }).toList(),
+
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  // 格式化创建时间
+  String _formatCreatedAt(String createdAt) {
+    try {
+      final dateTime = DateTime.parse(createdAt);
+      return DateFormat('yyyy年MM月dd日').format(dateTime);
+    } catch (e) {
+      return createdAt;
+    }
+  }
+
+  // 计算连续打卡天数
+  int _calculateStreak() {
+    if (habit.checkInTimes.isEmpty) return 0;
+
+    final Set<String> checkInDates = habit.checkInTimes
+        .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
+        .toSet();
+
+    int streak = 0;
+    DateTime currentDate = DateTime.now();
+
+    // 检查今天是否打卡，如果没有就从昨天开始算
+    String todayStr = DateFormat('yyyy-MM-dd').format(currentDate);
+    if (!checkInDates.contains(todayStr)) {
+      currentDate = currentDate.subtract(const Duration(days: 1));
+    }
+
+    // 往前数连续的天数
+    while (true) {
+      String dateStr = DateFormat('yyyy-MM-dd').format(currentDate);
+      if (checkInDates.contains(dateStr)) {
+        streak++;
+        currentDate = currentDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  Widget _statItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        ),
+      ],
     );
   }
 }

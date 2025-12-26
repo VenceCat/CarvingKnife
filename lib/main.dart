@@ -5,6 +5,10 @@ import 'package:intl/intl.dart';
 import 'dart:math';
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -211,6 +215,12 @@ class _MainPageState extends State<MainPage> {
     _saveData();
   }
 
+  // 新增：恢复数据方法
+  void _restoreHabits(List<Habit> newHabits) {
+    setState(() => habits = newHabits);
+    _saveData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -226,7 +236,11 @@ class _MainPageState extends State<MainPage> {
             onDelete: _removeHabit,
           ),
           HabitLibraryPage(onAddHabit: _addHabit),
-          ProfilePage(habits: habits, onSave: _refreshAndSave),
+          ProfilePage(
+            habits: habits,
+            onSave: _refreshAndSave,
+            onRestore: _restoreHabits, // 新增参数
+          ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -739,8 +753,9 @@ class HabitLibraryPage extends StatelessWidget {
 class ProfilePage extends StatelessWidget {
   final List<Habit> habits;
   final VoidCallback onSave;
+  final Function(List<Habit>) onRestore;
 
-  const ProfilePage({super.key, required this.habits, required this.onSave});
+  const ProfilePage({super.key, required this.habits, required this.onSave, required this.onRestore,});
 
   @override
   Widget build(BuildContext context) {
@@ -794,7 +809,7 @@ class ProfilePage extends StatelessWidget {
                       ReminderSettingsPage(habits: habits, onSave: onSave)),
                   _menuItem(context, Icons.color_lens_outlined, "主题设置",
                       const ThemeSettingsPage()),
-                  _menuItem(context, Icons.cloud_outlined, "数据备份", null),
+                  _menuItem(context, Icons.cloud_outlined, "数据备份", BackupPage(habits: habits, onRestore: onRestore)),
                   _menuItem(
                       context, Icons.info_outline, "关于", const AboutPage()),
                 ],
@@ -855,6 +870,405 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ========== 数据备份页面 ==========
+class BackupPage extends StatefulWidget {
+  final List<Habit> habits;
+  final Function(List<Habit>) onRestore;
+
+  const BackupPage({
+    super.key,
+    required this.habits,
+    required this.onRestore,
+  });
+
+  @override
+  State<BackupPage> createState() => _BackupPageState();
+}
+
+class _BackupPageState extends State<BackupPage> {
+  bool _isExporting = false;
+  bool _isImporting = false;
+
+  String _generateFileName() {
+    final now = DateTime.now();
+    final dateStr = DateFormat('yyyyMMdd_HHmmss').format(now);
+    return 'habit_backup_$dateStr.json';
+  }
+
+  Map<String, dynamic> _generateBackupData() {
+    return {
+      'version': '1.0',
+      'appName': '雕刀',
+      'backupTime': DateTime.now().toIso8601String(),
+      'habitsCount': widget.habits.length,
+      'habits': widget.habits.map((h) => h.toJson()).toList(),
+    };
+  }
+
+  Future<void> _exportToLocal() async {
+    setState(() => _isExporting = true);
+
+    try {
+      if (Platform.isAndroid) {
+        var status = await Permission.storage.request();
+        if (!status.isGranted) {
+          status = await Permission.manageExternalStorage.request();
+          if (!status.isGranted) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("需要存储权限才能导出文件")),
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      final backupData = _generateBackupData();
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) throw Exception("无法获取存储目录");
+
+      final fileName = _generateFileName();
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsString(jsonStr);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[400], size: 24),
+                const SizedBox(width: 10),
+                const Text("导出成功", style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("文件已保存到：", style: TextStyle(color: Colors.grey[600])),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(file.path, style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("确定"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("导出失败：$e")),
+        );
+      }
+    } finally {
+      setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _shareBackup() async {
+    setState(() => _isExporting = true);
+
+    try {
+      final backupData = _generateBackupData();
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+
+      final tempDir = await getTemporaryDirectory();
+      final fileName = _generateFileName();
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(jsonStr);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: '雕刀 - 习惯数据备份',
+        text: '这是我的习惯打卡数据备份文件',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("分享失败：$e")),
+        );
+      }
+    } finally {
+      setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _importBackup() async {
+    setState(() => _isImporting = true);
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = File(result.files.single.path!);
+      final jsonStr = await file.readAsString();
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+      if (!data.containsKey('habits')) {
+        throw Exception("无效的备份文件格式");
+      }
+
+      final habitsList = data['habits'] as List;
+      final habits = habitsList.map((h) => Habit.fromJson(h)).toList();
+
+      if (mounted) {
+        final backupTime = data['backupTime'] != null
+            ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(data['backupTime']))
+            : '未知';
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("确认恢复", style: TextStyle(fontSize: 16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("备份时间：$backupTime"),
+                const SizedBox(height: 8),
+                Text("习惯数量：${habits.length} 个"),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "恢复将覆盖当前所有数据！",
+                          style: TextStyle(color: Colors.orange[700], fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("取消", style: TextStyle(color: Colors.grey)),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  widget.onRestore(habits);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("已恢复 ${habits.length} 个习惯"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: const Text("确认恢复", style: TextStyle(color: Colors.orange)),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("导入失败：$e")),
+        );
+      }
+    } finally {
+      setState(() => _isImporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("数据备份", style: TextStyle(fontSize: 16)),
+        backgroundColor: backgroundColor,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: themeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.folder_outlined, size: 40, color: themeColor),
+                const SizedBox(height: 12),
+                Text("当前数据", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                const SizedBox(height: 8),
+                Text(
+                  "${widget.habits.length} 个习惯",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: themeColor),
+                ),
+                Text(
+                  "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
+                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text("导出备份", style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          const SizedBox(height: 12),
+          _buildActionCard(
+            icon: Icons.download_outlined,
+            title: "保存到本地",
+            subtitle: "将备份文件保存到下载目录",
+            color: themeColor,
+            isLoading: _isExporting,
+            onTap: _exportToLocal,
+          ),
+          const SizedBox(height: 12),
+          _buildActionCard(
+            icon: Icons.share_outlined,
+            title: "分享备份文件",
+            subtitle: "通过微信、邮件等方式分享",
+            color: themeColor,
+            isLoading: _isExporting,
+            onTap: _shareBackup,
+          ),
+          const SizedBox(height: 24),
+          Text("导入备份", style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          const SizedBox(height: 12),
+          _buildActionCard(
+            icon: Icons.upload_outlined,
+            title: "从文件恢复",
+            subtitle: "选择备份文件恢复数据",
+            color: Colors.orange,
+            isLoading: _isImporting,
+            onTap: _importBackup,
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text("备份说明", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildTip("• 备份文件包含所有习惯和打卡记录"),
+                _buildTip("• 建议定期备份，防止数据丢失"),
+                _buildTip("• 恢复数据会覆盖当前所有数据"),
+                _buildTip("• 备份文件可以跨设备使用"),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required bool isLoading,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: isLoading ? null : onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: isLoading
+                  ? Padding(
+                padding: const EdgeInsets.all(12),
+                child: CircularProgressIndicator(strokeWidth: 2, color: color),
+              )
+                  : Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTip(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
     );
   }
 }
@@ -1252,7 +1666,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.2.1",
+            Text("版本 1.3.0",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",

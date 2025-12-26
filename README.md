@@ -9,4 +9,4 @@
 
 ## 使用纯AI开发的APP
 
-APP使用纯AI开发，dart语言➕flutter框架，高效快捷
+APP使用AI开发，dart语言➕flutter框架，高效快捷

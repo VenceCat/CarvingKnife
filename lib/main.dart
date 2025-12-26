@@ -342,6 +342,7 @@ class _CheckInPageState extends State<CheckInPage> {
               decoration: const InputDecoration(
                 labelText: "习惯名称",
                 hintText: "例如：早起",
+                isDense: true,
               ),
             ),
             const SizedBox(height: 16),
@@ -350,8 +351,9 @@ class _CheckInPageState extends State<CheckInPage> {
               decoration: const InputDecoration(
                 labelText: "描述（选填）",
                 hintText: "例如：每天6点前起床",
+                isDense: true,
               ),
-              maxLines: 2,
+              maxLines: null,
             ),
           ],
         ),
@@ -433,7 +435,7 @@ class _CheckInPageState extends State<CheckInPage> {
                   currentQuote,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: themeColor.withOpacity(0.6),
+                    color: themeColor.withValues(alpha: 0.6),
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
                   ),
@@ -466,7 +468,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                           color: isTodayDone
-                              ? themeColor.withOpacity(0.4)
+                              ? themeColor.withValues(alpha: 0.4)
                               : Colors.grey[200]!,
                           width: isTodayDone ? 1.5 : 1,
                         ),
@@ -534,6 +536,73 @@ class HabitLibraryPage extends StatelessWidget {
   final Function(Habit) onAddHabit;
 
   const HabitLibraryPage({super.key, required this.onAddHabit});
+
+  void _showAddDialog(BuildContext context, Map<String, dynamic> template) {
+    final titleController = TextEditingController(text: template['title'] as String);
+    final descController = TextEditingController(text: template['desc'] as String);
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(template['icon'] as IconData, color: themeColor, size: 22),
+            const SizedBox(width: 10),
+            const Text("添加习惯", style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: "习惯名称",
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: "描述",
+                hintText: "可以修改描述内容",
+                isDense: true,
+              ),
+              maxLines: null,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("取消", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (titleController.text.isNotEmpty) {
+                onAddHabit(Habit(
+                  id: DateTime.now().toString(),
+                  title: titleController.text,
+                  description: descController.text,
+                  checkInTimes: [],
+                ));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("已添加「${titleController.text}」"),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+            child: Text("添加", style: TextStyle(color: themeColor)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -621,26 +690,13 @@ class HabitLibraryPage extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.6,
+                childAspectRatio: 1.5,
               ),
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
                   final t = templates[index];
                   return GestureDetector(
-                    onTap: () {
-                      onAddHabit(Habit(
-                        id: DateTime.now().toString(),
-                        title: t['title'] as String,
-                        description: t['desc'] as String,
-                        checkInTimes: [],
-                      ));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("已添加「${t['title']}」"),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                    onTap: () => _showAddDialog(context, t),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -842,7 +898,7 @@ class ThemeSettingsPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color:
-                      (currentTheme?.color ?? Colors.grey).withOpacity(0.4),
+                      (currentTheme?.color ?? Colors.grey).withValues(alpha: 0.4),
                     ),
                   ),
                   child: Row(
@@ -932,7 +988,7 @@ class ThemeSettingsPage extends StatelessWidget {
                                   margin: const EdgeInsets.only(right: 4),
                                   decoration: BoxDecoration(
                                     color: option.color
-                                        .withOpacity(0.25 + i * 0.25),
+                                        .withValues(alpha: 0.25 + i * 0.25),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 );
@@ -1018,7 +1074,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -1053,7 +1109,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: themeColor,
                           side: BorderSide(
-                              color: themeColor.withOpacity(0.5)),
+                              color: themeColor.withValues(alpha: 0.5)),
                         ),
                       ),
                     ),
@@ -1178,7 +1234,7 @@ class AboutPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                      color: themeColor.withOpacity(0.3),
+                      color: themeColor.withValues(alpha: 0.3),
                       blurRadius: 15,
                       offset: const Offset(0, 5)),
                 ],
@@ -1196,7 +1252,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.1.2",
+            Text("版本 1.2.1",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1263,7 +1319,7 @@ class DetailPage extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: themeColor.withOpacity(0.3)),
+              border: Border.all(color: themeColor.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1330,7 +1386,7 @@ class DetailPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: themeColor.withOpacity(0.05),
+                    color: themeColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -1341,7 +1397,7 @@ class DetailPage extends StatelessWidget {
                       Container(
                           width: 1,
                           height: 30,
-                          color: themeColor.withOpacity(0.2)),
+                          color: themeColor.withValues(alpha: 0.2)),
                       _statItem("连续天数", "${_calculateStreak()}天", themeColor),
                     ],
                   ),
@@ -1410,7 +1466,7 @@ class DetailPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isToday
-                        ? themeColor.withOpacity(0.4)
+                        ? themeColor.withValues(alpha: 0.4)
                         : Colors.grey[200]!,
                   ),
                 ),
@@ -1452,7 +1508,7 @@ class DetailPage extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

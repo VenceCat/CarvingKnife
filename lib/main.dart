@@ -383,7 +383,13 @@ class _CheckInPageState extends State<CheckInPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        content: const Text("放弃这个习惯吗？"),
+        contentPadding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 12),
+        actionsPadding: const EdgeInsets.only(bottom: 8),
+        actionsAlignment: MainAxisAlignment.center,
+        content: const Text(
+          "放弃这个习惯吗？",
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -535,14 +541,60 @@ class HabitLibraryPage extends StatelessWidget {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     final templates = [
+      // 健康生活
       {'icon': Icons.wb_sunny_outlined, 'title': '早起', 'desc': '每天6点前起床'},
-      {'icon': Icons.fitness_center, 'title': '健身', 'desc': '每天运动30分钟'},
-      {'icon': Icons.menu_book_outlined, 'title': '阅读', 'desc': '每天阅读30分钟'},
-      {'icon': Icons.water_drop_outlined, 'title': '喝水', 'desc': '每天8杯水'},
-      {'icon': Icons.self_improvement, 'title': '冥想', 'desc': '每天冥想10分钟'},
       {'icon': Icons.bedtime_outlined, 'title': '早睡', 'desc': '每天11点前入睡'},
-      {'icon': Icons.edit_note, 'title': '写日记', 'desc': '记录每天的心情'},
+      {'icon': Icons.water_drop_outlined, 'title': '喝水', 'desc': '每天8杯水'},
+      {'icon': Icons.fitness_center, 'title': '健身', 'desc': '每天运动30分钟'},
       {'icon': Icons.directions_walk, 'title': '散步', 'desc': '每天步行8000步'},
+      {'icon': Icons.directions_run, 'title': '跑步', 'desc': '每天跑步3公里'},
+      {'icon': Icons.sports_gymnastics, 'title': '拉伸', 'desc': '每天拉伸15分钟'},
+      {'icon': Icons.monitor_weight_outlined, 'title': '记录体重', 'desc': '每天记录体重变化'},
+
+      // 饮食习惯
+      {'icon': Icons.free_breakfast_outlined, 'title': '吃早餐', 'desc': '每天按时吃早餐'},
+      {'icon': Icons.no_drinks_outlined, 'title': '戒饮料', 'desc': '不喝含糖饮料'},
+      {'icon': Icons.apple, 'title': '吃水果', 'desc': '每天吃一份水果'},
+      {'icon': Icons.local_dining_outlined, 'title': '细嚼慢咽', 'desc': '专注吃饭不玩手机'},
+
+      // 学习成长
+      {'icon': Icons.menu_book_outlined, 'title': '阅读', 'desc': '每天阅读30分钟'},
+      {'icon': Icons.translate, 'title': '学英语', 'desc': '每天背10个单词'},
+      {'icon': Icons.code, 'title': '写代码', 'desc': '每天编程1小时'},
+      {'icon': Icons.headphones_outlined, 'title': '听播客', 'desc': '每天听一期播客'},
+      {'icon': Icons.school_outlined, 'title': '上网课', 'desc': '每天学习新知识'},
+      {'icon': Icons.piano_outlined, 'title': '练琴', 'desc': '每天练习30分钟'},
+
+      // 心灵成长
+      {'icon': Icons.self_improvement, 'title': '冥想', 'desc': '每天冥想10分钟'},
+      {'icon': Icons.edit_note, 'title': '写日记', 'desc': '记录每天的心情'},
+      {'icon': Icons.favorite_outline, 'title': '感恩', 'desc': '每天记录3件感恩的事'},
+      {'icon': Icons.psychology_outlined, 'title': '反思', 'desc': '每天复盘总结'},
+
+      // 生活习惯
+      {'icon': Icons.cleaning_services_outlined, 'title': '整理房间', 'desc': '保持环境整洁'},
+      {'icon': Icons.checkroom_outlined, 'title': '叠被子', 'desc': '起床后整理床铺'},
+      {'icon': Icons.spa_outlined, 'title': '护肤', 'desc': '每天护肤保养'},
+      {'icon': Icons.brush_outlined, 'title': '刷牙', 'desc': '早晚各刷一次牙'},
+      {'icon': Icons.bathtub_outlined, 'title': '泡脚', 'desc': '睡前泡脚放松'},
+
+      // 社交与情感
+      {'icon': Icons.call_outlined, 'title': '联系家人', 'desc': '每周给家人打电话'},
+      {'icon': Icons.emoji_emotions_outlined, 'title': '微笑', 'desc': '每天对人微笑'},
+      {'icon': Icons.volunteer_activism_outlined, 'title': '帮助他人', 'desc': '每天做一件好事'},
+
+      // 工作效率
+      {'icon': Icons.checklist, 'title': '列计划', 'desc': '每天列出待办事项'},
+      {'icon': Icons.timer_outlined, 'title': '番茄工作', 'desc': '专注工作25分钟'},
+      {'icon': Icons.phone_disabled_outlined, 'title': '少刷手机', 'desc': '每天屏幕时间<3小时'},
+      {'icon': Icons.inbox_outlined, 'title': '清空收件箱', 'desc': '每天处理完邮件'},
+
+      // 兴趣爱好
+      {'icon': Icons.camera_alt_outlined, 'title': '拍照', 'desc': '每天记录生活瞬间'},
+      {'icon': Icons.draw_outlined, 'title': '画画', 'desc': '每天画一幅小画'},
+      {'icon': Icons.music_note_outlined, 'title': '听音乐', 'desc': '每天享受音乐时光'},
+      {'icon': Icons.local_florist_outlined, 'title': '养植物', 'desc': '每天照顾绿植'},
+      {'icon': Icons.cookie_outlined, 'title': '烘焙', 'desc': '每周尝试新食谱'},
     ];
 
     return Scaffold(
@@ -569,7 +621,7 @@ class HabitLibraryPage extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.3,
+                childAspectRatio: 1.6,
               ),
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -608,7 +660,9 @@ class HabitLibraryPage extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(t['desc'] as String,
                               style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[400])),
+                                  fontSize: 11, color: Colors.grey[400]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -711,17 +765,9 @@ class ProfilePage extends StatelessWidget {
   Widget _menuItem(
       BuildContext context, IconData icon, String title, Widget? page) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: themeColor, size: 22),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        trailing: Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
         onTap: () {
           if (page != null) {
             Navigator.push(context, MaterialPageRoute(builder: (c) => page));
@@ -733,6 +779,25 @@ class ProfilePage extends StatelessWidget {
             );
           }
         },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: themeColor, size: 22),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(title, style: const TextStyle(fontSize: 15)),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -756,6 +821,54 @@ class ThemeSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // 预览效果（移到最上方）
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: currentTheme?.backgroundColor ?? Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("预览效果",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color:
+                      (currentTheme?.color ?? Colors.grey).withOpacity(0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("示例习惯",
+                                style: TextStyle(fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 4),
+                            Text("每天坚持",
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[400])),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.check_circle,
+                          color: currentTheme?.color ?? Colors.grey),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Text("选择主题颜色",
               style: TextStyle(
                   fontSize: 14,
@@ -836,53 +949,6 @@ class ThemeSettingsPage extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: currentTheme?.backgroundColor ?? Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("预览效果",
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color:
-                      (currentTheme?.color ?? Colors.grey).withOpacity(0.4),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("示例习惯",
-                                style: TextStyle(fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 4),
-                            Text("每天坚持",
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[400])),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.check_circle,
-                          color: currentTheme?.color ?? Colors.grey),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -1130,7 +1196,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.1.1",
+            Text("版本 1.1.2",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1150,7 +1216,7 @@ class AboutPage extends StatelessWidget {
                   const Divider(height: 20),
                   _infoRow("联系邮箱", "vence_cat@163.com"),
                   const Divider(height: 20),
-                  _infoRow("更新日期", "2025年12月"),
+                  _infoRow("更新时间", "2025年12月26日"),
                 ],
               ),
             ),

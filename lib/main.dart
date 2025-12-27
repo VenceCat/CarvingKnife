@@ -131,12 +131,12 @@ class HabitAppState extends State<HabitApp> {
   }
 }
 
-// 数据模型
+// 数据模型 - 替换原有的 Habit 类，并新增 CheckInRecord 类
 class Habit {
   String id;
   String title;
   String description;
-  List<String> checkInTimes;
+  List<CheckInRecord> checkInRecords; // 修改：使用记录对象
   String? reminderTime;
   String createdAt;
 
@@ -144,27 +144,67 @@ class Habit {
     required this.id,
     required this.title,
     this.description = '',
-    required this.checkInTimes,
+    List<CheckInRecord>? checkInRecords,
     this.reminderTime,
     String? createdAt,
-  }) : createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+  }) : checkInRecords = checkInRecords ?? [],
+        createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+
+  // 兼容性：获取打卡时间列表
+  List<String> get checkInTimes => checkInRecords.map((r) => r.time).toList();
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'description': description,
-    'checkInTimes': checkInTimes,
+    'checkInRecords': checkInRecords.map((r) => r.toJson()).toList(),
     'reminderTime': reminderTime,
     'createdAt': createdAt,
   };
 
-  factory Habit.fromJson(Map<String, dynamic> json) => Habit(
-    id: json['id'],
-    title: json['title'],
-    description: json['description'] ?? '',
-    checkInTimes: List<String>.from(json['checkInTimes'] ?? []),
-    reminderTime: json['reminderTime'],
-    createdAt: json['createdAt'],
+  factory Habit.fromJson(Map<String, dynamic> json) {
+    // 兼容旧数据格式
+    List<CheckInRecord> records = [];
+    if (json['checkInRecords'] != null) {
+      records = (json['checkInRecords'] as List)
+          .map((r) => CheckInRecord.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } else if (json['checkInTimes'] != null) {
+      // 旧数据迁移：将字符串列表转换为 CheckInRecord 列表
+      records = (json['checkInTimes'] as List)
+          .map((t) => CheckInRecord(time: t as String))
+          .toList();
+    }
+
+    return Habit(
+      id: json['id'],
+      title: json['title'],
+      description: json['description'] ?? '',
+      checkInRecords: records,
+      reminderTime: json['reminderTime'],
+      createdAt: json['createdAt'],
+    );
+  }
+}
+
+// 新增：打卡记录模型
+class CheckInRecord {
+  String time;
+  String? note; // 鼓励语
+
+  CheckInRecord({
+    required this.time,
+    this.note,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'time': time,
+    'note': note,
+  };
+
+  factory CheckInRecord.fromJson(Map<String, dynamic> json) => CheckInRecord(
+    time: json['time'],
+    note: json['note'],
   );
 }
 
@@ -333,9 +373,92 @@ class _CheckInPageState extends State<CheckInPage> {
         const SnackBar(content: Text("今日已完成"), duration: Duration(seconds: 1)),
       );
     } else {
-      habit.checkInTimes.add(DateFormat('yyyy-MM-dd HH:mm:ss').format(now));
+      // 创建打卡记录
+      final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+      final record = CheckInRecord(time: timeStr);
+      habit.checkInRecords.add(record);
       widget.onSave();
+
+      // 弹出鼓励语对话框
+      _showEncouragementDialog(habit, record);
     }
+  }
+
+  // 新增：鼓励语对话框
+  void _showEncouragementDialog(Habit habit, CheckInRecord record) {
+    final noteController = TextEditingController();
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.celebration, color: themeColor, size: 30),
+            ),
+            const SizedBox(height: 12),
+            const Text("打卡成功！", style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "「${habit.title}」已完成",
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: noteController,
+              maxLines: 3,
+              maxLength: 100,
+              decoration: InputDecoration(
+                hintText: "写点什么鼓励自己吧...",
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(16),
+                counterStyle: TextStyle(color: Colors.grey[400]),
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              if (noteController.text.trim().isNotEmpty) {
+                record.note = noteController.text.trim();
+                widget.onSave();
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            ),
+            child: const Text("完成"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAddDialog() {
@@ -383,7 +506,6 @@ class _CheckInPageState extends State<CheckInPage> {
                   id: DateTime.now().toString(),
                   title: titleController.text,
                   description: descController.text,
-                  checkInTimes: [],
                 ));
               }
               Navigator.pop(ctx);
@@ -433,8 +555,7 @@ class _CheckInPageState extends State<CheckInPage> {
         slivers: [
           SliverAppBar.large(
             title: const Text("雕刀",
-                style:
-                TextStyle(letterSpacing: 4, fontWeight: FontWeight.w300)),
+                style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
@@ -443,8 +564,7 @@ class _CheckInPageState extends State<CheckInPage> {
               onTap: () => setState(
                       () => currentQuote = quotes[Random().nextInt(quotes.length)]),
               child: Container(
-                padding:
-                const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
                 child: Text(
                   currentQuote,
                   textAlign: TextAlign.center,
@@ -465,13 +585,16 @@ class _CheckInPageState extends State<CheckInPage> {
                     DateFormat('yyyy-MM-dd').format(DateTime.now())));
 
                 return Padding(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: InkWell(
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (c) => DetailPage(habit: habit)),
+                        builder: (c) => DetailPage(
+                          habit: habit,
+                          onSave: widget.onSave,
+                        ),
+                      ),
                     ),
                     onLongPress: () => _deleteHabit(habit),
                     borderRadius: BorderRadius.circular(15),
@@ -495,8 +618,7 @@ class _CheckInPageState extends State<CheckInPage> {
                               children: [
                                 Text(habit.title,
                                     style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400)),
+                                        fontSize: 16, fontWeight: FontWeight.w400)),
                                 if (habit.description.isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
@@ -518,8 +640,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           ),
                           const SizedBox(width: 10),
                           IconButton(
-                            icon: Icon(Icons.add_task,
-                                size: 20, color: themeColor),
+                            icon: Icon(Icons.add_task, size: 20, color: themeColor),
                             onPressed: () => _toggleCheckIn(habit),
                           )
                         ],
@@ -600,7 +721,6 @@ class HabitLibraryPage extends StatelessWidget {
                   id: DateTime.now().toString(),
                   title: titleController.text,
                   description: descController.text,
-                  checkInTimes: [],
                 ));
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1708,10 +1828,12 @@ class AboutPage extends StatelessWidget {
   }
 }
 
-// ========== 详情页 ==========
+// ========== 详情页 ========== 替换整个 DetailPage 类
 class DetailPage extends StatefulWidget {
   final Habit habit;
-  const DetailPage({super.key, required this.habit});
+  final VoidCallback onSave;
+
+  const DetailPage({super.key, required this.habit, required this.onSave});
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -1721,8 +1843,7 @@ class _DetailPageState extends State<DetailPage> {
   late PageController _pageController;
   late DateTime _currentMonth;
 
-  // 设置一个足够大的范围：前后各100年
-  static const int _initialPage = 1200; // 100年 * 12个月
+  static const int _initialPage = 1200;
 
   DateTime _getMonthFromPage(int page) {
     final now = DateTime.now();
@@ -1743,7 +1864,6 @@ class _DetailPageState extends State<DetailPage> {
     super.dispose();
   }
 
-  // 获取打卡日期集合
   Set<String> get _checkInDates {
     return widget.habit.checkInTimes
         .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
@@ -1764,31 +1884,19 @@ class _DetailPageState extends State<DetailPage> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // ===== 习惯信息卡片 =====
           _buildInfoCard(themeColor),
-
           const SizedBox(height: 24),
-
-          // ===== 打卡日历 =====
           _buildCalendarCard(themeColor),
-
           const SizedBox(height: 24),
-
-          // ===== 打卡记录标题 =====
           _buildRecordHeader(themeColor),
-
           const SizedBox(height: 12),
-
-          // ===== 打卡记录列表 =====
           _buildRecordList(themeColor),
-
           const SizedBox(height: 50),
         ],
       ),
     );
   }
 
-  // 习惯信息卡片
   Widget _buildInfoCard(Color themeColor) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1807,10 +1915,7 @@ class _DetailPageState extends State<DetailPage> {
               Expanded(
                 child: Text(
                   widget.habit.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -1825,11 +1930,7 @@ class _DetailPageState extends State<DetailPage> {
                 Expanded(
                   child: Text(
                     widget.habit.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      height: 1.5,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
                   ),
                 ),
               ],
@@ -1856,7 +1957,7 @@ class _DetailPageState extends State<DetailPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _statItem("累计打卡", "${widget.habit.checkInTimes.length}次", themeColor),
+                _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
                 Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
                 _statItem("连续天数", "${_calculateStreak()}天", themeColor),
                 Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
@@ -1869,19 +1970,16 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 打卡日历卡片
   Widget _buildCalendarCard(Color themeColor) {
-    // 计算当前月份需要的行数
-    int _getRowCount(DateTime month) {
+    int getRowCount(DateTime month) {
       final firstDayOfMonth = DateTime(month.year, month.month, 1);
       final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
       final daysInMonth = lastDayOfMonth.day;
       final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
-      // 计算需要多少行
       return ((firstWeekday + daysInMonth) / 7).ceil();
     }
 
-    final rowCount = _getRowCount(_currentMonth);
+    final rowCount = getRowCount(_currentMonth);
 
     return Container(
       decoration: BoxDecoration(
@@ -1891,21 +1989,15 @@ class _DetailPageState extends State<DetailPage> {
       ),
       child: Column(
         children: [
-          // 日历头部
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
                 Icon(Icons.calendar_month, color: themeColor, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  "打卡日历",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
-                  ),
-                ),
+                Text("打卡日历",
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700])),
                 const Spacer(),
                 GestureDetector(
                   onTap: () {
@@ -1921,17 +2013,12 @@ class _DetailPageState extends State<DetailPage> {
                       color: themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      "今天",
-                      style: TextStyle(fontSize: 12, color: themeColor),
-                    ),
+                    child: Text("今天", style: TextStyle(fontSize: 12, color: themeColor)),
                   ),
                 ),
               ],
             ),
           ),
-
-          // 月份导航
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -1946,13 +2033,8 @@ class _DetailPageState extends State<DetailPage> {
                     );
                   },
                 ),
-                Text(
-                  DateFormat('yyyy年MM月').format(_currentMonth),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(DateFormat('yyyy年MM月').format(_currentMonth),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 IconButton(
                   icon: Icon(Icons.chevron_right, color: Colors.grey[600]),
                   onPressed: () {
@@ -1965,38 +2047,29 @@ class _DetailPageState extends State<DetailPage> {
               ],
             ),
           ),
-
-          // 星期标题行
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: ['日', '一', '二', '三', '四', '五', '六']
                   .map((day) => Expanded(
                 child: Center(
-                  child: Text(
-                    day,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: Text(day,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500)),
                 ),
               ))
                   .toList(),
             ),
           ),
-
           const SizedBox(height: 8),
-
-          // 日历网格 - 动态高度
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final cellWidth = (constraints.maxWidth - 24) / 7;
-                final cellHeight = cellWidth; // 保持正方形
-                // 动态计算高度：行数 * 单元格高度 + 间距
+                final cellHeight = cellWidth;
                 final calendarHeight = rowCount * cellHeight + (rowCount - 1) * 4;
 
                 return AnimatedContainer(
@@ -2018,10 +2091,7 @@ class _DetailPageState extends State<DetailPage> {
               },
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // 图例说明
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
@@ -2040,20 +2110,13 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 构建月份日期网格
   Widget _buildMonthGrid(DateTime month, Color themeColor) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
-    // 当月第一天
     final firstDayOfMonth = DateTime(month.year, month.month, 1);
-    // 当月最后一天
     final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
-    // 当月天数
     final daysInMonth = lastDayOfMonth.day;
-    // 第一天是星期几 (0=周日, 1=周一, ..., 6=周六)
     final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
-    // 计算需要的行数
     final rowCount = ((firstWeekday + daysInMonth) / 7).ceil();
     final totalCells = rowCount * 7;
 
@@ -2069,25 +2132,20 @@ class _DetailPageState extends State<DetailPage> {
       itemCount: totalCells,
       itemBuilder: (context, index) {
         final dayNumber = index - firstWeekday + 1;
-
-        // 不在当月范围内显示空白
         if (dayNumber < 1 || dayNumber > daysInMonth) {
           return const SizedBox();
         }
 
         final date = DateTime(month.year, month.month, dayNumber);
         final dateStr = DateFormat('yyyy-MM-dd').format(date);
-        final isToday = date.year == today.year &&
-            date.month == today.month &&
-            date.day == today.day;
+        final isToday =
+            date.year == today.year && date.month == today.month && date.day == today.day;
         final isCheckedIn = _checkInDates.contains(dateStr);
         final isFuture = date.isAfter(today);
 
         return Container(
           decoration: BoxDecoration(
-            color: isCheckedIn
-                ? themeColor.withValues(alpha: 0.15)
-                : Colors.transparent,
+            color: isCheckedIn ? themeColor.withValues(alpha: 0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: isToday ? Border.all(color: themeColor, width: 2) : null,
           ),
@@ -2098,8 +2156,7 @@ class _DetailPageState extends State<DetailPage> {
                 '$dayNumber',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight:
-                  isToday || isCheckedIn ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isToday || isCheckedIn ? FontWeight.w600 : FontWeight.normal,
                   color: isFuture
                       ? Colors.grey[300]
                       : isCheckedIn
@@ -2113,10 +2170,7 @@ class _DetailPageState extends State<DetailPage> {
                   child: Container(
                     width: 5,
                     height: 5,
-                    decoration: BoxDecoration(
-                      color: themeColor,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: themeColor, shape: BoxShape.circle),
                   ),
                 ),
             ],
@@ -2126,7 +2180,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 图例项
   Widget _buildLegend(Color color, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -2142,10 +2195,7 @@ class _DetailPageState extends State<DetailPage> {
             child: Container(
               width: 5,
               height: 5,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
           ),
         ),
@@ -2155,7 +2205,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 今天图例
   Widget _buildTodayLegend(Color themeColor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -2174,32 +2223,24 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 打卡记录标题
   Widget _buildRecordHeader(Color themeColor) {
     return Row(
       children: [
         Icon(Icons.history, color: themeColor, size: 20),
         const SizedBox(width: 8),
-        Text(
-          "打卡记录",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
+        Text("打卡记录",
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700])),
         const Spacer(),
-        Text(
-          "共 ${widget.habit.checkInTimes.length} 次",
-          style: TextStyle(fontSize: 13, color: Colors.grey[400]),
-        ),
+        Text("共 ${widget.habit.checkInRecords.length} 次",
+            style: TextStyle(fontSize: 13, color: Colors.grey[400])),
       ],
     );
   }
 
-  // 打卡记录列表
+  // 修改：打卡记录列表，显示鼓励语
   Widget _buildRecordList(Color themeColor) {
-    if (widget.habit.checkInTimes.isEmpty) {
+    if (widget.habit.checkInRecords.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
@@ -2221,8 +2262,8 @@ class _DetailPageState extends State<DetailPage> {
     }
 
     return Column(
-      children: widget.habit.checkInTimes.reversed.map((timeStr) {
-        final dateTime = DateTime.parse(timeStr);
+      children: widget.habit.checkInRecords.reversed.map((record) {
+        final dateTime = DateTime.parse(record.time);
         final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
             DateFormat('yyyy-MM-dd').format(DateTime.now());
 
@@ -2233,58 +2274,102 @@ class _DetailPageState extends State<DetailPage> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isToday
-                  ? themeColor.withValues(alpha: 0.4)
-                  : Colors.grey[200]!,
+              color: isToday ? themeColor.withValues(alpha: 0.4) : Colors.grey[200]!,
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isToday ? themeColor : Colors.grey[300],
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('yyyy年MM月dd日').format(dateTime),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isToday ? themeColor : Colors.grey[700],
-                        fontWeight: isToday ? FontWeight.w500 : FontWeight.normal,
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isToday ? themeColor : Colors.grey[300],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('yyyy年MM月dd日').format(dateTime),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isToday ? themeColor : Colors.grey[700],
+                            fontWeight: isToday ? FontWeight.w500 : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormat('HH:mm:ss').format(dateTime),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isToday)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "今天",
+                        style: TextStyle(
+                            fontSize: 12, color: themeColor, fontWeight: FontWeight.w500),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      DateFormat('HH:mm:ss').format(dateTime),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  const SizedBox(width: 8),
+                  // 编辑按钮
+                  GestureDetector(
+                    onTap: () => _editNote(record),
+                    child: Icon(
+                      record.note != null && record.note!.isNotEmpty
+                          ? Icons.edit_note
+                          : Icons.add_comment_outlined,
+                      size: 20,
+                      color: Colors.grey[400],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              if (isToday)
+              // 显示鼓励语
+              if (record.note != null && record.note!.isNotEmpty) ...[
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: themeColor.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: themeColor.withValues(alpha: 0.1)),
                   ),
-                  child: Text(
-                    "今天",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: themeColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.format_quote,
+                          size: 16, color: themeColor.withValues(alpha: 0.5)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          record.note!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                            height: 1.5,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
             ],
           ),
         );
@@ -2292,7 +2377,65 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 格式化创建时间
+  // 编辑鼓励语
+  void _editNote(CheckInRecord record) {
+    final noteController = TextEditingController(text: record.note ?? '');
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("编辑鼓励语", style: TextStyle(fontSize: 16)),
+        content: TextField(
+          controller: noteController,
+          maxLines: 3,
+          maxLength: 100,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: "写点什么鼓励自己...",
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+        actions: [
+          if (record.note != null && record.note!.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                record.note = null;
+                widget.onSave();
+                setState(() {});
+                Navigator.pop(ctx);
+              },
+              child: const Text("删除", style: TextStyle(color: Colors.red)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("取消", style: TextStyle(color: Colors.grey[400])),
+          ),
+          TextButton(
+            onPressed: () {
+              if (noteController.text.trim().isNotEmpty) {
+                record.note = noteController.text.trim();
+              } else {
+                record.note = null;
+              }
+              widget.onSave();
+              setState(() {});
+              Navigator.pop(ctx);
+            },
+            child: Text("保存", style: TextStyle(color: themeColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatCreatedAt(String createdAt) {
     try {
       final dateTime = DateTime.parse(createdAt);
@@ -2302,9 +2445,8 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  // 计算连续打卡天数
   int _calculateStreak() {
-    if (widget.habit.checkInTimes.isEmpty) return 0;
+    if (widget.habit.checkInRecords.isEmpty) return 0;
 
     int streak = 0;
     DateTime currentDate = DateTime.now();
@@ -2327,14 +2469,13 @@ class _DetailPageState extends State<DetailPage> {
     return streak;
   }
 
-  // 获取本月打卡天数
   int _getMonthCheckIns() {
     final now = DateTime.now();
     final monthStr = DateFormat('yyyy-MM').format(now);
 
-    final Set<String> monthDates = widget.habit.checkInTimes
-        .where((t) => t.startsWith(monthStr))
-        .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
+    final Set<String> monthDates = widget.habit.checkInRecords
+        .where((r) => r.time.startsWith(monthStr))
+        .map((r) => DateFormat('yyyy-MM-dd').format(DateTime.parse(r.time)))
         .toSet();
 
     return monthDates.length;
@@ -2343,19 +2484,10 @@ class _DetailPageState extends State<DetailPage> {
   Widget _statItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
+        Text(value,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: color)),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
       ],
     );
   }

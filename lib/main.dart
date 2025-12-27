@@ -745,7 +745,7 @@ class HabitLibraryPage extends StatelessWidget {
 
     final templates = [
       // 健康生活
-      {'icon': Icons.wb_sunny_outlined, 'title': '早起', 'desc': '每天6点前起床'},
+      {'icon': Icons.wb_sunny_outlined, 'title': '早起', 'desc': '每天7点前起床'},
       {'icon': Icons.bedtime_outlined, 'title': '早睡', 'desc': '每天11点前入睡'},
       {'icon': Icons.water_drop_outlined, 'title': '喝水', 'desc': '每天8杯水'},
       {'icon': Icons.fitness_center, 'title': '健身', 'desc': '每天运动30分钟'},
@@ -798,6 +798,9 @@ class HabitLibraryPage extends StatelessWidget {
       {'icon': Icons.music_note_outlined, 'title': '听音乐', 'desc': '每天享受音乐时光'},
       {'icon': Icons.local_florist_outlined, 'title': '养植物', 'desc': '每天照顾绿植'},
       {'icon': Icons.cookie_outlined, 'title': '烘焙', 'desc': '每周尝试新食谱'},
+
+      // 抽象彩蛋
+      {'icon': Icons.flight_takeoff, 'title': '起飞', 'desc': '你好机长，航班不可延误'},
     ];
 
     return Scaffold(

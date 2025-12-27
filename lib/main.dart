@@ -704,7 +704,7 @@ class HabitLibraryPage extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.5,
+                childAspectRatio: 1.6,
               ),
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -1666,7 +1666,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.3.4",
+            Text("版本 1.4.4",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1709,9 +1709,46 @@ class AboutPage extends StatelessWidget {
 }
 
 // ========== 详情页 ==========
-class DetailPage extends StatelessWidget {
+class DetailPage extends StatefulWidget {
   final Habit habit;
   const DetailPage({super.key, required this.habit});
+
+  @override
+  State<DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  late PageController _pageController;
+  late DateTime _currentMonth;
+
+  // 设置一个足够大的范围：前后各100年
+  static const int _initialPage = 1200; // 100年 * 12个月
+
+  DateTime _getMonthFromPage(int page) {
+    final now = DateTime.now();
+    final monthDiff = page - _initialPage;
+    return DateTime(now.year, now.month + monthDiff);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    _pageController = PageController(initialPage: _initialPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // 获取打卡日期集合
+  Set<String> get _checkInDates {
+    return widget.habit.checkInTimes
+        .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
+        .toSet();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1728,219 +1765,530 @@ class DetailPage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           // ===== 习惯信息卡片 =====
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: themeColor.withValues(alpha: 0.3)),
-            ),
-            child: Column(
+          _buildInfoCard(themeColor),
+
+          const SizedBox(height: 24),
+
+          // ===== 打卡日历 =====
+          _buildCalendarCard(themeColor),
+
+          const SizedBox(height: 24),
+
+          // ===== 打卡记录标题 =====
+          _buildRecordHeader(themeColor),
+
+          const SizedBox(height: 12),
+
+          // ===== 打卡记录列表 =====
+          _buildRecordList(themeColor),
+
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  // 习惯信息卡片
+  Widget _buildInfoCard(Color themeColor) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.flag_outlined, color: themeColor, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  widget.habit.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (widget.habit.description.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 习惯名称
-                Row(
-                  children: [
-                    Icon(Icons.flag_outlined, color: themeColor, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        habit.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                Icon(Icons.notes_outlined, color: Colors.grey[400], size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.habit.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
                     ),
-                  ],
-                ),
-
-                // 习惯描述
-                if (habit.description.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.notes_outlined,
-                          color: Colors.grey[400], size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          habit.description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.access_time_outlined, color: Colors.grey[400], size: 20),
+              const SizedBox(width: 10),
+              Text(
+                "创建于 ${_formatCreatedAt(widget.habit.createdAt)}",
+                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: themeColor.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _statItem("累计打卡", "${widget.habit.checkInTimes.length}次", themeColor),
+                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                _statItem("连续天数", "${_calculateStreak()}天", themeColor),
+                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                _statItem("本月打卡", "${_getMonthCheckIns()}天", themeColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                // 创建时间
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.access_time_outlined,
-                        color: Colors.grey[400], size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      "创建于 ${_formatCreatedAt(habit.createdAt)}",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
+  // 打卡日历卡片
+  Widget _buildCalendarCard(Color themeColor) {
+    // 计算当前月份需要的行数
+    int _getRowCount(DateTime month) {
+      final firstDayOfMonth = DateTime(month.year, month.month, 1);
+      final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
+      final daysInMonth = lastDayOfMonth.day;
+      final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+      // 计算需要多少行
+      return ((firstWeekday + daysInMonth) / 7).ceil();
+    }
+
+    final rowCount = _getRowCount(_currentMonth);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        children: [
+          // 日历头部
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_month, color: themeColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "打卡日历",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    _pageController.animateToPage(
+                      _initialPage,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: themeColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
-
-                // 统计信息
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _statItem(
-                          "累计打卡", "${habit.checkInTimes.length}次", themeColor),
-                      Container(
-                          width: 1,
-                          height: 30,
-                          color: themeColor.withValues(alpha: 0.2)),
-                      _statItem("连续天数", "${_calculateStreak()}天", themeColor),
-                    ],
+                    child: Text(
+                      "今天",
+                      style: TextStyle(fontSize: 12, color: themeColor),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
-
-          // ===== 打卡记录标题 =====
-          Row(
-            children: [
-              Icon(Icons.history, color: themeColor, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                "打卡记录",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+          // 月份导航
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.chevron_left, color: Colors.grey[600]),
+                  onPressed: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
                 ),
-              ),
-              const Spacer(),
-              Text(
-                "共 ${habit.checkInTimes.length} 次",
-                style: TextStyle(fontSize: 13, color: Colors.grey[400]),
-              ),
-            ],
+                Text(
+                  DateFormat('yyyy年MM月').format(_currentMonth),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.chevron_right, color: Colors.grey[600]),
+                  onPressed: () {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // 星期标题行
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: ['日', '一', '二', '三', '四', '五', '六']
+                  .map((day) => Expanded(
+                child: Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ))
+                  .toList(),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // 日历网格 - 动态高度
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cellWidth = (constraints.maxWidth - 24) / 7;
+                final cellHeight = cellWidth; // 保持正方形
+                // 动态计算高度：行数 * 单元格高度 + 间距
+                final calendarHeight = rowCount * cellHeight + (rowCount - 1) * 4;
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: calendarHeight,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (page) {
+                      setState(() {
+                        _currentMonth = _getMonthFromPage(page);
+                      });
+                    },
+                    itemBuilder: (context, page) {
+                      final month = _getMonthFromPage(page);
+                      return _buildMonthGrid(month, themeColor);
+                    },
+                  ),
+                );
+              },
+            ),
           ),
 
           const SizedBox(height: 12),
 
-          // ===== 打卡记录列表 =====
-          if (habit.checkInTimes.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                children: [
-                  Icon(Icons.event_available, size: 48, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text("暂无打卡记录",
-                      style: TextStyle(color: Colors.grey[400])),
-                  const SizedBox(height: 8),
-                  Text("快去完成第一次打卡吧！",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[300])),
-                ],
-              ),
-            )
-          else
-            ...habit.checkInTimes.reversed.map((timeStr) {
-              final dateTime = DateTime.parse(timeStr);
-              final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
-                  DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isToday
-                        ? themeColor.withValues(alpha: 0.4)
-                        : Colors.grey[200]!,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isToday ? themeColor : Colors.grey[300],
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            DateFormat('yyyy年MM月dd日').format(dateTime),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isToday ? themeColor : Colors.grey[700],
-                              fontWeight:
-                              isToday ? FontWeight.w500 : FontWeight.normal,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            DateFormat('HH:mm:ss').format(dateTime),
-                            style:
-                            TextStyle(fontSize: 12, color: Colors.grey[400]),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isToday)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          "今天",
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: themeColor,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-
-          const SizedBox(height: 50),
+          // 图例说明
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegend(themeColor, "已打卡"),
+                const SizedBox(width: 24),
+                _buildLegend(Colors.grey[300]!, "未打卡"),
+                const SizedBox(width: 24),
+                _buildTodayLegend(themeColor),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+// 构建月份日期网格
+  Widget _buildMonthGrid(DateTime month, Color themeColor) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // 当月第一天
+    final firstDayOfMonth = DateTime(month.year, month.month, 1);
+    // 当月最后一天
+    final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
+    // 当月天数
+    final daysInMonth = lastDayOfMonth.day;
+    // 第一天是星期几 (0=周日, 1=周一, ..., 6=周六)
+    final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+    // 计算需要的行数
+    final rowCount = ((firstWeekday + daysInMonth) / 7).ceil();
+    final totalCells = rowCount * 7;
+
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        childAspectRatio: 1,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
+      ),
+      itemCount: totalCells,
+      itemBuilder: (context, index) {
+        final dayNumber = index - firstWeekday + 1;
+
+        // 不在当月范围内显示空白
+        if (dayNumber < 1 || dayNumber > daysInMonth) {
+          return const SizedBox();
+        }
+
+        final date = DateTime(month.year, month.month, dayNumber);
+        final dateStr = DateFormat('yyyy-MM-dd').format(date);
+        final isToday = date.year == today.year &&
+            date.month == today.month &&
+            date.day == today.day;
+        final isCheckedIn = _checkInDates.contains(dateStr);
+        final isFuture = date.isAfter(today);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: isCheckedIn
+                ? themeColor.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: isToday ? Border.all(color: themeColor, width: 2) : null,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                '$dayNumber',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight:
+                  isToday || isCheckedIn ? FontWeight.w600 : FontWeight.normal,
+                  color: isFuture
+                      ? Colors.grey[300]
+                      : isCheckedIn
+                      ? themeColor
+                      : Colors.grey[700],
+                ),
+              ),
+              if (isCheckedIn)
+                Positioned(
+                  bottom: 4,
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: themeColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 图例项
+  Widget _buildLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Center(
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+      ],
+    );
+  }
+
+  // 今天图例
+  Widget _buildTodayLegend(Color themeColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            border: Border.all(color: themeColor, width: 1.5),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text("今天", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+      ],
+    );
+  }
+
+  // 打卡记录标题
+  Widget _buildRecordHeader(Color themeColor) {
+    return Row(
+      children: [
+        Icon(Icons.history, color: themeColor, size: 20),
+        const SizedBox(width: 8),
+        Text(
+          "打卡记录",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+        const Spacer(),
+        Text(
+          "共 ${widget.habit.checkInTimes.length} 次",
+          style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+        ),
+      ],
+    );
+  }
+
+  // 打卡记录列表
+  Widget _buildRecordList(Color themeColor) {
+    if (widget.habit.checkInTimes.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.event_available, size: 48, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text("暂无打卡记录", style: TextStyle(color: Colors.grey[400])),
+            const SizedBox(height: 8),
+            Text("快去完成第一次打卡吧！",
+                style: TextStyle(fontSize: 12, color: Colors.grey[300])),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: widget.habit.checkInTimes.reversed.map((timeStr) {
+        final dateTime = DateTime.parse(timeStr);
+        final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
+            DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isToday
+                  ? themeColor.withValues(alpha: 0.4)
+                  : Colors.grey[200]!,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isToday ? themeColor : Colors.grey[300],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('yyyy年MM月dd日').format(dateTime),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isToday ? themeColor : Colors.grey[700],
+                        fontWeight: isToday ? FontWeight.w500 : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormat('HH:mm:ss').format(dateTime),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                    ),
+                  ],
+                ),
+              ),
+              if (isToday)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "今天",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: themeColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1956,25 +2304,19 @@ class DetailPage extends StatelessWidget {
 
   // 计算连续打卡天数
   int _calculateStreak() {
-    if (habit.checkInTimes.isEmpty) return 0;
-
-    final Set<String> checkInDates = habit.checkInTimes
-        .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
-        .toSet();
+    if (widget.habit.checkInTimes.isEmpty) return 0;
 
     int streak = 0;
     DateTime currentDate = DateTime.now();
 
-    // 检查今天是否打卡，如果没有就从昨天开始算
     String todayStr = DateFormat('yyyy-MM-dd').format(currentDate);
-    if (!checkInDates.contains(todayStr)) {
+    if (!_checkInDates.contains(todayStr)) {
       currentDate = currentDate.subtract(const Duration(days: 1));
     }
 
-    // 往前数连续的天数
     while (true) {
       String dateStr = DateFormat('yyyy-MM-dd').format(currentDate);
-      if (checkInDates.contains(dateStr)) {
+      if (_checkInDates.contains(dateStr)) {
         streak++;
         currentDate = currentDate.subtract(const Duration(days: 1));
       } else {
@@ -1983,6 +2325,19 @@ class DetailPage extends StatelessWidget {
     }
 
     return streak;
+  }
+
+  // 获取本月打卡天数
+  int _getMonthCheckIns() {
+    final now = DateTime.now();
+    final monthStr = DateFormat('yyyy-MM').format(now);
+
+    final Set<String> monthDates = widget.habit.checkInTimes
+        .where((t) => t.startsWith(monthStr))
+        .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
+        .toSet();
+
+    return monthDates.length;
   }
 
   Widget _statItem(String label, String value, Color color) {

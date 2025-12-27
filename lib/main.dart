@@ -48,7 +48,7 @@ class ThemeConfig {
     ThemeColorOption(
       name: '玫瑰粉',
       color: Color(0xFFEC407A),
-      backgroundColor: Color(0xFFF5F7),
+      backgroundColor: Color(0xFFFCF5F7),
     ),
     ThemeColorOption(
       name: '薄荷青',
@@ -1666,7 +1666,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.3.0",
+            Text("版本 1.3.4",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1686,7 +1686,7 @@ class AboutPage extends StatelessWidget {
                   const Divider(height: 20),
                   _infoRow("联系邮箱", "vence_cat@163.com"),
                   const Divider(height: 20),
-                  _infoRow("更新时间", "2025年12月26日"),
+                  _infoRow("更新时间", "2025年12月27日"),
                 ],
               ),
             ),

@@ -800,7 +800,7 @@ class HabitLibraryPage extends StatelessWidget {
       {'icon': Icons.cookie_outlined, 'title': '烘焙', 'desc': '每周尝试新食谱'},
 
       // 抽象彩蛋
-      {'icon': Icons.flight_takeoff, 'title': '起飞', 'desc': '你好机长，航班不可延误'},
+      {'icon': Icons.flight_takeoff, 'title': '起飞', 'desc': '航班不可延误'},
     ];
 
     return Scaffold(

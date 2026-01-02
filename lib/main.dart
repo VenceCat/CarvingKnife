@@ -56,6 +56,11 @@ class ThemeConfig {
       backgroundColor: Color(0xFFF5FBFC),
     ),
     ThemeColorOption(
+      name: '新年红',
+      color: Color(0xFFE53935),
+      backgroundColor: Color(0xFFFFF8F7),
+    ),
+    ThemeColorOption(
       name: '沉稳黑',
       color: Color(0xFF455A64),
       backgroundColor: Color(0xFFF5F5F5),
@@ -1414,7 +1419,6 @@ class ThemeSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // 预览效果（移到最上方）
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -1845,6 +1849,7 @@ class DetailPage extends StatefulWidget {
 class _DetailPageState extends State<DetailPage> {
   late PageController _pageController;
   late DateTime _currentMonth;
+  DateTime? _selectedDate; // 新增：选中的日期
 
   static const int _initialPage = 1200;
 
@@ -1859,6 +1864,7 @@ class _DetailPageState extends State<DetailPage> {
     super.initState();
     _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
     _pageController = PageController(initialPage: _initialPage);
+    _selectedDate = DateTime.now(); // 默认选中今天
   }
 
   @override
@@ -1871,6 +1877,15 @@ class _DetailPageState extends State<DetailPage> {
     return widget.habit.checkInTimes
         .map((t) => DateFormat('yyyy-MM-dd').format(DateTime.parse(t)))
         .toSet();
+  }
+
+  // 新增：获取选中日期的打卡记录
+  List<CheckInRecord> get _selectedDateRecords {
+    if (_selectedDate == null) return [];
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    return widget.habit.checkInRecords
+        .where((r) => r.time.startsWith(dateStr))
+        .toList();
   }
 
   @override
@@ -2004,6 +2019,9 @@ class _DetailPageState extends State<DetailPage> {
                 const Spacer(),
                 GestureDetector(
                   onTap: () {
+                    setState(() {
+                      _selectedDate = DateTime.now();
+                    });
                     _pageController.animateToPage(
                       _initialPage,
                       duration: const Duration(milliseconds: 300),
@@ -2104,7 +2122,7 @@ class _DetailPageState extends State<DetailPage> {
                 const SizedBox(width: 24),
                 _buildLegend(Colors.grey[300]!, "未打卡"),
                 const SizedBox(width: 24),
-                _buildTodayLegend(themeColor),
+                _buildSelectedLegend(themeColor),
               ],
             ),
           ),
@@ -2146,37 +2164,60 @@ class _DetailPageState extends State<DetailPage> {
         final isCheckedIn = _checkInDates.contains(dateStr);
         final isFuture = date.isAfter(today);
 
-        return Container(
-          decoration: BoxDecoration(
-            color: isCheckedIn ? themeColor.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: isToday ? Border.all(color: themeColor, width: 2) : null,
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                '$dayNumber',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isToday || isCheckedIn ? FontWeight.w600 : FontWeight.normal,
-                  color: isFuture
-                      ? Colors.grey[300]
-                      : isCheckedIn
-                      ? themeColor
-                      : Colors.grey[700],
-                ),
-              ),
-              if (isCheckedIn)
-                Positioned(
-                  bottom: 4,
-                  child: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(color: themeColor, shape: BoxShape.circle),
+        // 新增：判断是否选中
+        final isSelected = _selectedDate != null &&
+            date.year == _selectedDate!.year &&
+            date.month == _selectedDate!.month &&
+            date.day == _selectedDate!.day;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedDate = date;
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? themeColor.withValues(alpha: 0.3)
+                  : isCheckedIn
+                  ? themeColor.withValues(alpha: 0.15)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: isToday && !isSelected
+                  ? Border.all(color: themeColor, width: 2)
+                  : isSelected
+                  ? Border.all(color: themeColor, width: 2)
+                  : null,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  '$dayNumber',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isToday || isCheckedIn || isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isFuture
+                        ? Colors.grey[300]
+                        : isSelected
+                        ? themeColor
+                        : isCheckedIn
+                        ? themeColor
+                        : Colors.grey[700],
                   ),
                 ),
-            ],
+                if (isCheckedIn && !isSelected)
+                  Positioned(
+                    bottom: 4,
+                    child: Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(color: themeColor, shape: BoxShape.circle),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -2208,7 +2249,7 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  Widget _buildTodayLegend(Color themeColor) {
+  Widget _buildSelectedLegend(Color themeColor) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2216,34 +2257,63 @@ class _DetailPageState extends State<DetailPage> {
           width: 14,
           height: 14,
           decoration: BoxDecoration(
+            color: themeColor.withValues(alpha: 0.3),
             border: Border.all(color: themeColor, width: 1.5),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
         const SizedBox(width: 4),
-        Text("今天", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        Text("选中", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
       ],
     );
   }
 
+  // 修改：显示选中日期的标题
   Widget _buildRecordHeader(Color themeColor) {
+    final hasRecord = _selectedDateRecords.isNotEmpty;
+
     return Row(
       children: [
-        Icon(Icons.history, color: themeColor, size: 20),
+        Icon(Icons.article_outlined, color: themeColor, size: 20),
         const SizedBox(width: 8),
-        Text("打卡记录",
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+        Text(
+          "打卡日志",
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+        ),
         const Spacer(),
-        Text("共 ${widget.habit.checkInRecords.length} 次",
-            style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: hasRecord
+                ? themeColor.withValues(alpha: 0.1)
+                : Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            hasRecord ? "已打卡" : "未打卡",
+            style: TextStyle(
+              fontSize: 12,
+              color: hasRecord ? themeColor : Colors.grey[400],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  // 修改：打卡记录列表，显示鼓励语
+  // 修改：只显示选中日期的打卡记录
   Widget _buildRecordList(Color themeColor) {
-    if (widget.habit.checkInRecords.isEmpty) {
+    final records = _selectedDateRecords;
+
+    if (records.isEmpty) {
+      final isFuture = _selectedDate != null &&
+          _selectedDate!.isAfter(DateTime.now());
+      final isToday = _selectedDate != null &&
+          DateFormat('yyyy-MM-dd').format(_selectedDate!) ==
+              DateFormat('yyyy-MM-dd').format(DateTime.now());
+
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
@@ -2253,22 +2323,35 @@ class _DetailPageState extends State<DetailPage> {
         ),
         child: Column(
           children: [
-            Icon(Icons.event_available, size: 48, color: Colors.grey[300]),
+            Icon(
+              isFuture ? Icons.schedule_outlined : Icons.event_busy_outlined,
+              size: 48,
+              color: Colors.grey[300],
+            ),
             const SizedBox(height: 16),
-            Text("暂无打卡记录", style: TextStyle(color: Colors.grey[400])),
+            Text(
+              isFuture
+                  ? "这是未来的日期"
+                  : "这天没有打卡记录",
+              style: TextStyle(color: Colors.grey[400]),
+            ),
             const SizedBox(height: 8),
-            Text("快去完成第一次打卡吧！",
-                style: TextStyle(fontSize: 12, color: Colors.grey[300])),
+            Text(
+              isFuture
+                  ? "期待你的坚持！"
+                  : isToday
+                  ? "快去完成今天的打卡吧！"
+                  : "继续加油哦～",
+              style: TextStyle(fontSize: 12, color: Colors.grey[300]),
+            ),
           ],
         ),
       );
     }
 
     return Column(
-      children: widget.habit.checkInRecords.reversed.map((record) {
+      children: records.reversed.map((record) {
         final dateTime = DateTime.parse(record.time);
-        final isToday = DateFormat('yyyy-MM-dd').format(dateTime) ==
-            DateFormat('yyyy-MM-dd').format(DateTime.now());
 
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -2276,9 +2359,7 @@ class _DetailPageState extends State<DetailPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isToday ? themeColor.withValues(alpha: 0.4) : Colors.grey[200]!,
-            ),
+            border: Border.all(color: themeColor.withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2286,12 +2367,13 @@ class _DetailPageState extends State<DetailPage> {
               Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: isToday ? themeColor : Colors.grey[300],
-                      shape: BoxShape.circle,
+                      color: themeColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: Icon(Icons.check, color: themeColor, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -2299,44 +2381,37 @@ class _DetailPageState extends State<DetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          DateFormat('yyyy年MM月dd日').format(dateTime),
+                          "打卡成功",
                           style: TextStyle(
-                            fontSize: 14,
-                            color: isToday ? themeColor : Colors.grey[700],
-                            fontWeight: isToday ? FontWeight.w500 : FontWeight.normal,
+                            fontSize: 15,
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           DateFormat('HH:mm:ss').format(dateTime),
-                          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                          style: TextStyle(fontSize: 13, color: Colors.grey[400]),
                         ),
                       ],
                     ),
                   ),
-                  if (isToday)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        "今天",
-                        style: TextStyle(
-                            fontSize: 12, color: themeColor, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  const SizedBox(width: 8),
                   // 编辑按钮
                   GestureDetector(
                     onTap: () => _editNote(record),
-                    child: Icon(
-                      record.note != null && record.note!.isNotEmpty
-                          ? Icons.edit_note
-                          : Icons.add_comment_outlined,
-                      size: 20,
-                      color: Colors.grey[400],
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        record.note != null && record.note!.isNotEmpty
+                            ? Icons.edit_note
+                            : Icons.add_comment_outlined,
+                        size: 18,
+                        color: Colors.grey[400],
+                      ),
                     ),
                   ),
                 ],
@@ -2395,7 +2470,7 @@ class _DetailPageState extends State<DetailPage> {
           maxLength: 100,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: "写点什么鼓励自己...",
+            hintText: "写点什么鼓励自己吧...",
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             filled: true,
             fillColor: Colors.grey[50],

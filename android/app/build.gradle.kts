@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.keep"
+    namespace = "com.example.carvingknife"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 

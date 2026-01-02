@@ -427,7 +427,7 @@ class _CheckInPageState extends State<CheckInPage> {
               maxLines: 3,
               maxLength: 100,
               decoration: InputDecoration(
-                hintText: "写点什么鼓励自己吧...",
+                hintText: "写点什么记录一下吧...",
                 hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                 filled: true,
                 fillColor: Colors.grey[50],
@@ -1835,7 +1835,7 @@ class AboutPage extends StatelessWidget {
   }
 }
 
-// ========== 详情页 ========== 替换整个 DetailPage 类
+// ========== 详情页 ==========
 class DetailPage extends StatefulWidget {
   final Habit habit;
   final VoidCallback onSave;
@@ -2270,7 +2270,12 @@ class _DetailPageState extends State<DetailPage> {
 
   // 修改：显示选中日期的标题
   Widget _buildRecordHeader(Color themeColor) {
-    final hasRecord = _selectedDateRecords.isNotEmpty;
+    final records = _selectedDateRecords;
+    final hasRecord = records.isNotEmpty;
+
+    // 判断是否是补卡记录
+    final isMakeUp = hasRecord &&
+        records.any((r) => r.note != null && r.note!.contains("[补卡于"));
 
     return Row(
       children: [
@@ -2286,15 +2291,25 @@ class _DetailPageState extends State<DetailPage> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: hasRecord
-                ? themeColor.withValues(alpha: 0.1)
+                ? isMakeUp
+                ? Colors.orange.withValues(alpha: 0.1)
+                : themeColor.withValues(alpha: 0.1)
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            hasRecord ? "已打卡" : "未打卡",
+            hasRecord
+                ? isMakeUp
+                ? "已补卡"
+                : "已打卡"
+                : "未打卡",
             style: TextStyle(
               fontSize: 12,
-              color: hasRecord ? themeColor : Colors.grey[400],
+              color: hasRecord
+                  ? isMakeUp
+                  ? Colors.orange
+                  : themeColor
+                  : Colors.grey[400],
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -2306,14 +2321,18 @@ class _DetailPageState extends State<DetailPage> {
   // 修改：只显示选中日期的打卡记录
   Widget _buildRecordList(Color themeColor) {
     final records = _selectedDateRecords;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final isFuture = _selectedDate != null &&
+        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day).isAfter(today);
+    final isToday = _selectedDate != null &&
+        DateFormat('yyyy-MM-dd').format(_selectedDate!) ==
+            DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final isPast = _selectedDate != null &&
+        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day).isBefore(today);
 
     if (records.isEmpty) {
-      final isFuture = _selectedDate != null &&
-          _selectedDate!.isAfter(DateTime.now());
-      final isToday = _selectedDate != null &&
-          DateFormat('yyyy-MM-dd').format(_selectedDate!) ==
-              DateFormat('yyyy-MM-dd').format(DateTime.now());
-
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
@@ -2344,6 +2363,21 @@ class _DetailPageState extends State<DetailPage> {
                   : "继续加油哦～",
               style: TextStyle(fontSize: 12, color: Colors.grey[300]),
             ),
+            if (isPast) ...[
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => _showMakeUpCheckInDialog(),
+                icon: Icon(Icons.add_task, size: 18, color: themeColor),
+                label: Text("补卡", style: TextStyle(color: themeColor)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -2352,6 +2386,7 @@ class _DetailPageState extends State<DetailPage> {
     return Column(
       children: records.reversed.map((record) {
         final dateTime = DateTime.parse(record.time);
+        final isMakeUp = record.note != null && record.note!.contains("[补卡于");
 
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -2359,7 +2394,11 @@ class _DetailPageState extends State<DetailPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: isMakeUp
+                  ? Colors.orange.withValues(alpha: 0.3)
+                  : themeColor.withValues(alpha: 0.3),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2370,23 +2409,47 @@ class _DetailPageState extends State<DetailPage> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.1),
+                      color: isMakeUp
+                          ? Colors.orange.withValues(alpha: 0.1)
+                          : themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.check, color: themeColor, size: 20),
+                    child: Icon(
+                      isMakeUp ? Icons.history : Icons.check,
+                      color: isMakeUp ? Colors.orange : themeColor,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "打卡成功",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey[800],
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              isMakeUp ? "补卡成功" : "打卡成功",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey[800],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (isMakeUp) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _extractMakeUpTime(record.note!),
+                                  style: const TextStyle(fontSize: 10, color: Colors.orange),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -2396,7 +2459,6 @@ class _DetailPageState extends State<DetailPage> {
                       ],
                     ),
                   ),
-                  // 编辑按钮
                   GestureDetector(
                     onTap: () => _editNote(record),
                     child: Container(
@@ -2416,42 +2478,253 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                 ],
               ),
-              // 显示鼓励语
-              if (record.note != null && record.note!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: themeColor.withValues(alpha: 0.1)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.format_quote,
-                          size: 16, color: themeColor.withValues(alpha: 0.5)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          record.note!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                            height: 1.5,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              _buildNoteSection(record, isMakeUp, themeColor),
             ],
           ),
         );
       }).toList(),
+    );
+  }
+
+// 新增：提取补卡时间
+  String _extractMakeUpTime(String note) {
+    final regex = RegExp(r'\[补卡于(.+?)\]');
+    final match = regex.firstMatch(note);
+    if (match != null) {
+      return "补于${match.group(1)}";
+    }
+    return "补签";
+  }
+
+// 新增：构建备注区域
+  Widget _buildNoteSection(CheckInRecord record, bool isMakeUp, Color themeColor) {
+    if (record.note == null || record.note!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // 处理显示的备注内容，去掉补卡标记
+    String displayNote = record.note!;
+    final regex = RegExp(r'\[补卡于.+?\]\s*');
+    displayNote = displayNote.replaceAll(regex, '').trim();
+
+    if (displayNote.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isMakeUp
+                ? Colors.orange.withValues(alpha: 0.05)
+                : themeColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isMakeUp
+                  ? Colors.orange.withValues(alpha: 0.1)
+                  : themeColor.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.format_quote,
+                size: 16,
+                color: isMakeUp
+                    ? Colors.orange.withValues(alpha: 0.5)
+                    : themeColor.withValues(alpha: 0.5),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  displayNote,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                    height: 1.5,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+// 新增：补卡对话框
+  void _showMakeUpCheckInDialog() {
+    final noteController = TextEditingController();
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final selectedDateStr = DateFormat('MM月dd日').format(_selectedDate!);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 拖动指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 标题行
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.history, color: Colors.orange, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "补卡",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              selectedDateStr,
+                              style: const TextStyle(fontSize: 14, color: Colors.orange),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 关闭按钮
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // 输入框
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    maxLength: 100,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: "写点什么记录一下吧...",
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: TextStyle(color: Colors.grey[400]),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 确认按钮
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _performMakeUpCheckIn(noteController.text.trim());
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: const Text("确认补卡", style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// 新增：执行补卡
+  void _performMakeUpCheckIn(String note) {
+    // 记录当前的完整时间，但存储到选中的日期
+    final now = DateTime.now();
+
+    // 存储时使用选中的日期（用于归类到那一天）
+    final makeUpTime = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+
+    final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(makeUpTime);
+
+    // 在备注中记录实际补卡的日期时间
+    final actualTimeStr = DateFormat('MM月dd日 HH:mm').format(now);
+    final noteContent = note.isNotEmpty
+        ? "[补卡于$actualTimeStr] $note"
+        : "[补卡于$actualTimeStr]";
+
+    final record = CheckInRecord(
+      time: timeStr,
+      note: noteContent,
+    );
+
+    widget.habit.checkInRecords.add(record);
+    widget.onSave();
+
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("已补卡 ${DateFormat('MM月dd日').format(_selectedDate!)}"),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
@@ -2463,14 +2736,14 @@ class _DetailPageState extends State<DetailPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("编辑鼓励语", style: TextStyle(fontSize: 16)),
+        title: const Text("编辑备注", style: TextStyle(fontSize: 16)),
         content: TextField(
           controller: noteController,
           maxLines: 3,
           maxLength: 100,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: "写点什么鼓励自己吧...",
+            hintText: "写点什么记录一下吧...",
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
             filled: true,
             fillColor: Colors.grey[50],

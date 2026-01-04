@@ -1522,135 +1522,395 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
           ],
         ),
       )
-          : ListView.builder(
+          : ListView(
         padding: const EdgeInsets.all(20),
-        itemCount: widget.habits.length,
-        itemBuilder: (context, index) {
-          final habit = widget.habits[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
+        children: [
+          // 顶部说明
+          Container(
             padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: themeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(habit.title,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w500)),
-                    ),
-                    if (habit.reminderTime != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          habit.reminderTime!,
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: themeColor,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            setState(() => habit.reminderTime =
-                            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
-                            widget.onSave();
-                          }
-                        },
-                        icon: const Icon(Icons.schedule, size: 18),
-                        label: Text(
-                            habit.reminderTime == null ? "设置提醒" : "修改时间"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: themeColor,
-                          side: BorderSide(
-                              color: themeColor.withValues(alpha: 0.5)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: habit.reminderTime != null
-                            ? () => _addToCalendar(habit)
-                            : null,
-                        icon: const Icon(Icons.calendar_month, size: 18),
-                        label: const Text("添加日历"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeColor,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey[200],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (habit.reminderTime != null)
-                  Center(
-                    child: TextButton(
-                      onPressed: () {
-                        setState(() => habit.reminderTime = null);
-                        widget.onSave();
-                      },
-                      child: Text("清除提醒",
-                          style: TextStyle(
-                              color: Colors.grey[400], fontSize: 12)),
-                    ),
+                Icon(Icons.info_outline, color: themeColor, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "设置提醒后将添加到系统日历，每天定时提醒你打卡",
+                    style: TextStyle(fontSize: 13, color: themeColor),
                   ),
+                ),
               ],
             ),
-          );
-        },
+          ),
+          // 习惯列表
+          ...widget.habits.map((habit) => _buildHabitCard(habit, themeColor)),
+        ],
       ),
     );
   }
 
-  void _addToCalendar(Habit habit) {
-    if (habit.reminderTime == null) return;
+  Widget _buildHabitCard(Habit habit, Color themeColor) {
+    final hasReminder = habit.reminderTime != null;
 
-    final parts = habit.reminderTime!.split(':');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasReminder
+              ? themeColor.withValues(alpha: 0.3)
+              : Colors.grey[200]!,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showSetReminderFlow(habit),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // 左侧图标
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: hasReminder
+                        ? themeColor.withValues(alpha: 0.1)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    hasReminder
+                        ? Icons.notifications_active
+                        : Icons.notifications_none,
+                    color: hasReminder ? themeColor : Colors.grey[400],
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                // 中间内容
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        habit.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasReminder
+                            ? "每天 ${habit.reminderTime} 提醒"
+                            : "点击设置打卡提醒",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: hasReminder ? themeColor : Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 右侧箭头或时间标签
+                if (hasReminder)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: themeColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.access_time, size: 14, color: themeColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          habit.reminderTime!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: themeColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Icon(Icons.chevron_right, color: Colors.grey[300], size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 设置提醒的完整流程
+  void _showSetReminderFlow(Habit habit) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final hasReminder = habit.reminderTime != null;
+
+    // 解析已有的时间
+    TimeOfDay initialTime = TimeOfDay.now();
+    if (hasReminder) {
+      final parts = habit.reminderTime!.split(':');
+      initialTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 标题行
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.notifications_active,
+                          color: themeColor, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            habit.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasReminder ? "修改提醒时间" : "设置打卡提醒",
+                            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 时间选择按钮
+                _TimePickerButton(
+                  initialTime: initialTime,
+                  themeColor: themeColor,
+                  onConfirm: (time) {
+                    Navigator.pop(ctx);
+                    _confirmAndAddToCalendar(habit, time);
+                  },
+                ),
+                // 如果已有提醒，显示删除按钮
+                if (hasReminder) ...[
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showDeleteReminderDialog(habit);
+                    },
+                    child: Text(
+                      "删除提醒",
+                      style: TextStyle(color: Colors.red[400], fontSize: 14),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 确认并添加到日历
+  void _confirmAndAddToCalendar(Habit habit, TimeOfDay time) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final timeStr = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
     final now = DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1,
-        int.parse(parts[0]), int.parse(parts[1]));
+    final tomorrow = DateTime(now.year, now.month, now.day + 1, time.hour, time.minute);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("添加到日历", style: TextStyle(fontSize: 16)),
-        content: Text("将「${habit.title}」添加到系统日历？\n提醒时间：${habit.reminderTime}"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.calendar_month, color: themeColor, size: 28),
+            ),
+            const SizedBox(height: 12),
+            const Text("添加到日历", style: TextStyle(fontSize: 17)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "将「${habit.title}」的每日提醒添加到系统日历？",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.access_time, color: themeColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    "每天 $timeStr",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: themeColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                    side: BorderSide(color: Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text("取消"),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    // 保存提醒时间
+                    setState(() => habit.reminderTime = timeStr);
+                    widget.onSave();
+                    // 打开日历
+                    _openCalendarIntent(habit, tomorrow);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                  ),
+                  child: const Text("确认添加"),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 删除提醒确认
+  void _showDeleteReminderDialog(Habit habit) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("删除提醒", style: TextStyle(fontSize: 16)),
+        content: Text(
+          "确定要删除「${habit.title}」的提醒吗？\n\n注意：日历中的事件需要手动删除",
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("取消", style: TextStyle(color: Colors.grey)),
+            child: Text("取消", style: TextStyle(color: Colors.grey[500])),
           ),
           TextButton(
             onPressed: () {
+              setState(() => habit.reminderTime = null);
+              widget.onSave();
               Navigator.pop(ctx);
-              _openCalendarIntent(habit, tomorrow);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("已删除提醒"),
+                  duration: Duration(seconds: 1),
+                ),
+              );
             },
-            child: Text("确认",
-                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            child: const Text("删除", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1674,6 +1934,15 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       );
       try {
         await intent.launch();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("已为「${habit.title}」设置提醒"),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1685,6 +1954,176 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   }
 }
 
+// 时间选择器组件
+class _TimePickerButton extends StatefulWidget {
+  final TimeOfDay initialTime;
+  final Color themeColor;
+  final Function(TimeOfDay) onConfirm;
+
+  const _TimePickerButton({
+    required this.initialTime,
+    required this.themeColor,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_TimePickerButton> createState() => _TimePickerButtonState();
+}
+
+class _TimePickerButtonState extends State<_TimePickerButton> {
+  late int _selectedHour;
+  late int _selectedMinute;
+
+  late FixedExtentScrollController _hourController;
+  late FixedExtentScrollController _minuteController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedHour = widget.initialTime.hour;
+    _selectedMinute = widget.initialTime.minute;
+    _hourController = FixedExtentScrollController(initialItem: _selectedHour);
+    _minuteController = FixedExtentScrollController(initialItem: _selectedMinute);
+  }
+
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _minuteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // 时间选择器
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            color: widget.themeColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: widget.themeColor.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Stack(
+            children: [
+              // 选中行高亮背景
+              Center(
+                child: Container(
+                  height: 44,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: widget.themeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              // 滚轮选择器
+              Row(
+                children: [
+                  // 小时
+                  Expanded(
+                    child: ListWheelScrollView.useDelegate(
+                      controller: _hourController,
+                      itemExtent: 44,
+                      perspective: 0.005,
+                      diameterRatio: 1.5,
+                      physics: const FixedExtentScrollPhysics(),
+                      onSelectedItemChanged: (index) {
+                        setState(() => _selectedHour = index);
+                      },
+                      childDelegate: ListWheelChildBuilderDelegate(
+                        childCount: 24,
+                        builder: (context, index) {
+                          final isSelected = index == _selectedHour;
+                          return Center(
+                            child: Text(
+                              '${index.toString().padLeft(2, '0')} 时',
+                              style: TextStyle(
+                                fontSize: isSelected ? 20 : 16,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                color: isSelected
+                                    ? widget.themeColor
+                                    : Colors.grey[400],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  // 分隔符
+                  Text(
+                    ":",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: widget.themeColor,
+                    ),
+                  ),
+                  // 分钟
+                  Expanded(
+                    child: ListWheelScrollView.useDelegate(
+                      controller: _minuteController,
+                      itemExtent: 44,
+                      perspective: 0.005,
+                      diameterRatio: 1.5,
+                      physics: const FixedExtentScrollPhysics(),
+                      onSelectedItemChanged: (index) {
+                        setState(() => _selectedMinute = index);
+                      },
+                      childDelegate: ListWheelChildBuilderDelegate(
+                        childCount: 60,
+                        builder: (context, index) {
+                          final isSelected = index == _selectedMinute;
+                          return Center(
+                            child: Text(
+                              '${index.toString().padLeft(2, '0')} 分',
+                              style: TextStyle(
+                                fontSize: isSelected ? 20 : 16,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                color: isSelected
+                                    ? widget.themeColor
+                                    : Colors.grey[400],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // 确认按钮
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => widget.onConfirm(
+              TimeOfDay(hour: _selectedHour, minute: _selectedMinute),
+            ),
+            icon: const Icon(Icons.calendar_month, size: 20),
+            label: const Text("设置打卡提醒", style: TextStyle(fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.themeColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 // ========== 关于页面 ==========
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -1728,7 +2167,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.5.4",
+            Text("版本 1.6.5",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -1748,7 +2187,7 @@ class AboutPage extends StatelessWidget {
                   const Divider(height: 20),
                   _infoRow("联系邮箱", "vence_cat@163.com"),
                   const Divider(height: 20),
-                  _infoRow("更新时间", "2026年1月2日"),
+                  _infoRow("更新时间", "2026年1月4日"),
                 ],
               ),
             ),

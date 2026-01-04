@@ -10,8 +10,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 
+import 'models/habit.dart';
+import 'services/widget_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await WidgetService.initialize();
+
   final prefs = await SharedPreferences.getInstance();
   final colorIndex = prefs.getInt('theme_color_index') ?? 0;
   runApp(HabitApp(initialColorIndex: colorIndex));
@@ -136,83 +142,6 @@ class HabitAppState extends State<HabitApp> {
   }
 }
 
-// 数据模型 - 替换原有的 Habit 类，并新增 CheckInRecord 类
-class Habit {
-  String id;
-  String title;
-  String description;
-  List<CheckInRecord> checkInRecords; // 修改：使用记录对象
-  String? reminderTime;
-  String createdAt;
-
-  Habit({
-    required this.id,
-    required this.title,
-    this.description = '',
-    List<CheckInRecord>? checkInRecords,
-    this.reminderTime,
-    String? createdAt,
-  }) : checkInRecords = checkInRecords ?? [],
-        createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-
-  // 兼容性：获取打卡时间列表
-  List<String> get checkInTimes => checkInRecords.map((r) => r.time).toList();
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'description': description,
-    'checkInRecords': checkInRecords.map((r) => r.toJson()).toList(),
-    'reminderTime': reminderTime,
-    'createdAt': createdAt,
-  };
-
-  factory Habit.fromJson(Map<String, dynamic> json) {
-    // 兼容旧数据格式
-    List<CheckInRecord> records = [];
-    if (json['checkInRecords'] != null) {
-      records = (json['checkInRecords'] as List)
-          .map((r) => CheckInRecord.fromJson(r as Map<String, dynamic>))
-          .toList();
-    } else if (json['checkInTimes'] != null) {
-      // 旧数据迁移：将字符串列表转换为 CheckInRecord 列表
-      records = (json['checkInTimes'] as List)
-          .map((t) => CheckInRecord(time: t as String))
-          .toList();
-    }
-
-    return Habit(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'] ?? '',
-      checkInRecords: records,
-      reminderTime: json['reminderTime'],
-      createdAt: json['createdAt'],
-    );
-  }
-}
-
-// 新增：打卡记录模型
-class CheckInRecord {
-  String time;
-  String? note; // 鼓励语
-
-  CheckInRecord({
-    required this.time,
-    this.note,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'time': time,
-    'note': note,
-  };
-
-  factory CheckInRecord.fromJson(Map<String, dynamic> json) => CheckInRecord(
-    time: json['time'],
-    note: json['note'],
-  );
-}
-
 // ========== 主页面 ==========
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -237,12 +166,18 @@ class _MainPageState extends State<MainPage> {
     if (data != null) {
       setState(() => habits =
           (jsonDecode(data) as List).map((e) => Habit.fromJson(e)).toList());
+
+      // 更新小组件
+      await WidgetService.updateWidget(habits);
     }
   }
 
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('simple_habits', jsonEncode(habits));
+
+    // 更新小组件
+    await WidgetService.updateWidget(habits);
   }
 
   void _addHabit(Habit habit) {

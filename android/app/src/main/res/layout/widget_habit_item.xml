@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/item_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="6dp"
+    android:paddingHorizontal="4dp">
+
+    <!-- 状态图标 -->
+    <ImageView
+        android:id="@+id/item_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:src="@drawable/ic_undone"
+        android:contentDescription="status" />
+
+    <!-- 习惯名称 -->
+    <TextView
+        android:id="@+id/item_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="14sp"
+        android:textColor="#424242"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <!-- 右侧标签（打卡次数/连续天数） -->
+    <TextView
+        android:id="@+id/item_streak"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="#999999"
+        android:background="@drawable/widget_item_tag_bg"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp" />
+</LinearLayout>

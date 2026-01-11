@@ -7,6 +7,7 @@ class Habit {
   List<CheckInRecord> checkInRecords;
   String? reminderTime;
   String createdAt;
+  int iconIndex; // 新增：图标索引
 
   Habit({
     required this.id,
@@ -15,6 +16,7 @@ class Habit {
     List<CheckInRecord>? checkInRecords,
     this.reminderTime,
     String? createdAt,
+    this.iconIndex = 0, // 默认图标索引
   })  : checkInRecords = checkInRecords ?? [],
         createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
@@ -27,6 +29,7 @@ class Habit {
     'checkInRecords': checkInRecords.map((r) => r.toJson()).toList(),
     'reminderTime': reminderTime,
     'createdAt': createdAt,
+    'iconIndex': iconIndex, // 新增
   };
 
   factory Habit.fromJson(Map<String, dynamic> json) {
@@ -48,6 +51,7 @@ class Habit {
       checkInRecords: records,
       reminderTime: json['reminderTime'] as String?,
       createdAt: json['createdAt'] as String?,
+      iconIndex: (json['iconIndex'] as int?) ?? 0, // 新增
     );
   }
 }

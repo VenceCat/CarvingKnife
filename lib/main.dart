@@ -74,6 +74,126 @@ class ThemeConfig {
   ];
 }
 
+// 习惯图标配置
+class HabitIcons {
+  static const List<IconData> icons = [
+    Icons.flag_outlined,
+    Icons.star_outline,
+    Icons.favorite_outline,
+    Icons.wb_sunny_outlined,
+    Icons.bedtime_outlined,
+    Icons.water_drop_outlined,
+    Icons.fitness_center,
+    Icons.directions_run,
+    Icons.directions_walk,
+    Icons.self_improvement,
+    Icons.menu_book_outlined,
+    Icons.edit_note,
+    Icons.code,
+    Icons.translate,
+    Icons.music_note_outlined,
+    Icons.piano_outlined,
+    Icons.brush_outlined,
+    Icons.camera_alt_outlined,
+    Icons.local_florist_outlined,
+    Icons.eco_outlined,
+    Icons.restaurant_outlined,
+    Icons.free_breakfast_outlined,
+    Icons.local_cafe_outlined,
+    Icons.apple,
+    Icons.sports_gymnastics,
+    Icons.pool_outlined,
+    Icons.pedal_bike_outlined,
+    Icons.sports_soccer_outlined,
+    Icons.sports_basketball_outlined,
+    Icons.spa_outlined,
+    Icons.bathtub_outlined,
+    Icons.cleaning_services_outlined,
+    Icons.checkroom_outlined,
+    Icons.alarm_outlined,
+    Icons.timer_outlined,
+    Icons.event_outlined,
+    Icons.work_outline,
+    Icons.school_outlined,
+    Icons.psychology_outlined,
+    Icons.lightbulb_outline,
+    Icons.savings_outlined,
+    Icons.account_balance_wallet_outlined,
+    Icons.phone_disabled_outlined,
+    Icons.visibility_outlined,
+    Icons.hearing_outlined,
+    Icons.emoji_emotions_outlined,
+    Icons.volunteer_activism_outlined,
+    Icons.people_outline,
+    Icons.pets_outlined,
+    Icons.rocket_launch_outlined,
+  ];
+
+  static IconData getIcon(int index) {
+    if (index >= 0 && index < icons.length) {
+      return icons[index];
+    }
+    return icons[0];
+  }
+}
+
+// 图标选择器组件
+class IconSelector extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onSelect;
+  final Color themeColor;
+
+  const IconSelector({
+    super.key,
+    required this.selectedIndex,
+    required this.onSelect,
+    required this.themeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 6,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1,
+        ),
+        itemCount: HabitIcons.icons.length,
+        itemBuilder: (context, index) {
+          final isSelected = index == selectedIndex;
+          return GestureDetector(
+            onTap: () => onSelect(index),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isSelected ? themeColor.withValues(alpha: 0.15) : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? themeColor : Colors.grey[300]!,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Icon(
+                HabitIcons.icons[index],
+                color: isSelected ? themeColor : Colors.grey[600],
+                size: 22,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class ThemeColorOption {
   final String name;
   final Color color;
@@ -442,7 +562,8 @@ class _CheckInPageState extends State<CheckInPage> {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
-    String? errorText; // 移到外部
+    String? errorText;
+    int selectedIconIndex = 0; // 新增：选中的图标索引
 
     showModalBottomSheet(
       context: context,
@@ -485,7 +606,7 @@ class _CheckInPageState extends State<CheckInPage> {
                               color: themeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(Icons.add_task, color: themeColor, size: 22),
+                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
@@ -520,12 +641,27 @@ class _CheckInPageState extends State<CheckInPage> {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      // 图标选择
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "选择图标",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      IconSelector(
+                        selectedIndex: selectedIconIndex,
+                        themeColor: themeColor,
+                        onSelect: (index) {
+                          setModalState(() => selectedIconIndex = index);
+                        },
+                      ),
+                      const SizedBox(height: 20),
                       // 习惯名称输入框
                       TextField(
                         controller: titleController,
-                        autofocus: true,
                         onChanged: (value) {
-                          // 输入时清除错误提示
                           if (errorText != null && value.trim().isNotEmpty) {
                             errorText = null;
                             setModalState(() {});
@@ -562,7 +698,7 @@ class _CheckInPageState extends State<CheckInPage> {
                       // 描述输入框
                       TextField(
                         controller: descController,
-                        maxLines: 3,
+                        maxLines: 2,
                         maxLength: 100,
                         decoration: InputDecoration(
                           labelText: "描述（选填）",
@@ -596,6 +732,7 @@ class _CheckInPageState extends State<CheckInPage> {
                                 id: DateTime.now().toString(),
                                 title: titleController.text.trim(),
                                 description: descController.text.trim(),
+                                iconIndex: selectedIconIndex, // 新增
                               ));
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(ctx).showSnackBar(
@@ -886,6 +1023,23 @@ class _CheckInPageState extends State<CheckInPage> {
                       ),
                       child: Row(
                         children: [
+                          // 新增：习惯图标
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isTodayDone
+                                  ? themeColor.withValues(alpha: 0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              HabitIcons.getIcon(habit.iconIndex),
+                              color: isTodayDone ? themeColor : Colors.grey[500],
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -952,6 +1106,10 @@ class HabitLibraryPage extends StatelessWidget {
     final themeColor = Theme.of(context).colorScheme.primary;
     String? errorText;
 
+    // 根据模板图标找到对应的索引
+    int selectedIconIndex = HabitIcons.icons.indexOf(template['icon'] as IconData);
+    if (selectedIconIndex < 0) selectedIconIndex = 0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -993,7 +1151,7 @@ class HabitLibraryPage extends StatelessWidget {
                               color: themeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(template['icon'] as IconData, color: themeColor, size: 22),
+                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1028,10 +1186,26 @@ class HabitLibraryPage extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      // 图标选择
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "选择图标",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      IconSelector(
+                        selectedIndex: selectedIconIndex,
+                        themeColor: themeColor,
+                        onSelect: (index) {
+                          setModalState(() => selectedIconIndex = index);
+                        },
+                      ),
+                      const SizedBox(height: 20),
                       // 习惯名称输入框
                       TextField(
                         controller: titleController,
-                        autofocus: false,
                         onChanged: (value) {
                           if (errorText != null && value.trim().isNotEmpty) {
                             errorText = null;
@@ -1069,7 +1243,7 @@ class HabitLibraryPage extends StatelessWidget {
                       // 描述输入框
                       TextField(
                         controller: descController,
-                        maxLines: 3,
+                        maxLines: 2,
                         maxLength: 100,
                         decoration: InputDecoration(
                           labelText: "描述（选填）",
@@ -1103,6 +1277,7 @@ class HabitLibraryPage extends StatelessWidget {
                                 id: DateTime.now().toString(),
                                 title: titleController.text.trim(),
                                 description: descController.text.trim(),
+                                iconIndex: selectedIconIndex,
                               ));
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(ctx).showSnackBar(
@@ -3040,15 +3215,28 @@ class _DetailPageState extends State<DetailPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.flag_outlined, color: themeColor, size: 22),
-              const SizedBox(width: 10),
+              // 修改：使用习惯自己的图标
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  HabitIcons.getIcon(widget.habit.iconIndex),
+                  color: themeColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   widget.habit.title,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
               ),
-              // 新增：编辑按钮
+              // 编辑按钮
               GestureDetector(
                 onTap: () => _showEditHabitDialog(),
                 child: Container(
@@ -3117,161 +3305,183 @@ class _DetailPageState extends State<DetailPage> {
     final titleController = TextEditingController(text: widget.habit.title);
     final descController = TextEditingController(text: widget.habit.description);
     final themeColor = Theme.of(context).colorScheme.primary;
+    int selectedIconIndex = widget.habit.iconIndex;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 拖动指示条
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // 标题行
-                  Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      // 拖动指示条
                       Container(
-                        width: 44,
-                        height: 44,
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.edit_outlined, color: themeColor, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          "编辑习惯",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      // 关闭按钮
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            shape: BoxShape.circle,
+                      const SizedBox(height: 20),
+                      // 标题行
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: themeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
                           ),
-                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              "编辑习惯",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          // 关闭按钮
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // 图标选择
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "选择图标",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      IconSelector(
+                        selectedIndex: selectedIconIndex,
+                        themeColor: themeColor,
+                        onSelect: (index) {
+                          setModalState(() => selectedIconIndex = index);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      // 习惯名称输入框
+                      TextField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: "习惯名称",
+                          hintText: "例如：早起",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // 描述输入框
+                      TextField(
+                        controller: descController,
+                        maxLines: 2,
+                        maxLength: 100,
+                        decoration: InputDecoration(
+                          labelText: "描述（选填）",
+                          hintText: "例如：每天6点前起床",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          counterStyle: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 保存按钮
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (titleController.text.trim().isNotEmpty) {
+                              setState(() {
+                                widget.habit.title = titleController.text.trim();
+                                widget.habit.description = descController.text.trim();
+                                widget.habit.iconIndex = selectedIconIndex;
+                              });
+                              widget.onSave();
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("已保存修改"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(
+                                  content: Text("习惯名称不能为空"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          child: const Text("保存修改", style: TextStyle(fontSize: 16)),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  // 习惯名称输入框
-                  TextField(
-                    controller: titleController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: "习惯名称",
-                      hintText: "例如：早起",
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: themeColor, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 描述输入框
-                  TextField(
-                    controller: descController,
-                    maxLines: 3,
-                    maxLength: 100,
-                    decoration: InputDecoration(
-                      labelText: "描述（选填）",
-                      hintText: "例如：每天6点前起床",
-                      labelStyle: TextStyle(color: Colors.grey[600]),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: themeColor, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.all(16),
-                      counterStyle: TextStyle(color: Colors.grey[400]),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // 保存按钮
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (titleController.text.trim().isNotEmpty) {
-                          setState(() {
-                            widget.habit.title = titleController.text.trim();
-                            widget.habit.description = descController.text.trim();
-                          });
-                          widget.onSave();
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("已保存修改"),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("习惯名称不能为空"),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: themeColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                      ),
-                      child: const Text("保存修改", style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

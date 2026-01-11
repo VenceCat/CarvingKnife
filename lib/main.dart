@@ -74,71 +74,484 @@ class ThemeConfig {
   ];
 }
 
-// 习惯图标配置
+// 习惯图标配置 - 分类版本
 class HabitIcons {
-  static const List<IconData> icons = [
-    Icons.flag_outlined,
-    Icons.star_outline,
-    Icons.favorite_outline,
-    Icons.wb_sunny_outlined,
-    Icons.bedtime_outlined,
-    Icons.water_drop_outlined,
-    Icons.fitness_center,
-    Icons.directions_run,
-    Icons.directions_walk,
-    Icons.self_improvement,
-    Icons.menu_book_outlined,
-    Icons.edit_note,
-    Icons.code,
-    Icons.translate,
-    Icons.music_note_outlined,
-    Icons.piano_outlined,
-    Icons.brush_outlined,
-    Icons.camera_alt_outlined,
-    Icons.local_florist_outlined,
-    Icons.eco_outlined,
-    Icons.restaurant_outlined,
-    Icons.free_breakfast_outlined,
-    Icons.local_cafe_outlined,
-    Icons.apple,
-    Icons.sports_gymnastics,
-    Icons.pool_outlined,
-    Icons.pedal_bike_outlined,
-    Icons.sports_soccer_outlined,
-    Icons.sports_basketball_outlined,
-    Icons.spa_outlined,
-    Icons.bathtub_outlined,
-    Icons.cleaning_services_outlined,
-    Icons.checkroom_outlined,
-    Icons.alarm_outlined,
-    Icons.timer_outlined,
-    Icons.event_outlined,
-    Icons.work_outline,
-    Icons.school_outlined,
-    Icons.psychology_outlined,
-    Icons.lightbulb_outline,
-    Icons.savings_outlined,
-    Icons.account_balance_wallet_outlined,
-    Icons.phone_disabled_outlined,
-    Icons.visibility_outlined,
-    Icons.hearing_outlined,
-    Icons.emoji_emotions_outlined,
-    Icons.volunteer_activism_outlined,
-    Icons.people_outline,
-    Icons.pets_outlined,
-    Icons.rocket_launch_outlined,
+  // 图标分类数据
+  static const List<IconCategory> categories = [
+    IconCategory(
+      name: '常用',
+      icon: Icons.star_outline,
+      icons: [
+        Icons.flag_outlined,
+        Icons.star_outline,
+        Icons.favorite_outline,
+        Icons.bookmark_outline,
+        Icons.push_pin_outlined,
+        Icons.lightbulb_outline,
+        Icons.check_circle_outline,
+        Icons.radio_button_checked,
+        Icons.task_alt_outlined,
+        Icons.verified_outlined,
+        Icons.thumb_up_outlined,
+        Icons.grade_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '时间',
+      icon: Icons.schedule_outlined,
+      icons: [
+        Icons.wb_sunny_outlined,
+        Icons.bedtime_outlined,
+        Icons.alarm_outlined,
+        Icons.timer_outlined,
+        Icons.schedule_outlined,
+        Icons.nightlight_outlined,
+        Icons.wb_twilight_outlined,
+        Icons.hourglass_empty_outlined,
+        Icons.update_outlined,
+        Icons.history_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '运动',
+      icon: Icons.fitness_center,
+      icons: [
+        Icons.fitness_center,
+        Icons.directions_run,
+        Icons.directions_walk,
+        Icons.sports_gymnastics,
+        Icons.pool_outlined,
+        Icons.pedal_bike_outlined,
+        Icons.skateboarding_outlined,
+        Icons.surfing_outlined,
+        Icons.hiking_outlined,
+        Icons.sports_martial_arts,
+        Icons.sports_soccer_outlined,
+        Icons.sports_basketball_outlined,
+        Icons.sports_tennis_outlined,
+        Icons.sports_golf_outlined,
+        Icons.sports_baseball_outlined,
+        Icons.snowboarding_outlined,
+        Icons.downhill_skiing_outlined,
+        Icons.rowing_outlined,
+        Icons.kayaking_outlined,
+        Icons.sports_handball_outlined,
+        Icons.sports_volleyball_outlined,
+        Icons.sports_cricket_outlined,
+        Icons.sports_rugby_outlined,
+        Icons.sports_kabaddi_outlined,
+        Icons.sports_mma_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '饮食',
+      icon: Icons.restaurant_outlined,
+      icons: [
+        Icons.water_drop_outlined,
+        Icons.local_drink_outlined,
+        Icons.coffee_outlined,
+        Icons.local_cafe_outlined,
+        Icons.free_breakfast_outlined,
+        Icons.wine_bar_outlined,
+        Icons.no_drinks_outlined,
+        Icons.restaurant_outlined,
+        Icons.apple,
+        Icons.egg_outlined,
+        Icons.rice_bowl_outlined,
+        Icons.ramen_dining_outlined,
+        Icons.lunch_dining_outlined,
+        Icons.dinner_dining_outlined,
+        Icons.bakery_dining_outlined,
+        Icons.icecream_outlined,
+        Icons.cookie_outlined,
+        Icons.cake_outlined,
+        Icons.local_pizza_outlined,
+        Icons.set_meal_outlined,
+        Icons.no_food_outlined,
+        Icons.no_meals_outlined,
+        Icons.fastfood_outlined,
+        Icons.kebab_dining_outlined,
+        Icons.soup_kitchen_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '学习',
+      icon: Icons.menu_book_outlined,
+      icons: [
+        Icons.menu_book_outlined,
+        Icons.auto_stories_outlined,
+        Icons.book_outlined,
+        Icons.library_books_outlined,
+        Icons.article_outlined,
+        Icons.edit_note,
+        Icons.draw_outlined,
+        Icons.create_outlined,
+        Icons.edit_outlined,
+        Icons.history_edu_outlined,
+        Icons.school_outlined,
+        Icons.science_outlined,
+        Icons.calculate_outlined,
+        Icons.functions_outlined,
+        Icons.biotech_outlined,
+        Icons.psychology_outlined,
+        Icons.architecture_outlined,
+        Icons.precision_manufacturing_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '语言',
+      icon: Icons.translate,
+      icons: [
+        Icons.translate,
+        Icons.language_outlined,
+        Icons.abc_outlined,
+        Icons.spellcheck_outlined,
+        Icons.record_voice_over_outlined,
+        Icons.mic_outlined,
+        Icons.headphones_outlined,
+        Icons.hearing_outlined,
+        Icons.interpreter_mode_outlined,
+        Icons.subtitles_outlined,
+        Icons.closed_caption_outlined,
+        Icons.speaker_notes_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '工作',
+      icon: Icons.work_outline,
+      icons: [
+        Icons.code,
+        Icons.terminal_outlined,
+        Icons.laptop_outlined,
+        Icons.computer_outlined,
+        Icons.work_outline,
+        Icons.business_center_outlined,
+        Icons.task_alt_outlined,
+        Icons.checklist_outlined,
+        Icons.fact_check_outlined,
+        Icons.assignment_outlined,
+        Icons.pending_actions_outlined,
+        Icons.event_outlined,
+        Icons.event_available_outlined,
+        Icons.inbox_outlined,
+        Icons.mail_outlined,
+        Icons.send_outlined,
+        Icons.analytics_outlined,
+        Icons.insights_outlined,
+        Icons.trending_up_outlined,
+        Icons.assessment_outlined,
+        Icons.leaderboard_outlined,
+        Icons.bar_chart_outlined,
+        Icons.show_chart_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '艺术',
+      icon: Icons.palette_outlined,
+      icons: [
+        Icons.music_note_outlined,
+        Icons.audiotrack_outlined,
+        Icons.piano_outlined,
+        Icons.album_outlined,
+        Icons.library_music_outlined,
+        Icons.queue_music_outlined,
+        Icons.brush_outlined,
+        Icons.palette_outlined,
+        Icons.color_lens_outlined,
+        Icons.format_paint_outlined,
+        Icons.gesture_outlined,
+        Icons.auto_fix_high_outlined,
+        Icons.photo_filter_outlined,
+        Icons.filter_vintage_outlined,
+        Icons.theater_comedy_outlined,
+        Icons.masks_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '摄影',
+      icon: Icons.camera_alt_outlined,
+      icons: [
+        Icons.camera_alt_outlined,
+        Icons.photo_camera_outlined,
+        Icons.videocam_outlined,
+        Icons.movie_outlined,
+        Icons.theaters_outlined,
+        Icons.tv_outlined,
+        Icons.podcasts_outlined,
+        Icons.live_tv_outlined,
+        Icons.photo_outlined,
+        Icons.image_outlined,
+        Icons.photo_library_outlined,
+        Icons.video_library_outlined,
+        Icons.slideshow_outlined,
+        Icons.camera_roll_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '心灵',
+      icon: Icons.self_improvement,
+      icons: [
+        Icons.self_improvement,
+        Icons.psychology_outlined,
+        Icons.spa_outlined,
+        Icons.hot_tub_outlined,
+        Icons.air_outlined,
+        Icons.mood_outlined,
+        Icons.sentiment_satisfied_outlined,
+        Icons.emoji_emotions_outlined,
+        Icons.emoji_nature_outlined,
+        Icons.volunteer_activism_outlined,
+        Icons.diversity_1_outlined,
+        Icons.handshake_outlined,
+        Icons.favorite_outline,
+        Icons.healing_outlined,
+        Icons.church_outlined,
+        Icons.temple_buddhist_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '生活',
+      icon: Icons.home_outlined,
+      icons: [
+        Icons.cleaning_services_outlined,
+        Icons.dry_cleaning_outlined,
+        Icons.iron_outlined,
+        Icons.checkroom_outlined,
+        Icons.bathtub_outlined,
+        Icons.shower_outlined,
+        Icons.wash_outlined,
+        Icons.soap_outlined,
+        Icons.sanitizer_outlined,
+        Icons.face_retouching_natural_outlined,
+        Icons.face_outlined,
+        Icons.home_outlined,
+        Icons.bed_outlined,
+        Icons.chair_outlined,
+        Icons.weekend_outlined,
+        Icons.kitchen_outlined,
+        Icons.bathroom_outlined,
+        Icons.living_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '自然',
+      icon: Icons.eco_outlined,
+      icons: [
+        Icons.local_florist_outlined,
+        Icons.grass_outlined,
+        Icons.yard_outlined,
+        Icons.eco_outlined,
+        Icons.park_outlined,
+        Icons.forest_outlined,
+        Icons.pets_outlined,
+        Icons.cruelty_free_outlined,
+        Icons.bug_report_outlined,
+        Icons.emoji_nature_outlined,
+        Icons.waves_outlined,
+        Icons.terrain_outlined,
+        Icons.landscape_outlined,
+        Icons.water_outlined,
+        Icons.cloud_outlined,
+        Icons.thunderstorm_outlined,
+        Icons.ac_unit_outlined,
+        Icons.wb_cloudy_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '社交',
+      icon: Icons.people_outline,
+      icons: [
+        Icons.people_outline,
+        Icons.person_outline,
+        Icons.groups_outlined,
+        Icons.family_restroom_outlined,
+        Icons.elderly_outlined,
+        Icons.child_care_outlined,
+        Icons.call_outlined,
+        Icons.video_call_outlined,
+        Icons.chat_outlined,
+        Icons.forum_outlined,
+        Icons.campaign_outlined,
+        Icons.connect_without_contact_outlined,
+        Icons.share_outlined,
+        Icons.group_add_outlined,
+        Icons.person_add_outlined,
+        Icons.waving_hand_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '出行',
+      icon: Icons.explore_outlined,
+      icons: [
+        Icons.directions_car_outlined,
+        Icons.directions_bus_outlined,
+        Icons.train_outlined,
+        Icons.flight_outlined,
+        Icons.flight_takeoff_outlined,
+        Icons.two_wheeler_outlined,
+        Icons.electric_scooter_outlined,
+        Icons.sailing_outlined,
+        Icons.explore_outlined,
+        Icons.map_outlined,
+        Icons.tour_outlined,
+        Icons.luggage_outlined,
+        Icons.directions_bike_outlined,
+        Icons.directions_subway_outlined,
+        Icons.local_taxi_outlined,
+        Icons.airport_shuttle_outlined,
+        Icons.directions_boat_outlined,
+        Icons.rocket_launch_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '健康',
+      icon: Icons.monitor_heart_outlined,
+      icons: [
+        Icons.medical_services_outlined,
+        Icons.medication_outlined,
+        Icons.vaccines_outlined,
+        Icons.healing_outlined,
+        Icons.health_and_safety_outlined,
+        Icons.monitor_heart_outlined,
+        Icons.bloodtype_outlined,
+        Icons.visibility_outlined,
+        Icons.hearing_outlined,
+        Icons.accessibility_new_outlined,
+        Icons.monitor_weight_outlined,
+        Icons.sick_outlined,
+        Icons.coronavirus_outlined,
+        Icons.masks_outlined,
+        Icons.personal_injury_outlined,
+        Icons.emergency_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '财务',
+      icon: Icons.savings_outlined,
+      icons: [
+        Icons.savings_outlined,
+        Icons.account_balance_wallet_outlined,
+        Icons.payments_outlined,
+        Icons.credit_card_outlined,
+        Icons.attach_money_outlined,
+        Icons.money_off_outlined,
+        Icons.receipt_long_outlined,
+        Icons.account_balance_outlined,
+        Icons.currency_exchange_outlined,
+        Icons.price_check_outlined,
+        Icons.request_quote_outlined,
+        Icons.point_of_sale_outlined,
+        Icons.monetization_on_outlined,
+        Icons.paid_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '数码',
+      icon: Icons.devices_outlined,
+      icons: [
+        Icons.phone_android_outlined,
+        Icons.phone_iphone_outlined,
+        Icons.phone_disabled_outlined,
+        Icons.smartphone_outlined,
+        Icons.tablet_outlined,
+        Icons.watch_outlined,
+        Icons.devices_outlined,
+        Icons.battery_charging_full_outlined,
+        Icons.power_outlined,
+        Icons.wifi_off_outlined,
+        Icons.bluetooth_outlined,
+        Icons.screen_lock_portrait_outlined,
+        Icons.do_not_disturb_on_outlined,
+        Icons.data_saver_on_outlined,
+        Icons.signal_cellular_alt_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '娱乐',
+      icon: Icons.sports_esports_outlined,
+      icons: [
+        Icons.sports_esports_outlined,
+        Icons.games_outlined,
+        Icons.casino_outlined,
+        Icons.extension_outlined,
+        Icons.toys_outlined,
+        Icons.attractions_outlined,
+        Icons.celebration_outlined,
+        Icons.party_mode_outlined,
+        Icons.nightlife_outlined,
+        Icons.local_bar_outlined,
+        Icons.music_video_outlined,
+        Icons.stadium_outlined,
+        Icons.festival_outlined,
+        Icons.event_seat_outlined,
+        Icons.confirmation_number_outlined,
+      ],
+    ),
+    IconCategory(
+      name: '成就',
+      icon: Icons.emoji_events_outlined,
+      icons: [
+        Icons.emoji_events_outlined,
+        Icons.military_tech_outlined,
+        Icons.diamond_outlined,
+        Icons.bolt_outlined,
+        Icons.rocket_launch_outlined,
+        Icons.public_outlined,
+        Icons.verified_outlined,
+        Icons.workspace_premium_outlined,
+        Icons.stars_outlined,
+        Icons.auto_awesome_outlined,
+        Icons.flare_outlined,
+        Icons.whatshot_outlined,
+        Icons.local_fire_department_outlined,
+        Icons.shield_outlined,
+        Icons.security_outlined,
+        Icons.token_outlined,
+      ],
+    ),
   ];
 
+  // 获取所有图标的平铺列表（用于索引存储）
+  static List<IconData> get allIcons {
+    final List<IconData> icons = [];
+    for (final category in categories) {
+      for (final icon in category.icons) {
+        if (!icons.contains(icon)) {
+          icons.add(icon);
+        }
+      }
+    }
+    return icons;
+  }
+
   static IconData getIcon(int index) {
+    final icons = allIcons;
     if (index >= 0 && index < icons.length) {
       return icons[index];
     }
-    return icons[0];
+    return Icons.flag_outlined;
+  }
+
+  static int getIconIndex(IconData icon) {
+    return allIcons.indexOf(icon);
   }
 }
 
-// 图标选择器组件
-class IconSelector extends StatelessWidget {
+// 图标分类数据类
+class IconCategory {
+  final String name;
+  final IconData icon;
+  final List<IconData> icons;
+
+  const IconCategory({
+    required this.name,
+    required this.icon,
+    required this.icons,
+  });
+}
+
+// 分类图标选择器组件
+class IconSelector extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onSelect;
   final Color themeColor;
@@ -151,44 +564,144 @@ class IconSelector extends StatelessWidget {
   });
 
   @override
+  State<IconSelector> createState() => _IconSelectorState();
+}
+
+class _IconSelectorState extends State<IconSelector> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late IconData _selectedIcon;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: HabitIcons.categories.length,
+      vsync: this,
+    );
+    _selectedIcon = HabitIcons.getIcon(widget.selectedIndex);
+
+    // 定位到选中图标所在的分类
+    _scrollToSelectedCategory();
+  }
+
+  void _scrollToSelectedCategory() {
+    for (int i = 0; i < HabitIcons.categories.length; i++) {
+      if (HabitIcons.categories[i].icons.contains(_selectedIcon)) {
+        _tabController.animateTo(i);
+        break;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
-      height: 180,
+      height: 185,
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(12),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 6,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1,
-        ),
-        itemCount: HabitIcons.icons.length,
-        itemBuilder: (context, index) {
-          final isSelected = index == selectedIndex;
-          return GestureDetector(
-            onTap: () => onSelect(index),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isSelected ? themeColor.withValues(alpha: 0.15) : Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected ? themeColor : Colors.grey[300]!,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: Icon(
-                HabitIcons.icons[index],
-                color: isSelected ? themeColor : Colors.grey[600],
-                size: 22,
-              ),
+      child: Column(
+        children: [
+          // 分类标签栏
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
             ),
-          );
-        },
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: widget.themeColor,
+              unselectedLabelColor: Colors.grey[500],
+              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
+              indicatorColor: widget.themeColor,
+              indicatorWeight: 2,
+              indicatorSize: TabBarIndicatorSize.label,
+              dividerColor: Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+              tabs: HabitIcons.categories.map((category) {
+                return Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(category.icon, size: 16),
+                      const SizedBox(width: 4),
+                      Text(category.name),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          // 图标网格
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: HabitIcons.categories.map((category) {
+                return GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: category.icons.length,
+                  itemBuilder: (context, index) {
+                    final icon = category.icons[index];
+                    final isSelected = icon == _selectedIcon;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedIcon = icon);
+                        final globalIndex = HabitIcons.getIconIndex(icon);
+                        widget.onSelect(globalIndex);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? widget.themeColor.withValues(alpha: 0.15)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? widget.themeColor : Colors.grey[300]!,
+                            width: isSelected ? 2 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                            BoxShadow(
+                              color: widget.themeColor.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                              : null,
+                        ),
+                        child: Icon(
+                          icon,
+                          color: isSelected ? widget.themeColor : Colors.grey[600],
+                          size: 22,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1107,7 +1620,7 @@ class HabitLibraryPage extends StatelessWidget {
     String? errorText;
 
     // 根据模板图标找到对应的索引
-    int selectedIconIndex = HabitIcons.icons.indexOf(template['icon'] as IconData);
+    int selectedIconIndex = HabitIcons.allIcons.indexOf(template['icon'] as IconData);
     if (selectedIconIndex < 0) selectedIconIndex = 0;
 
     showModalBottomSheet(
@@ -2795,37 +3308,129 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     );
   }
 
-  // 删除提醒确认
+  // 删除提醒确认 - 优化后的样式
   void _showDeleteReminderDialog(Habit habit) {
-    showDialog(
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("删除提醒", style: TextStyle(fontSize: 16)),
-        content: Text(
-          "确定要删除「${habit.title}」的提醒吗？\n\n注意：日历中的事件需要手动删除",
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("取消", style: TextStyle(color: Colors.grey[500])),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() => habit.reminderTime = null);
-              widget.onSave();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("已删除提醒"),
-                  duration: Duration(seconds: 1),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              );
-            },
-            child: const Text("删除", style: TextStyle(color: Colors.red)),
+                const SizedBox(height: 24),
+                // 警告图标
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.notifications_off_outlined, color: Colors.red[400], size: 36),
+                ),
+                const SizedBox(height: 20),
+                // 标题
+                const Text(
+                  "删除提醒",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "确定要删除「${habit.title}」的提醒吗？",
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                // 提示信息
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "日历中的事件需要手动删除",
+                          style: TextStyle(color: Colors.orange[800], fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 按钮区域
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("取消", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() => habit.reminderTime = null);
+                          widget.onSave();
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("已删除提醒"),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("确认删除", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

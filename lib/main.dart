@@ -319,84 +319,121 @@ class _CheckInPageState extends State<CheckInPage> {
       habit.checkInRecords.add(record);
       widget.onSave();
 
-      // 弹出鼓励语对话框
+      // 弹出打卡对话框
       _showEncouragementDialog(habit, record);
     }
   }
 
-  // 新增：鼓励语对话框
+  // 打卡对话框 - 优化后的样式
   void _showEncouragementDialog(Habit habit, CheckInRecord record) {
     final noteController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.celebration, color: themeColor, size: 30),
-            ),
-            const SizedBox(height: 12),
-            const Text("打卡成功！", style: TextStyle(fontSize: 18)),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "「${habit.title}」已完成",
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: noteController,
-              maxLines: 3,
-              maxLength: 100,
-              decoration: InputDecoration(
-                hintText: "写点什么记录一下吧...",
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                filled: true,
-                fillColor: Colors.grey[50],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.all(16),
-                counterStyle: TextStyle(color: Colors.grey[400]),
-              ),
-            ),
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              if (noteController.text.trim().isNotEmpty) {
-                record.note = noteController.text.trim();
-                widget.onSave();
-              }
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            child: const Text("完成"),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-        ],
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 拖动指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // 成功图标
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: themeColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.celebration, color: themeColor, size: 36),
+                  ),
+                  const SizedBox(height: 16),
+                  // 标题
+                  const Text(
+                    "打卡成功！",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "「${habit.title}」已完成",
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  // 备注输入框
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    maxLength: 100,
+                    decoration: InputDecoration(
+                      hintText: "写点什么记录一下吧...",
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: themeColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: TextStyle(color: Colors.grey[400]),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 完成按钮
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (noteController.text.trim().isNotEmpty) {
+                          record.note = noteController.text.trim();
+                          widget.onSave();
+                        }
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.check, size: 20),
+                      label: const Text("完成", style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -405,82 +442,379 @@ class _CheckInPageState extends State<CheckInPage> {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
+    String? errorText; // 移到外部
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("新计划", style: TextStyle(fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: "习惯名称",
-                hintText: "例如：早起",
-                isDense: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 拖动指示条
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 标题行
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: themeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.add_task, color: themeColor, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "新计划",
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  "开始一个新的好习惯",
+                                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 关闭按钮
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // 习惯名称输入框
+                      TextField(
+                        controller: titleController,
+                        autofocus: true,
+                        onChanged: (value) {
+                          // 输入时清除错误提示
+                          if (errorText != null && value.trim().isNotEmpty) {
+                            errorText = null;
+                            setModalState(() {});
+                          }
+                        },
+                        decoration: InputDecoration(
+                          labelText: "习惯名称",
+                          hintText: "例如：早起",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                          ),
+                          errorText: errorText,
+                          errorStyle: TextStyle(color: Colors.red[400]),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // 描述输入框
+                      TextField(
+                        controller: descController,
+                        maxLines: 3,
+                        maxLength: 100,
+                        decoration: InputDecoration(
+                          labelText: "描述（选填）",
+                          hintText: "例如：每天6点前起床",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          counterStyle: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 确认按钮
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (titleController.text.trim().isEmpty) {
+                              errorText = "习惯名称不能为空";
+                              setModalState(() {});
+                            } else {
+                              widget.onAdd(Habit(
+                                id: DateTime.now().toString(),
+                                title: titleController.text.trim(),
+                                description: descController.text.trim(),
+                              ));
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text("已添加「${titleController.text.trim()}」"),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.check, size: 20),
+                          label: const Text("创建习惯", style: TextStyle(fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(
-                labelText: "描述（选填）",
-                hintText: "例如：每天6点前起床",
-                isDense: true,
-              ),
-              maxLines: null,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("取消", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              if (titleController.text.isNotEmpty) {
-                widget.onAdd(Habit(
-                  id: DateTime.now().toString(),
-                  title: titleController.text,
-                  description: descController.text,
-                ));
-              }
-              Navigator.pop(ctx);
-            },
-            child: Text("确认", style: TextStyle(color: themeColor)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   void _deleteHabit(Habit habit) {
-    showDialog(
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        contentPadding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 12),
-        actionsPadding: const EdgeInsets.only(bottom: 8),
-        actionsAlignment: MainAxisAlignment.center,
-        content: const Text(
-          "放弃这个习惯吗？",
-          textAlign: TextAlign.center,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("保留"),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 标题行
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.delete_outline, color: Colors.red[400], size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "删除习惯",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "确定要删除这个习惯吗？",
+                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 关闭按钮
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 习惯信息卡片
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.flag_outlined, color: themeColor, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              habit.title,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "已打卡 ${habit.checkInRecords.length} 次",
+                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 警告提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.red[400], size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "删除后所有打卡记录将一并清除，此操作不可撤销！",
+                          style: TextStyle(color: Colors.red[700], fontSize: 13, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 按钮区域
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("保留", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          widget.onDelete(habit);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text("已删除「${habit.title}」"),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("删除", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              widget.onDelete(habit);
-              Navigator.pop(ctx);
-            },
-            child: const Text("放弃", style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -616,64 +950,189 @@ class HabitLibraryPage extends StatelessWidget {
     final titleController = TextEditingController(text: template['title'] as String);
     final descController = TextEditingController(text: template['desc'] as String);
     final themeColor = Theme.of(context).colorScheme.primary;
+    String? errorText;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(template['icon'] as IconData, color: themeColor, size: 22),
-            const SizedBox(width: 10),
-            const Text("添加习惯", style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: "习惯名称",
-                isDense: true,
-              ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(
-                labelText: "描述",
-                hintText: "可以修改描述内容",
-                isDense: true,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              maxLines: null,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("取消", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              if (titleController.text.isNotEmpty) {
-                onAddHabit(Habit(
-                  id: DateTime.now().toString(),
-                  title: titleController.text,
-                  description: descController.text,
-                ));
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("已添加「${titleController.text}」"),
-                    duration: const Duration(seconds: 1),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 拖动指示条
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 标题行
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: themeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(template['icon'] as IconData, color: themeColor, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "添加习惯",
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "从习惯库添加到我的习惯",
+                                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 关闭按钮
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // 习惯名称输入框
+                      TextField(
+                        controller: titleController,
+                        autofocus: false,
+                        onChanged: (value) {
+                          if (errorText != null && value.trim().isNotEmpty) {
+                            errorText = null;
+                            setModalState(() {});
+                          }
+                        },
+                        decoration: InputDecoration(
+                          labelText: "习惯名称",
+                          hintText: "例如：早起",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                          ),
+                          errorText: errorText,
+                          errorStyle: TextStyle(color: Colors.red[400]),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // 描述输入框
+                      TextField(
+                        controller: descController,
+                        maxLines: 3,
+                        maxLength: 100,
+                        decoration: InputDecoration(
+                          labelText: "描述（选填）",
+                          hintText: "可以修改描述内容",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          counterStyle: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // 确认按钮
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (titleController.text.trim().isEmpty) {
+                              errorText = "习惯名称不能为空";
+                              setModalState(() {});
+                            } else {
+                              onAddHabit(Habit(
+                                id: DateTime.now().toString(),
+                                title: titleController.text.trim(),
+                                description: descController.text.trim(),
+                              ));
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text("已添加「${titleController.text.trim()}」"),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.add, size: 20),
+                          label: const Text("添加到我的习惯", style: TextStyle(fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }
-            },
-            child: Text("添加", style: TextStyle(color: themeColor)),
-          ),
-        ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1011,40 +1470,7 @@ class _BackupPageState extends State<BackupPage> {
       await file.writeAsString(jsonStr);
 
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green[400], size: 24),
-                const SizedBox(width: 10),
-                const Text("导出成功", style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("文件已保存到：", style: TextStyle(color: Colors.grey[600])),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(file.path, style: const TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("确定"),
-              ),
-            ],
-          ),
-        );
+        _showExportSuccessDialog(file.path);
       }
     } catch (e) {
       if (mounted) {
@@ -1055,6 +1481,113 @@ class _BackupPageState extends State<BackupPage> {
     } finally {
       setState(() => _isExporting = false);
     }
+  }
+
+// 新增：导出成功弹窗
+  void _showExportSuccessDialog(String filePath) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 成功图标
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 40),
+                ),
+                const SizedBox(height: 16),
+                // 标题
+                const Text(
+                  "导出成功",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "备份文件已保存到本地",
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                // 文件路径
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.folder_outlined, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            "文件位置",
+                            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        filePath,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 确认按钮
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                    ),
+                    child: const Text("我知道了", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _shareBackup() async {
@@ -1112,61 +1645,7 @@ class _BackupPageState extends State<BackupPage> {
             ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(data['backupTime']))
             : '未知';
 
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text("确认恢复", style: TextStyle(fontSize: 16)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("备份时间：$backupTime"),
-                const SizedBox(height: 8),
-                Text("习惯数量：${habits.length} 个"),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "恢复将覆盖当前所有数据！",
-                          style: TextStyle(color: Colors.orange[700], fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("取消", style: TextStyle(color: Colors.grey)),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  widget.onRestore(habits);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("已恢复 ${habits.length} 个习惯"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                child: const Text("确认恢复", style: TextStyle(color: Colors.orange)),
-              ),
-            ],
-          ),
-        );
+        _showImportConfirmDialog(habits, backupTime);
       }
     } catch (e) {
       if (mounted) {
@@ -1177,6 +1656,265 @@ class _BackupPageState extends State<BackupPage> {
     } finally {
       setState(() => _isImporting = false);
     }
+  }
+
+// 新增：导入确认弹窗
+  void _showImportConfirmDialog(List<Habit> habits, String backupTime) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 标题行
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.restore, color: Colors.orange, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "确认恢复数据",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "备份于 $backupTime",
+                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 关闭按钮
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 备份信息卡片
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem("习惯数量", "${habits.length} 个", themeColor),
+                      Container(width: 1, height: 40, color: themeColor.withValues(alpha: 0.2)),
+                      _buildStatItem("打卡记录", "$totalCheckIns 次", themeColor),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 警告提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "恢复将覆盖当前所有数据，此操作不可撤销！",
+                          style: TextStyle(color: Colors.orange[800], fontSize: 13, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 按钮区域
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("取消", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          widget.onRestore(habits);
+                          _showRestoreSuccessDialog(habits.length);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("确认恢复", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// 新增：恢复成功弹窗
+  void _showRestoreSuccessDialog(int count) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 成功图标
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 40),
+                ),
+                const SizedBox(height: 16),
+                // 标题
+                const Text(
+                  "恢复成功",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "已恢复 $count 个习惯",
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+                // 确认按钮
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                    ),
+                    child: const Text("我知道了", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// 辅助方法：构建统计项
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: color),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+        ),
+      ],
+    );
   }
 
   @override
@@ -2310,6 +3048,18 @@ class _DetailPageState extends State<DetailPage> {
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
               ),
+              // 新增：编辑按钮
+              GestureDetector(
+                onTap: () => _showEditHabitDialog(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.edit_outlined, size: 18, color: themeColor),
+                ),
+              ),
             ],
           ),
           if (widget.habit.description.isNotEmpty) ...[
@@ -2358,6 +3108,170 @@ class _DetailPageState extends State<DetailPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+// 新增：编辑习惯对话框
+  void _showEditHabitDialog() {
+    final titleController = TextEditingController(text: widget.habit.title);
+    final descController = TextEditingController(text: widget.habit.description);
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 拖动指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 标题行
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.edit_outlined, color: themeColor, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          "编辑习惯",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      // 关闭按钮
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // 习惯名称输入框
+                  TextField(
+                    controller: titleController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: "习惯名称",
+                      hintText: "例如：早起",
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: themeColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 描述输入框
+                  TextField(
+                    controller: descController,
+                    maxLines: 3,
+                    maxLength: 100,
+                    decoration: InputDecoration(
+                      labelText: "描述（选填）",
+                      hintText: "例如：每天6点前起床",
+                      labelStyle: TextStyle(color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: themeColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: TextStyle(color: Colors.grey[400]),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 保存按钮
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (titleController.text.trim().isNotEmpty) {
+                          setState(() {
+                            widget.habit.title = titleController.text.trim();
+                            widget.habit.description = descController.text.trim();
+                          });
+                          widget.onSave();
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("已保存修改"),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("习惯名称不能为空"),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: const Text("保存修改", style: TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -3102,61 +4016,206 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 编辑鼓励语
+  // 编辑备注 - 优化后的样式
   void _editNote(CheckInRecord record) {
-    final noteController = TextEditingController(text: record.note ?? '');
-    final themeColor = Theme.of(context).colorScheme.primary;
+    // 处理备注内容，保留补卡标记但只编辑用户备注部分
+    String originalNote = record.note ?? '';
+    String makeUpPrefix = '';
+    String userNote = originalNote;
 
-    showDialog(
+    // 检查是否有补卡标记
+    final regex = RegExp(r'(\[补卡于.+?\])\s*');
+    final match = regex.firstMatch(originalNote);
+    if (match != null) {
+      makeUpPrefix = match.group(1)!;
+      userNote = originalNote.replaceAll(regex, '').trim();
+    }
+
+    final noteController = TextEditingController(text: userNote);
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final dateTime = DateTime.parse(record.time);
+    final dateStr = DateFormat('MM月dd日 HH:mm').format(dateTime);
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("编辑备注", style: TextStyle(fontSize: 16)),
-        content: TextField(
-          controller: noteController,
-          maxLines: 3,
-          maxLength: 100,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: "写点什么记录一下吧...",
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 拖动指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 标题行
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.edit_note, color: themeColor, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "编辑备注",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              dateStr,
+                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 关闭按钮
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // 备注输入框
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    maxLength: 100,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: "写点什么记录一下吧...",
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: themeColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: TextStyle(color: Colors.grey[400]),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 按钮区域
+                  Row(
+                    children: [
+                      // 删除按钮（如果有备注内容才显示）
+                      if (userNote.isNotEmpty)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              // 如果有补卡标记，只保留标记
+                              if (makeUpPrefix.isNotEmpty) {
+                                record.note = makeUpPrefix;
+                              } else {
+                                record.note = null;
+                              }
+                              widget.onSave();
+                              setState(() {});
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("已删除备注"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red[400],
+                              side: BorderSide(color: Colors.red[300]!),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text("删除备注", style: TextStyle(fontSize: 15)),
+                          ),
+                        ),
+                      if (userNote.isNotEmpty) const SizedBox(width: 12),
+                      // 保存按钮
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            String newNote = noteController.text.trim();
+
+                            // 如果有补卡标记，需要保留
+                            if (makeUpPrefix.isNotEmpty) {
+                              if (newNote.isNotEmpty) {
+                                record.note = '$makeUpPrefix $newNote';
+                              } else {
+                                record.note = makeUpPrefix;
+                              }
+                            } else {
+                              record.note = newNote.isNotEmpty ? newNote : null;
+                            }
+
+                            widget.onSave();
+                            setState(() {});
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("已保存备注"),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          child: const Text("保存备注", style: TextStyle(fontSize: 15)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            contentPadding: const EdgeInsets.all(16),
           ),
         ),
-        actions: [
-          if (record.note != null && record.note!.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                record.note = null;
-                widget.onSave();
-                setState(() {});
-                Navigator.pop(ctx);
-              },
-              child: const Text("删除", style: TextStyle(color: Colors.red)),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("取消", style: TextStyle(color: Colors.grey[400])),
-          ),
-          TextButton(
-            onPressed: () {
-              if (noteController.text.trim().isNotEmpty) {
-                record.note = noteController.text.trim();
-              } else {
-                record.note = null;
-              }
-              widget.onSave();
-              setState(() {});
-              Navigator.pop(ctx);
-            },
-            child: Text("保存", style: TextStyle(color: themeColor)),
-          ),
-        ],
       ),
     );
   }

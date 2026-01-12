@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
@@ -17,14 +18,30 @@ import java.util.Locale
 
 class HabitWidgetProvider : AppWidgetProvider() {
 
+    companion object {
+        private const val SIZE_2X2 = 146
+        private const val SIZE_2X3_HEIGHT = 220
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
         for (appWidgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId)
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            updateWidget(context, appWidgetManager, appWidgetId, options)
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateWidget(context, appWidgetManager, appWidgetId, newOptions)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -38,17 +55,34 @@ class HabitWidgetProvider : AppWidgetProvider() {
             appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.habit_list)
 
             for (appWidgetId in appWidgetIds) {
-                updateWidget(context, appWidgetManager, appWidgetId)
+                val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+                updateWidget(context, appWidgetManager, appWidgetId, options)
             }
+        }
+    }
+
+    private fun getLayoutId(options: Bundle): Int {
+        val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+        val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+
+        return when {
+            // 小于 2x2：小布局
+            minWidth < SIZE_2X2 || minHeight < SIZE_2X2 -> R.layout.habit_widget_layout_small
+            // 宽度或高度任一 >= 220dp：大布局（如 2x3、3x2、3x3 等）
+            minWidth >= SIZE_2X3_HEIGHT || minHeight >= SIZE_2X3_HEIGHT -> R.layout.habit_widget_layout
+            // 2x2：中布局
+            else -> R.layout.habit_widget_layout_medium
         }
     }
 
     private fun updateWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetId: Int
+        appWidgetId: Int,
+        options: Bundle
     ) {
-        val views = RemoteViews(context.packageName, R.layout.habit_widget_layout)
+        val layoutId = getLayoutId(options)
+        val views = RemoteViews(context.packageName, layoutId)
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -99,58 +133,93 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
                 val streak = calculateStreak(allCheckInDates, dateFormat)
 
-                views.setTextViewText(R.id.widget_title, "雕刀")
-                views.setTextViewText(R.id.widget_summary, "$todayCompleted/$habitCount")
-                views.setTextViewText(R.id.widget_streak, "🔥 连续 $streak 天")
-
-                if (habitCount > 0) {
-                    views.setViewVisibility(R.id.habit_list, View.VISIBLE)
-                    views.setViewVisibility(R.id.empty_text, View.GONE)
-
-                    val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                        data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                // 正常有数据时
+                when (layoutId) {
+                    R.layout.habit_widget_layout_small -> {
+                        views.setTextViewText(R.id.widget_summary, "$todayCompleted/$habitCount")
+                        views.setTextViewText(R.id.widget_streak, "🔥 ${streak}天")
                     }
-                    views.setRemoteAdapter(R.id.habit_list, serviceIntent)
+                    R.layout.habit_widget_layout_medium -> {
+                        views.setTextViewText(R.id.widget_title, "雕刀")
+                        views.setTextViewText(R.id.widget_summary, "$todayCompleted/$habitCount")
+                        views.setTextViewText(R.id.widget_progress, "$todayCompleted/$habitCount")
+                        views.setTextViewText(R.id.widget_streak, "🔥 连续 $streak 天")
+                    }
+                    else -> {
+                        views.setTextViewText(R.id.widget_title, "雕刀")
+                        views.setTextViewText(R.id.widget_summary, "$todayCompleted/$habitCount")
+                        views.setTextViewText(R.id.widget_streak, "🔥 连续 $streak 天")
 
-                    // ✅ 列表项点击
-                    views.setPendingIntentTemplate(R.id.habit_list, openAppPendingIntent)
-                } else {
-                    showEmptyState(views)
+                        if (habitCount > 0) {
+                            views.setViewVisibility(R.id.habit_list, View.VISIBLE)
+                            views.setViewVisibility(R.id.empty_text, View.GONE)
+
+                            val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                                data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                            }
+                            views.setRemoteAdapter(R.id.habit_list, serviceIntent)
+                            views.setPendingIntentTemplate(R.id.habit_list, openAppPendingIntent)
+                        } else {
+                            showEmptyState(views)
+                        }
+                    }
                 }
             } else {
-                views.setTextViewText(R.id.widget_title, "雕刀")
-                views.setTextViewText(R.id.widget_summary, "0/0")
-                views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
-                showEmptyState(views)
+                // ================================
+                // 空数据时 - 已修改
+                // ================================
+                when (layoutId) {
+                    R.layout.habit_widget_layout_small -> {
+                        views.setTextViewText(R.id.widget_summary, "0/0")
+                        views.setTextViewText(R.id.widget_streak, "🔥 0天")
+                    }
+                    R.layout.habit_widget_layout_medium -> {
+                        views.setTextViewText(R.id.widget_title, "雕刀")
+                        views.setTextViewText(R.id.widget_summary, "0/0")
+                        views.setTextViewText(R.id.widget_progress, "0/0")
+                        views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
+                    }
+                    else -> {
+                        views.setTextViewText(R.id.widget_title, "雕刀")
+                        views.setTextViewText(R.id.widget_summary, "0/0")
+                        views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
+                        showEmptyState(views)
+                    }
+                }
             }
 
         } catch (e: Exception) {
+            // ================================
+            // 异常处理时 - 已修改
+            // ================================
             e.printStackTrace()
-            views.setTextViewText(R.id.widget_title, "雕刀")
-            views.setTextViewText(R.id.widget_summary, "0/0")
-            views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
-            showEmptyState(views)
+            when (layoutId) {
+                R.layout.habit_widget_layout_small -> {
+                    views.setTextViewText(R.id.widget_summary, "0/0")
+                    views.setTextViewText(R.id.widget_streak, "🔥 0天")
+                }
+                R.layout.habit_widget_layout_medium -> {
+                    views.setTextViewText(R.id.widget_title, "雕刀")
+                    views.setTextViewText(R.id.widget_summary, "0/0")
+                    views.setTextViewText(R.id.widget_progress, "0/0")
+                    views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
+                }
+                else -> {
+                    views.setTextViewText(R.id.widget_title, "雕刀")
+                    views.setTextViewText(R.id.widget_summary, "0/0")
+                    views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
+                    showEmptyState(views)
+                }
+            }
         }
 
-        // ✅ 设置点击事件
+        // 设置点击事件
         views.setOnClickPendingIntent(R.id.widget_container, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.header_container, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.icon_container, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.app_icon, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.widget_title, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.widget_summary, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.divider, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.widget_streak, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.empty_text, openAppPendingIntent)
-
-        // ✅ 关键：给 list_container 设置点击，这样空白区域也能响应
-        views.setOnClickPendingIntent(R.id.list_container, openAppPendingIntent)
-        // ✅ 给背景层设置点击
-        views.setOnClickPendingIntent(R.id.list_background, openAppPendingIntent)
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
+
     private fun calculateStreak(dates: Set<String>, dateFormat: SimpleDateFormat): Int {
         if (dates.isEmpty()) return 0
 

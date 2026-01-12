@@ -185,7 +185,6 @@ class HabitIcons {
         Icons.article_outlined,
         Icons.edit_note,
         Icons.draw_outlined,
-        Icons.create_outlined,
         Icons.edit_outlined,
         Icons.history_edu_outlined,
         Icons.school_outlined,
@@ -222,7 +221,6 @@ class HabitIcons {
       icons: [
         Icons.code,
         Icons.terminal_outlined,
-        Icons.laptop_outlined,
         Icons.computer_outlined,
         Icons.work_outline,
         Icons.business_center_outlined,
@@ -250,21 +248,18 @@ class HabitIcons {
       icon: Icons.palette_outlined,
       icons: [
         Icons.music_note_outlined,
-        Icons.audiotrack_outlined,
         Icons.piano_outlined,
         Icons.album_outlined,
         Icons.library_music_outlined,
         Icons.queue_music_outlined,
         Icons.brush_outlined,
         Icons.palette_outlined,
-        Icons.color_lens_outlined,
         Icons.format_paint_outlined,
         Icons.gesture_outlined,
         Icons.auto_fix_high_outlined,
         Icons.photo_filter_outlined,
         Icons.filter_vintage_outlined,
         Icons.theater_comedy_outlined,
-        Icons.masks_outlined,
       ],
     ),
     IconCategory(
@@ -272,7 +267,6 @@ class HabitIcons {
       icon: Icons.camera_alt_outlined,
       icons: [
         Icons.camera_alt_outlined,
-        Icons.photo_camera_outlined,
         Icons.videocam_outlined,
         Icons.movie_outlined,
         Icons.theaters_outlined,
@@ -280,7 +274,6 @@ class HabitIcons {
         Icons.podcasts_outlined,
         Icons.live_tv_outlined,
         Icons.photo_outlined,
-        Icons.image_outlined,
         Icons.photo_library_outlined,
         Icons.video_library_outlined,
         Icons.slideshow_outlined,
@@ -442,7 +435,6 @@ class HabitIcons {
         Icons.request_quote_outlined,
         Icons.point_of_sale_outlined,
         Icons.monetization_on_outlined,
-        Icons.paid_outlined,
       ],
     ),
     IconCategory(
@@ -495,7 +487,6 @@ class HabitIcons {
         Icons.military_tech_outlined,
         Icons.diamond_outlined,
         Icons.bolt_outlined,
-        Icons.rocket_launch_outlined,
         Icons.public_outlined,
         Icons.verified_outlined,
         Icons.workspace_premium_outlined,
@@ -602,11 +593,11 @@ class _IconSelectorState extends State<IconSelector> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 185,
+      height: 165,
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        // 移除了 border 属性
       ),
       child: Column(
         children: [
@@ -675,10 +666,10 @@ class _IconSelectorState extends State<IconSelector> with SingleTickerProviderSt
                               ? widget.themeColor.withValues(alpha: 0.15)
                               : Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected ? widget.themeColor : Colors.grey[300]!,
-                            width: isSelected ? 2 : 1,
-                          ),
+                          // 移除了未选中状态的边框
+                          border: isSelected
+                              ? Border.all(color: widget.themeColor, width: 2)
+                              : null,
                           boxShadow: isSelected
                               ? [
                             BoxShadow(
@@ -1132,7 +1123,7 @@ class _CheckInPageState extends State<CheckInPage> {
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  "开始一个新的好习惯",
+                                  "开启一个新习惯",
                                   style: TextStyle(fontSize: 13, color: Colors.grey),
                                 ),
                               ],

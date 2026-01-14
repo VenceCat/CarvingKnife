@@ -6,8 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
 import java.text.SimpleDateFormat
@@ -15,7 +13,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-class HabitWidgetProvider : AppWidgetProvider() {
+class HabitWidgetMediumProvider : AppWidgetProvider() {
 
     override fun onUpdate(
         context: Context,
@@ -31,9 +29,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+            val componentName = ComponentName(context, HabitWidgetMediumProvider::class.java)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.habit_list)
             for (appWidgetId in appWidgetIds) {
                 updateWidget(context, appWidgetManager, appWidgetId)
             }
@@ -45,7 +42,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        val views = RemoteViews(context.packageName, R.layout.habit_widget_layout)
+        val views = RemoteViews(context.packageName, R.layout.habit_widget_layout_medium)
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -92,36 +89,19 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 val streak = calculateStreak(allCheckInDates, dateFormat)
                 views.setTextViewText(R.id.widget_title, "雕刀")
                 views.setTextViewText(R.id.widget_summary, "$todayCompleted/$habitCount")
+                views.setTextViewText(R.id.widget_progress, "$todayCompleted/$habitCount")
                 views.setTextViewText(R.id.widget_streak, "🔥 连续 $streak 天")
-
-                if (habitCount > 0) {
-                    views.setViewVisibility(R.id.habit_list, View.VISIBLE)
-                    views.setViewVisibility(R.id.empty_text, View.GONE)
-
-                    val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                        data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-                    }
-                    views.setRemoteAdapter(R.id.habit_list, serviceIntent)
-                    views.setPendingIntentTemplate(R.id.habit_list, openAppPendingIntent)
-                } else {
-                    views.setViewVisibility(R.id.habit_list, View.GONE)
-                    views.setViewVisibility(R.id.empty_text, View.VISIBLE)
-                }
             } else {
                 views.setTextViewText(R.id.widget_title, "雕刀")
                 views.setTextViewText(R.id.widget_summary, "0/0")
+                views.setTextViewText(R.id.widget_progress, "0/0")
                 views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
-                views.setViewVisibility(R.id.habit_list, View.GONE)
-                views.setViewVisibility(R.id.empty_text, View.VISIBLE)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
             views.setTextViewText(R.id.widget_title, "雕刀")
             views.setTextViewText(R.id.widget_summary, "0/0")
+            views.setTextViewText(R.id.widget_progress, "0/0")
             views.setTextViewText(R.id.widget_streak, "🔥 连续 0 天")
-            views.setViewVisibility(R.id.habit_list, View.GONE)
-            views.setViewVisibility(R.id.empty_text, View.VISIBLE)
         }
 
         views.setOnClickPendingIntent(R.id.widget_container, openAppPendingIntent)

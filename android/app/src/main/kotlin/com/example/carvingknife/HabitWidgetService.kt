@@ -120,7 +120,6 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
 
             views.setTextViewText(R.id.item_title, habit.title)
 
-            // 设置右侧标签：显示连续天数
             val streakText = if (habit.streak > 0) {
                 "连续${habit.streak}天"
             } else {
@@ -138,9 +137,7 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                 views.setInt(R.id.item_streak, "setTextColor", 0xFF999999.toInt())
             }
 
-            // 点击打开应用
             val fillIntent = Intent()
-            views.setOnClickFillInIntent(R.id.item_container, fillIntent)
             views.setOnClickFillInIntent(R.id.item_container, fillIntent)
             views.setOnClickFillInIntent(R.id.item_icon, fillIntent)
             views.setOnClickFillInIntent(R.id.item_title, fillIntent)

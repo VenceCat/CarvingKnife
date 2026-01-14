@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">雕刀</string>
-    <string name="widget_description">显示习惯列表和打卡进度</string>
+    <string name="widget_medium_description">中尺寸 (2×2)</string>
+    <string name="widget_large_description">大尺寸 (2×3+)</string>
 </resources>

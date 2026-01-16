@@ -839,7 +839,7 @@ class _MainPageState extends State<MainPage> {
             onAdd: _addHabit,
             onDelete: _removeHabit,
           ),
-          HabitLibraryPage(onAddHabit: _addHabit),
+          StatisticsPage(habits: habits),
           ProfilePage(
             habits: habits,
             onSave: _refreshAndSave,
@@ -869,9 +869,9 @@ class _MainPageState extends State<MainPage> {
               label: '打卡',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.auto_awesome_mosaic_outlined),
-              activeIcon: Icon(Icons.auto_awesome_mosaic),
-              label: '习惯库',
+              icon: Icon(Icons.bar_chart_outlined),
+              activeIcon: Icon(Icons.bar_chart),
+              label: '统计',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
@@ -1598,222 +1598,173 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 }
 
-// ========== 习惯库页面 ==========
-class HabitLibraryPage extends StatelessWidget {
-  final Function(Habit) onAddHabit;
+// ========== 统计页面 ==========
+class StatisticsPage extends StatefulWidget {
+  final List<Habit> habits;
 
-  const HabitLibraryPage({super.key, required this.onAddHabit});
+  const StatisticsPage({super.key, required this.habits});
 
-  void _showAddDialog(BuildContext context, Map<String, dynamic> template) {
-    final titleController = TextEditingController(text: template['title'] as String);
-    final descController = TextEditingController(text: template['desc'] as String);
-    final themeColor = Theme.of(context).colorScheme.primary;
-    String? errorText;
+  @override
+  State<StatisticsPage> createState() => _StatisticsPageState();
+}
 
-    // 根据模板图标找到对应的索引
-    int selectedIconIndex = HabitIcons.allIcons.indexOf(template['icon'] as IconData);
-    if (selectedIconIndex < 0) selectedIconIndex = 0;
+class _StatisticsPageState extends State<StatisticsPage> {
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 拖动指示条
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 标题行
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: themeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "添加习惯",
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  "从习惯库添加到我的习惯",
-                                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // 关闭按钮
-                          GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      // 图标选择
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "选择图标",
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      IconSelector(
-                        selectedIndex: selectedIconIndex,
-                        themeColor: themeColor,
-                        onSelect: (index) {
-                          setModalState(() => selectedIconIndex = index);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      // 习惯名称输入框
-                      TextField(
-                        controller: titleController,
-                        onChanged: (value) {
-                          if (errorText != null && value.trim().isNotEmpty) {
-                            errorText = null;
-                            setModalState(() {});
-                          }
-                        },
-                        decoration: InputDecoration(
-                          labelText: "习惯名称",
-                          hintText: "例如：早起",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
-                          ),
-                          errorText: errorText,
-                          errorStyle: TextStyle(color: Colors.red[400]),
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // 描述输入框
-                      TextField(
-                        controller: descController,
-                        maxLines: 2,
-                        maxLength: 100,
-                        decoration: InputDecoration(
-                          labelText: "描述（选填）",
-                          hintText: "可以修改描述内容",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                          counterStyle: TextStyle(color: Colors.grey[400]),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 确认按钮
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            if (titleController.text.trim().isEmpty) {
-                              errorText = "习惯名称不能为空";
-                              setModalState(() {});
-                            } else {
-                              onAddHabit(Habit(
-                                id: DateTime.now().toString(),
-                                title: titleController.text.trim(),
-                                description: descController.text.trim(),
-                                iconIndex: selectedIconIndex,
-                              ));
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text("已添加「${titleController.text.trim()}」"),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.add, size: 20),
-                          label: const Text("添加到我的习惯", style: TextStyle(fontSize: 16)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
+  // 计算总打卡次数
+  int get totalCheckIns {
+    return widget.habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
+  }
+
+  // 计算当前连续天数最长的习惯
+  int get currentStreak {
+    if (widget.habits.isEmpty) return 0;
+
+    int maxStreak = 0;
+    for (final habit in widget.habits) {
+      final streak = _calculateHabitStreak(habit);
+      if (streak > maxStreak) {
+        maxStreak = streak;
+      }
+    }
+    return maxStreak;
+  }
+
+// 计算累计打卡次数最多的习惯
+  int get maxTotalCheckIns {
+    if (widget.habits.isEmpty) return 0;
+
+    int maxTotal = 0;
+    for (final habit in widget.habits) {
+      if (habit.checkInRecords.length > maxTotal) {
+        maxTotal = habit.checkInRecords.length;
+      }
+    }
+    return maxTotal;
+  }
+
+  // 计算今日完成率
+  double get todayCompletionRate {
+    if (widget.habits.isEmpty) return 0;
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    int completed = 0;
+    for (final habit in widget.habits) {
+      if (habit.checkInTimes.any((t) => t.startsWith(today))) {
+        completed++;
+      }
+    }
+    return completed / widget.habits.length;
+  }
+
+  // 计算本周完成率
+  double get weekCompletionRate {
+    if (widget.habits.isEmpty) return 0;
+
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    int totalPossible = widget.habits.length * now.weekday;
+    int totalCompleted = 0;
+
+    for (int i = 0; i < now.weekday; i++) {
+      final date = DateFormat('yyyy-MM-dd').format(weekStart.add(Duration(days: i)));
+      for (final habit in widget.habits) {
+        if (habit.checkInTimes.any((t) => t.startsWith(date))) {
+          totalCompleted++;
+        }
+      }
+    }
+
+    return totalPossible > 0 ? totalCompleted / totalPossible : 0;
+  }
+
+  // 计算本月完成率
+  double get monthCompletionRate {
+    if (widget.habits.isEmpty) return 0;
+
+    final now = DateTime.now();
+    int totalPossible = widget.habits.length * now.day;
+    int totalCompleted = 0;
+
+    for (int i = 1; i <= now.day; i++) {
+      final date = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, i));
+      for (final habit in widget.habits) {
+        if (habit.checkInTimes.any((t) => t.startsWith(date))) {
+          totalCompleted++;
+        }
+      }
+    }
+
+    return totalPossible > 0 ? totalCompleted / totalPossible : 0;
+  }
+
+  // 获取习惯排行（按连续天数）
+  List<Map<String, dynamic>> get habitRanking {
+    final ranking = <Map<String, dynamic>>[];
+
+    for (final habit in widget.habits) {
+      final streak = _calculateHabitStreak(habit);
+      ranking.add({
+        'habit': habit,
+        'streak': streak,
+        'total': habit.checkInRecords.length,
+      });
+    }
+
+    ranking.sort((a, b) => (b['streak'] as int).compareTo(a['streak'] as int));
+    return ranking;
+  }
+
+  int _calculateHabitStreak(Habit habit) {
+    if (habit.checkInRecords.isEmpty) return 0;
+
+    final dates = <String>{};
+    for (final record in habit.checkInRecords) {
+      if (record.time.length >= 10) {
+        dates.add(record.time.substring(0, 10));
+      }
+    }
+
+    int streak = 0;
+    DateTime date = DateTime.now();
+    final dateFormat = DateFormat('yyyy-MM-dd');
+
+    String todayStr = dateFormat.format(date);
+    if (!dates.contains(todayStr)) {
+      date = date.subtract(const Duration(days: 1));
+    }
+
+    while (dates.contains(dateFormat.format(date))) {
+      streak++;
+      date = date.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
+
+  // 获取最近30天的打卡数据（用于热力图）
+  List<Map<String, dynamic>> get heatmapData {
+    final data = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+
+    for (int i = 29; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      int count = 0;
+
+      for (final habit in widget.habits) {
+        if (habit.checkInTimes.any((t) => t.startsWith(dateStr))) {
+          count++;
+        }
+      }
+
+      data.add({
+        'date': date,
+        'dateStr': dateStr,
+        'count': count,
+        'total': widget.habits.length,
+      });
+    }
+
+    return data;
   }
 
   @override
@@ -1821,131 +1772,363 @@ class HabitLibraryPage extends StatelessWidget {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
-    final templates = [
-      // 健康生活
-      {'icon': Icons.wb_sunny_outlined, 'title': '早起', 'desc': '每天7点前起床'},
-      {'icon': Icons.bedtime_outlined, 'title': '早睡', 'desc': '每天11点前入睡'},
-      {'icon': Icons.water_drop_outlined, 'title': '喝水', 'desc': '每天8杯水'},
-      {'icon': Icons.fitness_center, 'title': '健身', 'desc': '每天运动30分钟'},
-      {'icon': Icons.directions_walk, 'title': '散步', 'desc': '每天步行8000步'},
-      {'icon': Icons.directions_run, 'title': '跑步', 'desc': '每天跑步3公里'},
-      {'icon': Icons.sports_gymnastics, 'title': '拉伸', 'desc': '每天拉伸15分钟'},
-      {'icon': Icons.monitor_weight_outlined, 'title': '记录体重', 'desc': '每天记录体重变化'},
-
-      // 饮食习惯
-      {'icon': Icons.free_breakfast_outlined, 'title': '吃早餐', 'desc': '每天按时吃早餐'},
-      {'icon': Icons.no_drinks_outlined, 'title': '戒饮料', 'desc': '不喝含糖饮料'},
-      {'icon': Icons.apple, 'title': '吃水果', 'desc': '每天吃一份水果'},
-      {'icon': Icons.local_dining_outlined, 'title': '细嚼慢咽', 'desc': '专注吃饭不玩手机'},
-
-      // 学习成长
-      {'icon': Icons.menu_book_outlined, 'title': '阅读', 'desc': '每天阅读30分钟'},
-      {'icon': Icons.translate, 'title': '学英语', 'desc': '每天背10个单词'},
-      {'icon': Icons.code, 'title': '写代码', 'desc': '每天编程1小时'},
-      {'icon': Icons.headphones_outlined, 'title': '听播客', 'desc': '每天听一期播客'},
-      {'icon': Icons.school_outlined, 'title': '上网课', 'desc': '每天学习新知识'},
-      {'icon': Icons.piano_outlined, 'title': '练琴', 'desc': '每天练习30分钟'},
-
-      // 心灵成长
-      {'icon': Icons.self_improvement, 'title': '冥想', 'desc': '每天冥想10分钟'},
-      {'icon': Icons.edit_note, 'title': '写日记', 'desc': '记录每天的心情'},
-      {'icon': Icons.favorite_outline, 'title': '感恩', 'desc': '每天记录3件感恩的事'},
-      {'icon': Icons.psychology_outlined, 'title': '反思', 'desc': '每天复盘总结'},
-
-      // 生活习惯
-      {'icon': Icons.cleaning_services_outlined, 'title': '整理房间', 'desc': '保持环境整洁'},
-      {'icon': Icons.checkroom_outlined, 'title': '叠被子', 'desc': '起床后整理床铺'},
-      {'icon': Icons.spa_outlined, 'title': '护肤', 'desc': '每天护肤保养'},
-      {'icon': Icons.brush_outlined, 'title': '刷牙', 'desc': '早晚各刷一次牙'},
-      {'icon': Icons.bathtub_outlined, 'title': '泡脚', 'desc': '睡前泡脚放松'},
-
-      // 社交与情感
-      {'icon': Icons.call_outlined, 'title': '联系家人', 'desc': '每周给家人打电话'},
-      {'icon': Icons.emoji_emotions_outlined, 'title': '微笑', 'desc': '每天对人微笑'},
-      {'icon': Icons.volunteer_activism_outlined, 'title': '帮助他人', 'desc': '每天做一件好事'},
-
-      // 工作效率
-      {'icon': Icons.checklist, 'title': '列计划', 'desc': '每天列出待办事项'},
-      {'icon': Icons.timer_outlined, 'title': '番茄工作', 'desc': '专注工作25分钟'},
-      {'icon': Icons.phone_disabled_outlined, 'title': '少刷手机', 'desc': '每天屏幕时间<3小时'},
-      {'icon': Icons.inbox_outlined, 'title': '清空收件箱', 'desc': '每天处理完邮件'},
-
-      // 兴趣爱好
-      {'icon': Icons.camera_alt_outlined, 'title': '拍照', 'desc': '每天记录生活瞬间'},
-      {'icon': Icons.draw_outlined, 'title': '画画', 'desc': '每天画一幅小画'},
-      {'icon': Icons.music_note_outlined, 'title': '听音乐', 'desc': '每天享受音乐时光'},
-      {'icon': Icons.local_florist_outlined, 'title': '养植物', 'desc': '每天照顾绿植'},
-      {'icon': Icons.cookie_outlined, 'title': '烘焙', 'desc': '每周尝试新食谱'},
-
-      // 抽象彩蛋
-      {'icon': Icons.flight_takeoff, 'title': '起飞', 'desc': '航班不可延误'},
-    ];
-
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar.large(
-            title: const Text("习惯库",
-                style:
-                TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
+            title: const Text("统计",
+                style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
+
+          // 概览卡片
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Text("点击添加到我的习惯",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+              child: Row(
+                children: [
+                  _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor),
+                  const SizedBox(width: 12),
+                  _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor),
+                  const SizedBox(width: 12),
+                  _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange),
+                  const SizedBox(width: 12),
+                  _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber),
+                ],
+              ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.6,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  final t = templates[index];
-                  return GestureDetector(
-                    onTap: () => _showAddDialog(context, t),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(t['icon'] as IconData,
-                              color: themeColor, size: 26),
-                          const Spacer(),
-                          Text(t['title'] as String,
-                              style: const TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text(t['desc'] as String,
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[400]),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
+
+          // 完成率卡片
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
+                        const SizedBox(width: 8),
+                        Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                      ],
                     ),
-                  );
-                },
-                childCount: templates.length,
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildProgressRing("今日", todayCompletionRate, themeColor),
+                        _buildProgressRing("本周", weekCompletionRate, Colors.blue),
+                        _buildProgressRing("本月", monthCompletionRate, Colors.purple),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+
+          // 打卡热力图
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
+                        const SizedBox(width: 8),
+                        Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHeatmap(themeColor),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                        const SizedBox(width: 4),
+                        ...List.generate(5, (i) => Container(
+                          width: 12,
+                          height: 12,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            color: themeColor.withValues(alpha: 0.2 + i * 0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        )),
+                        const SizedBox(width: 4),
+                        Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 习惯排行
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
+                        const SizedBox(width: 8),
+                        Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (habitRanking.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
+                        ),
+                      )
+                    else
+                      ...habitRanking.take(5).toList().asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        final habit = item['habit'] as Habit;
+                        final streak = item['streak'] as int;
+                        final total = item['total'] as int;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              // 排名
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: index == 0 ? Colors.amber[100] :
+                                  index == 1 ? Colors.grey[200] :
+                                  index == 2 ? Colors.orange[100] :
+                                  Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    "${index + 1}",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: index == 0 ? Colors.amber[800] :
+                                      index == 1 ? Colors.grey[600] :
+                                      index == 2 ? Colors.orange[800] :
+                                      Colors.grey[500],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // 图标
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: themeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  HabitIcons.getIcon(habit.iconIndex),
+                                  color: themeColor,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // 名称
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      habit.title,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      "共打卡 $total 次",
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // 连续天数
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (streak > 0) ...[
+                                      Icon(Icons.local_fire_department, size: 14, color: Colors.orange[600]),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Text(
+                                      streak > 0 ? "$streak天" : "未打卡",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
+    );
+  }
+
+  // 构建统计卡片
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 构建进度环
+  Widget _buildProgressRing(String label, double progress, Color color) {
+    return Column(
+      children: [
+        SizedBox(
+          width: 70,
+          height: 70,
+          child: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 6,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  "${(progress * 100).toInt()}%",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+      ],
+    );
+  }
+
+  // 构建热力图
+  Widget _buildHeatmap(Color themeColor) {
+    final data = heatmapData;
+    final habitCount = widget.habits.length;
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: data.map((item) {
+        final count = item['count'] as int;
+        final date = item['date'] as DateTime;
+        final opacity = habitCount > 0 ? (count / habitCount).clamp(0.0, 1.0) : 0.0;
+
+        return Tooltip(
+          message: "${DateFormat('M/d').format(date)}: $count/${habitCount}",
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: count > 0
+                  ? themeColor.withValues(alpha: 0.2 + opacity * 0.8)
+                  : Colors.grey[200],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Center(
+              child: Text(
+                "${date.day}",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: count > 0 ? Colors.white : Colors.grey[400],
+                  fontWeight: count > 0 ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

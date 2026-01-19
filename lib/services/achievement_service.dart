@@ -613,7 +613,7 @@ class AchievementChecker {
 
     // 特殊成就
     all.add(Achievement(id: 'perfect_day', icon: Icons.check_circle_outline, title: '完美一天', description: '今日完成所有习惯', isUnlocked: habitCount > 0 && todayDone == habitCount, progress: habitCount > 0 ? (todayDone / habitCount).clamp(0.0, 1.0) : 0.0, current: todayDone, target: habitCount > 0 ? habitCount : 1, category: '特殊成就'));
-    all.add(Achievement(id: 'flight', icon: Icons.flight_takeoff_outlined, title: '起飞，芜湖！', description: '创建飞机图标习惯并完成打卡', isUnlocked: isFlightUnlocked, progress: isFlightUnlocked ? 1.0 : 0.0, current: isFlightUnlocked ? 1 : 0, target: 1, category: '特殊成就'));
+    all.add(Achievement(id: 'flight', icon: Icons.flight_takeoff_outlined, title: '起飞，芜湖！', description: '航班不可延误', isUnlocked: isFlightUnlocked, progress: isFlightUnlocked ? 1.0 : 0.0, current: isFlightUnlocked ? 1 : 0, target: 1, category: '特殊成就'));
     all.add(Achievement(id: 'missed_50', icon: Icons.hotel_outlined, title: '缺勤大师', description: '累计未打卡50次', isUnlocked: missed >= 50, progress: (missed / 50).clamp(0.0, 1.0), current: missed, target: 50, category: '特殊成就'));
     all.add(Achievement(id: 'night_owl', icon: Icons.nightlight_outlined, title: '夜猫子', description: '在凌晨0-5点打卡', isUnlocked: isNightOwlUnlocked, progress: isNightOwlUnlocked ? 1.0 : 0.0, current: isNightOwlUnlocked ? 1 : 0, target: 1, category: '特殊成就'));
     all.add(Achievement(id: 'early_bird', icon: Icons.wb_sunny_outlined, title: '早起的鸟儿', description: '在早上5-7点打卡', isUnlocked: isEarlyBirdUnlocked, progress: isEarlyBirdUnlocked ? 1.0 : 0.0, current: isEarlyBirdUnlocked ? 1 : 0, target: 1, category: '特殊成就'));

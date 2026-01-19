@@ -9,9 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
-
+import 'models/achievement.dart';
+import 'services/achievement_service.dart';
+import 'widgets/achievement_dialog.dart';
 import 'models/habit.dart';
 import 'services/widget_service.dart';
+import 'services/habit_icons.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,29 +24,6 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final colorIndex = prefs.getInt('theme_color_index') ?? 0;
   runApp(HabitApp(initialColorIndex: colorIndex));
-}
-
-// 成就数据类
-class Achievement {
-  final IconData icon;
-  final String title;
-  final String description;
-  final bool isUnlocked;
-  final double progress;
-  final int current;
-  final int target;
-  final String category;
-
-  const Achievement({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.isUnlocked,
-    required this.progress,
-    required this.current,
-    required this.target,
-    required this.category,
-  });
 }
 
 // 主题颜色配置
@@ -95,473 +75,6 @@ class ThemeConfig {
       backgroundColor: Color(0xFFF5F5F5),
     ),
   ];
-}
-
-// 习惯图标配置 - 分类版本
-class HabitIcons {
-  // 图标分类数据
-  static const List<IconCategory> categories = [
-    IconCategory(
-      name: '常用',
-      icon: Icons.star_outline,
-      icons: [
-        Icons.flag_outlined,
-        Icons.star_outline,
-        Icons.favorite_outline,
-        Icons.bookmark_outline,
-        Icons.push_pin_outlined,
-        Icons.lightbulb_outline,
-        Icons.check_circle_outline,
-        Icons.radio_button_checked,
-        Icons.task_alt_outlined,
-        Icons.verified_outlined,
-        Icons.thumb_up_outlined,
-        Icons.grade_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '时间',
-      icon: Icons.schedule_outlined,
-      icons: [
-        Icons.wb_sunny_outlined,
-        Icons.bedtime_outlined,
-        Icons.alarm_outlined,
-        Icons.timer_outlined,
-        Icons.schedule_outlined,
-        Icons.nightlight_outlined,
-        Icons.wb_twilight_outlined,
-        Icons.hourglass_empty_outlined,
-        Icons.update_outlined,
-        Icons.history_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '运动',
-      icon: Icons.fitness_center,
-      icons: [
-        Icons.fitness_center,
-        Icons.directions_run,
-        Icons.directions_walk,
-        Icons.sports_gymnastics,
-        Icons.pool_outlined,
-        Icons.pedal_bike_outlined,
-        Icons.skateboarding_outlined,
-        Icons.surfing_outlined,
-        Icons.hiking_outlined,
-        Icons.sports_martial_arts,
-        Icons.sports_soccer_outlined,
-        Icons.sports_basketball_outlined,
-        Icons.sports_tennis_outlined,
-        Icons.sports_golf_outlined,
-        Icons.sports_baseball_outlined,
-        Icons.snowboarding_outlined,
-        Icons.downhill_skiing_outlined,
-        Icons.rowing_outlined,
-        Icons.kayaking_outlined,
-        Icons.sports_handball_outlined,
-        Icons.sports_volleyball_outlined,
-        Icons.sports_cricket_outlined,
-        Icons.sports_rugby_outlined,
-        Icons.sports_kabaddi_outlined,
-        Icons.sports_mma_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '饮食',
-      icon: Icons.restaurant_outlined,
-      icons: [
-        Icons.water_drop_outlined,
-        Icons.local_drink_outlined,
-        Icons.coffee_outlined,
-        Icons.local_cafe_outlined,
-        Icons.free_breakfast_outlined,
-        Icons.wine_bar_outlined,
-        Icons.no_drinks_outlined,
-        Icons.restaurant_outlined,
-        Icons.apple,
-        Icons.egg_outlined,
-        Icons.rice_bowl_outlined,
-        Icons.ramen_dining_outlined,
-        Icons.lunch_dining_outlined,
-        Icons.dinner_dining_outlined,
-        Icons.bakery_dining_outlined,
-        Icons.icecream_outlined,
-        Icons.cookie_outlined,
-        Icons.cake_outlined,
-        Icons.local_pizza_outlined,
-        Icons.set_meal_outlined,
-        Icons.no_food_outlined,
-        Icons.no_meals_outlined,
-        Icons.fastfood_outlined,
-        Icons.kebab_dining_outlined,
-        Icons.soup_kitchen_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '学习',
-      icon: Icons.menu_book_outlined,
-      icons: [
-        Icons.menu_book_outlined,
-        Icons.auto_stories_outlined,
-        Icons.book_outlined,
-        Icons.library_books_outlined,
-        Icons.article_outlined,
-        Icons.edit_note,
-        Icons.draw_outlined,
-        Icons.edit_outlined,
-        Icons.history_edu_outlined,
-        Icons.school_outlined,
-        Icons.science_outlined,
-        Icons.calculate_outlined,
-        Icons.functions_outlined,
-        Icons.biotech_outlined,
-        Icons.psychology_outlined,
-        Icons.architecture_outlined,
-        Icons.precision_manufacturing_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '语言',
-      icon: Icons.translate,
-      icons: [
-        Icons.translate,
-        Icons.language_outlined,
-        Icons.abc_outlined,
-        Icons.spellcheck_outlined,
-        Icons.record_voice_over_outlined,
-        Icons.mic_outlined,
-        Icons.headphones_outlined,
-        Icons.hearing_outlined,
-        Icons.interpreter_mode_outlined,
-        Icons.subtitles_outlined,
-        Icons.closed_caption_outlined,
-        Icons.speaker_notes_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '工作',
-      icon: Icons.work_outline,
-      icons: [
-        Icons.code,
-        Icons.terminal_outlined,
-        Icons.computer_outlined,
-        Icons.work_outline,
-        Icons.business_center_outlined,
-        Icons.task_alt_outlined,
-        Icons.checklist_outlined,
-        Icons.fact_check_outlined,
-        Icons.assignment_outlined,
-        Icons.pending_actions_outlined,
-        Icons.event_outlined,
-        Icons.event_available_outlined,
-        Icons.inbox_outlined,
-        Icons.mail_outlined,
-        Icons.send_outlined,
-        Icons.analytics_outlined,
-        Icons.insights_outlined,
-        Icons.trending_up_outlined,
-        Icons.assessment_outlined,
-        Icons.leaderboard_outlined,
-        Icons.bar_chart_outlined,
-        Icons.show_chart_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '艺术',
-      icon: Icons.palette_outlined,
-      icons: [
-        Icons.music_note_outlined,
-        Icons.piano_outlined,
-        Icons.album_outlined,
-        Icons.library_music_outlined,
-        Icons.queue_music_outlined,
-        Icons.brush_outlined,
-        Icons.palette_outlined,
-        Icons.format_paint_outlined,
-        Icons.gesture_outlined,
-        Icons.auto_fix_high_outlined,
-        Icons.photo_filter_outlined,
-        Icons.filter_vintage_outlined,
-        Icons.theater_comedy_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '摄影',
-      icon: Icons.camera_alt_outlined,
-      icons: [
-        Icons.camera_alt_outlined,
-        Icons.videocam_outlined,
-        Icons.movie_outlined,
-        Icons.theaters_outlined,
-        Icons.tv_outlined,
-        Icons.podcasts_outlined,
-        Icons.live_tv_outlined,
-        Icons.photo_outlined,
-        Icons.photo_library_outlined,
-        Icons.video_library_outlined,
-        Icons.slideshow_outlined,
-        Icons.camera_roll_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '心灵',
-      icon: Icons.self_improvement,
-      icons: [
-        Icons.self_improvement,
-        Icons.psychology_outlined,
-        Icons.spa_outlined,
-        Icons.hot_tub_outlined,
-        Icons.air_outlined,
-        Icons.mood_outlined,
-        Icons.sentiment_satisfied_outlined,
-        Icons.emoji_emotions_outlined,
-        Icons.emoji_nature_outlined,
-        Icons.volunteer_activism_outlined,
-        Icons.diversity_1_outlined,
-        Icons.handshake_outlined,
-        Icons.favorite_outline,
-        Icons.healing_outlined,
-        Icons.church_outlined,
-        Icons.temple_buddhist_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '生活',
-      icon: Icons.home_outlined,
-      icons: [
-        Icons.cleaning_services_outlined,
-        Icons.dry_cleaning_outlined,
-        Icons.iron_outlined,
-        Icons.checkroom_outlined,
-        Icons.bathtub_outlined,
-        Icons.shower_outlined,
-        Icons.wash_outlined,
-        Icons.soap_outlined,
-        Icons.sanitizer_outlined,
-        Icons.face_retouching_natural_outlined,
-        Icons.face_outlined,
-        Icons.home_outlined,
-        Icons.bed_outlined,
-        Icons.chair_outlined,
-        Icons.weekend_outlined,
-        Icons.kitchen_outlined,
-        Icons.bathroom_outlined,
-        Icons.living_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '自然',
-      icon: Icons.eco_outlined,
-      icons: [
-        Icons.local_florist_outlined,
-        Icons.grass_outlined,
-        Icons.yard_outlined,
-        Icons.eco_outlined,
-        Icons.park_outlined,
-        Icons.forest_outlined,
-        Icons.pets_outlined,
-        Icons.cruelty_free_outlined,
-        Icons.bug_report_outlined,
-        Icons.emoji_nature_outlined,
-        Icons.waves_outlined,
-        Icons.terrain_outlined,
-        Icons.landscape_outlined,
-        Icons.water_outlined,
-        Icons.cloud_outlined,
-        Icons.thunderstorm_outlined,
-        Icons.ac_unit_outlined,
-        Icons.wb_cloudy_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '社交',
-      icon: Icons.people_outline,
-      icons: [
-        Icons.people_outline,
-        Icons.person_outline,
-        Icons.groups_outlined,
-        Icons.family_restroom_outlined,
-        Icons.elderly_outlined,
-        Icons.child_care_outlined,
-        Icons.call_outlined,
-        Icons.video_call_outlined,
-        Icons.chat_outlined,
-        Icons.forum_outlined,
-        Icons.campaign_outlined,
-        Icons.connect_without_contact_outlined,
-        Icons.share_outlined,
-        Icons.group_add_outlined,
-        Icons.person_add_outlined,
-        Icons.waving_hand_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '出行',
-      icon: Icons.explore_outlined,
-      icons: [
-        Icons.directions_car_outlined,
-        Icons.directions_bus_outlined,
-        Icons.train_outlined,
-        Icons.flight_outlined,
-        Icons.flight_takeoff_outlined,
-        Icons.two_wheeler_outlined,
-        Icons.electric_scooter_outlined,
-        Icons.sailing_outlined,
-        Icons.explore_outlined,
-        Icons.map_outlined,
-        Icons.tour_outlined,
-        Icons.luggage_outlined,
-        Icons.directions_bike_outlined,
-        Icons.directions_subway_outlined,
-        Icons.local_taxi_outlined,
-        Icons.airport_shuttle_outlined,
-        Icons.directions_boat_outlined,
-        Icons.rocket_launch_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '健康',
-      icon: Icons.monitor_heart_outlined,
-      icons: [
-        Icons.medical_services_outlined,
-        Icons.medication_outlined,
-        Icons.vaccines_outlined,
-        Icons.healing_outlined,
-        Icons.health_and_safety_outlined,
-        Icons.monitor_heart_outlined,
-        Icons.bloodtype_outlined,
-        Icons.visibility_outlined,
-        Icons.hearing_outlined,
-        Icons.accessibility_new_outlined,
-        Icons.monitor_weight_outlined,
-        Icons.sick_outlined,
-        Icons.coronavirus_outlined,
-        Icons.masks_outlined,
-        Icons.personal_injury_outlined,
-        Icons.emergency_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '财务',
-      icon: Icons.savings_outlined,
-      icons: [
-        Icons.savings_outlined,
-        Icons.account_balance_wallet_outlined,
-        Icons.payments_outlined,
-        Icons.credit_card_outlined,
-        Icons.attach_money_outlined,
-        Icons.money_off_outlined,
-        Icons.receipt_long_outlined,
-        Icons.account_balance_outlined,
-        Icons.currency_exchange_outlined,
-        Icons.price_check_outlined,
-        Icons.request_quote_outlined,
-        Icons.point_of_sale_outlined,
-        Icons.monetization_on_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '数码',
-      icon: Icons.devices_outlined,
-      icons: [
-        Icons.phone_android_outlined,
-        Icons.phone_iphone_outlined,
-        Icons.phone_disabled_outlined,
-        Icons.smartphone_outlined,
-        Icons.tablet_outlined,
-        Icons.watch_outlined,
-        Icons.devices_outlined,
-        Icons.battery_charging_full_outlined,
-        Icons.power_outlined,
-        Icons.wifi_off_outlined,
-        Icons.bluetooth_outlined,
-        Icons.screen_lock_portrait_outlined,
-        Icons.do_not_disturb_on_outlined,
-        Icons.data_saver_on_outlined,
-        Icons.signal_cellular_alt_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '娱乐',
-      icon: Icons.sports_esports_outlined,
-      icons: [
-        Icons.sports_esports_outlined,
-        Icons.games_outlined,
-        Icons.casino_outlined,
-        Icons.extension_outlined,
-        Icons.toys_outlined,
-        Icons.attractions_outlined,
-        Icons.celebration_outlined,
-        Icons.party_mode_outlined,
-        Icons.nightlife_outlined,
-        Icons.local_bar_outlined,
-        Icons.music_video_outlined,
-        Icons.stadium_outlined,
-        Icons.festival_outlined,
-        Icons.event_seat_outlined,
-        Icons.confirmation_number_outlined,
-      ],
-    ),
-    IconCategory(
-      name: '成就',
-      icon: Icons.emoji_events_outlined,
-      icons: [
-        Icons.emoji_events_outlined,
-        Icons.military_tech_outlined,
-        Icons.diamond_outlined,
-        Icons.bolt_outlined,
-        Icons.public_outlined,
-        Icons.verified_outlined,
-        Icons.workspace_premium_outlined,
-        Icons.stars_outlined,
-        Icons.auto_awesome_outlined,
-        Icons.flare_outlined,
-        Icons.whatshot_outlined,
-        Icons.local_fire_department_outlined,
-        Icons.shield_outlined,
-        Icons.security_outlined,
-        Icons.token_outlined,
-      ],
-    ),
-  ];
-
-  // 获取所有图标的平铺列表（用于索引存储）
-  static List<IconData> get allIcons {
-    final List<IconData> icons = [];
-    for (final category in categories) {
-      for (final icon in category.icons) {
-        if (!icons.contains(icon)) {
-          icons.add(icon);
-        }
-      }
-    }
-    return icons;
-  }
-
-  static IconData getIcon(int index) {
-    final icons = allIcons;
-    if (index >= 0 && index < icons.length) {
-      return icons[index];
-    }
-    return Icons.flag_outlined;
-  }
-
-  static int getIconIndex(IconData icon) {
-    return allIcons.indexOf(icon);
-  }
-}
-
-// 图标分类数据类
-class IconCategory {
-  final String name;
-  final IconData icon;
-  final List<IconData> icons;
-
-  const IconCategory({
-    required this.name,
-    required this.icon,
-    required this.icons,
-  });
 }
 
 // 分类图标选择器组件
@@ -620,7 +133,6 @@ class _IconSelectorState extends State<IconSelector> with SingleTickerProviderSt
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        // 移除了 border 属性
       ),
       child: Column(
         children: [
@@ -816,6 +328,9 @@ class _MainPageState extends State<MainPage> {
 
       // 更新小组件
       await WidgetService.updateWidget(habits);
+
+      // 修改：仅首次初始化时同步成就状态
+      await AchievementService.initializeIfNeeded(habits);
     }
   }
 
@@ -842,11 +357,13 @@ class _MainPageState extends State<MainPage> {
     _saveData();
   }
 
-  // 新增：恢复数据方法
+  // 修改：恢复数据方法 - 添加成就同步
   void _restoreHabits(List<Habit> newHabits) {
     setState(() => habits = newHabits);
     _saveData();
+    // 恢复后同步成就状态，防止重复弹窗
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -955,12 +472,16 @@ class _CheckInPageState extends State<CheckInPage> {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    if (habit.checkInTimes.any((t) => t.startsWith(todayStr))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("今日已完成"), duration: Duration(seconds: 1)),
-      );
+    // 查找今日的打卡记录
+    final todayRecordIndex = habit.checkInRecords.indexWhere(
+          (r) => r.time.startsWith(todayStr),
+    );
+
+    if (todayRecordIndex != -1) {
+      // 已打卡，显示取消确认对话框
+      _showCancelCheckInDialog(habit, todayRecordIndex);
     } else {
-      // 创建打卡记录
+      // 未打卡，执行打卡
       final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
       final record = CheckInRecord(time: timeStr);
       habit.checkInRecords.add(record);
@@ -971,7 +492,261 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
-  // 打卡对话框 - 优化后的样式
+// 取消打卡确认对话框
+  void _showCancelCheckInDialog(Habit habit, int recordIndex) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final record = habit.checkInRecords[recordIndex];
+    final checkInTime = DateTime.parse(record.time);
+    final timeStr = DateFormat('HH:mm').format(checkInTime);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 标题行
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.undo, color: Colors.orange, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "取消打卡",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "确定要取消今日的打卡吗？",
+                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 打卡信息卡片
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          HabitIcons.getIcon(habit.iconIndex),
+                          color: themeColor,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              habit.title,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.access_time, size: 14, color: Colors.grey[400]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "今日 $timeStr 打卡",
+                                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 显示备注（如果有）
+                if (record.note != null && record.note!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.format_quote, size: 16, color: Colors.grey[400]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            record.note!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                // 提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: Colors.orange[700]),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "取消后今日的打卡记录和备注将被删除",
+                          style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // 按钮区域
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("保留打卡", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          // 记录取消打卡（用于成就）
+                          await AchievementService.recordCancelledCheckIn();
+
+                          setState(() {
+                            habit.checkInRecords.removeAt(recordIndex);
+                          });
+                          widget.onSave();
+                          Navigator.pop(ctx);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("已取消「${habit.title}」的打卡"),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+
+                          // 检查成就
+                          await _checkAndShowAchievements();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 新增：检查并显示成就
+  Future<void> _checkAndShowAchievements() async {
+    final newAchievements = await AchievementService.checkNewAchievements(widget.habits);
+
+    if (newAchievements.isNotEmpty && mounted) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await AchievementUnlockDialog.showMultiple(context, newAchievements);
+      }
+    }
+  }
+
+  // 修改打卡对话框中的完成按钮
   void _showEncouragementDialog(Habit habit, CheckInRecord record) {
     final noteController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -1052,16 +827,19 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // 完成按钮
+                  // 完成按钮 - 修改这里添加成就检查
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         if (noteController.text.trim().isNotEmpty) {
                           record.note = noteController.text.trim();
                           widget.onSave();
                         }
                         Navigator.pop(ctx);
+
+                        // 新增：检查成就
+                        await _checkAndShowAchievements();
                       },
                       icon: const Icon(Icons.check, size: 20),
                       label: const Text("完成", style: TextStyle(fontSize: 16)),
@@ -1085,12 +863,13 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  // 修改：添加习惯对话框
   void _showAddDialog() {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
     String? errorText;
-    int selectedIconIndex = 0; // 新增：选中的图标索引
+    int selectedIconIndex = 0;
 
     showModalBottomSheet(
       context: context,
@@ -1152,7 +931,6 @@ class _CheckInPageState extends State<CheckInPage> {
                               ],
                             ),
                           ),
-                          // 关闭按钮
                           GestureDetector(
                             onTap: () => Navigator.pop(ctx),
                             child: Container(
@@ -1246,28 +1024,33 @@ class _CheckInPageState extends State<CheckInPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // 确认按钮
+                      // 确认按钮 - 修改为 async 并添加成就检查
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
                             if (titleController.text.trim().isEmpty) {
                               errorText = "习惯名称不能为空";
                               setModalState(() {});
                             } else {
+                              final habitTitle = titleController.text.trim();
                               widget.onAdd(Habit(
                                 id: DateTime.now().toString(),
-                                title: titleController.text.trim(),
+                                title: habitTitle,
                                 description: descController.text.trim(),
-                                iconIndex: selectedIconIndex, // 新增
+                                iconIndex: selectedIconIndex,
                               ));
                               Navigator.pop(ctx);
-                              ScaffoldMessenger.of(ctx).showSnackBar(
+
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text("已添加「${titleController.text.trim()}」"),
+                                  content: Text("已添加「$habitTitle」"),
                                   duration: const Duration(seconds: 1),
                                 ),
                               );
+
+                              // 新增：创建习惯后检查成就
+                              await _checkAndShowAchievements();
                             }
                           },
                           icon: const Icon(Icons.check, size: 20),
@@ -1294,6 +1077,7 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
+  // 修改：删除习惯对话框
   void _deleteHabit(Habit habit) {
     final themeColor = Theme.of(context).colorScheme.primary;
 
@@ -1351,7 +1135,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         ],
                       ),
                     ),
-                    // 关闭按钮
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx),
                       child: Container(
@@ -1385,7 +1168,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.flag_outlined, color: themeColor, size: 22),
+                        child: Icon(HabitIcons.getIcon(habit.iconIndex), color: themeColor, size: 22),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -1451,15 +1234,23 @@ class _CheckInPageState extends State<CheckInPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          // 记录删除习惯（用于成就）
+                          await AchievementService.recordDeletedHabit();
+
+                          final habitTitle = habit.title;
                           widget.onDelete(habit);
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(ctx).showSnackBar(
+
+                          ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text("已删除「${habit.title}」"),
+                              content: Text("已删除「$habitTitle」"),
                               duration: const Duration(seconds: 2),
                             ),
                           );
+
+                          // 检查成就
+                          await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red[400],
@@ -1530,6 +1321,7 @@ class _CheckInPageState extends State<CheckInPage> {
                       MaterialPageRoute(
                         builder: (c) => DetailPage(
                           habit: habit,
+                          allHabits: widget.habits,
                           onSave: widget.onSave,
                         ),
                       ),
@@ -2312,13 +2104,18 @@ class _BackupPageState extends State<BackupPage> {
     return 'habit_backup_$dateStr.json';
   }
 
-  Map<String, dynamic> _generateBackupData() {
+  // 修改为异步方法
+  Future<Map<String, dynamic>> _generateBackupData() async {
+    // 获取成就状态
+    final achievementStatus = await AchievementService.exportAchievementStatus();
+
     return {
-      'version': '1.0',
+      'version': '1.8.5',  // 版本号升级，标识新格式
       'appName': '雕刀',
       'backupTime': DateTime.now().toIso8601String(),
       'habitsCount': widget.habits.length,
       'habits': widget.habits.map((h) => h.toJson()).toList(),
+      'achievementStatus': achievementStatus,  // 新增：成就状态
     };
   }
 
@@ -2341,7 +2138,8 @@ class _BackupPageState extends State<BackupPage> {
         }
       }
 
-      final backupData = _generateBackupData();
+      // 改为 await
+      final backupData = await _generateBackupData();
       final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
 
       Directory? directory;
@@ -2485,7 +2283,8 @@ class _BackupPageState extends State<BackupPage> {
     setState(() => _isExporting = true);
 
     try {
-      final backupData = _generateBackupData();
+      // 改为 await
+      final backupData = await _generateBackupData();
       final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
 
       final tempDir = await getTemporaryDirectory();
@@ -2531,12 +2330,15 @@ class _BackupPageState extends State<BackupPage> {
       final habitsList = data['habits'] as List;
       final habits = habitsList.map((h) => Habit.fromJson(h)).toList();
 
+      // 提取成就状态（兼容旧版本备份，可能没有这个字段）
+      final achievementStatus = data['achievementStatus'] as Map<String, dynamic>?;
+
       if (mounted) {
         final backupTime = data['backupTime'] != null
             ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(data['backupTime']))
             : '未知';
 
-        _showImportConfirmDialog(habits, backupTime);
+        _showImportConfirmDialog(habits, backupTime, achievementStatus);
       }
     } catch (e) {
       if (mounted) {
@@ -2550,7 +2352,11 @@ class _BackupPageState extends State<BackupPage> {
   }
 
 // 新增：导入确认弹窗
-  void _showImportConfirmDialog(List<Habit> habits, String backupTime) {
+  void _showImportConfirmDialog(
+      List<Habit> habits,
+      String backupTime,
+      Map<String, dynamic>? achievementStatus,  // 新增参数
+      ) {
     final themeColor = Theme.of(context).colorScheme.primary;
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
 
@@ -2686,9 +2492,18 @@ class _BackupPageState extends State<BackupPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(ctx);
+
+                          // ===== 新增：恢复成就状态 =====
+                          await AchievementService.importAchievementStatus(achievementStatus);
+
+                          // 恢复习惯数据
                           widget.onRestore(habits);
+
+                          // ===== 新增：重新同步成就（确保基于习惯数据的成就也被标记为已通知）=====
+                          await AchievementService.resyncAfterImport(habits);
+
                           _showRestoreSuccessDialog(habits.length);
                         },
                         style: ElevatedButton.styleFrom(
@@ -3888,7 +3703,7 @@ class AboutPage extends StatelessWidget {
                     fontWeight: FontWeight.w300,
                     letterSpacing: 4)),
             const SizedBox(height: 8),
-            Text("版本 1.7.5",
+            Text("版本 1.8.5",
                 style: TextStyle(fontSize: 14, color: Colors.grey[400])),
             const SizedBox(height: 30),
             Text("用极简的方式，雕刻更好的自己",
@@ -3908,7 +3723,7 @@ class AboutPage extends StatelessWidget {
                   const Divider(height: 20),
                   _infoRow("联系邮箱", "vence_cat@163.com"),
                   const Divider(height: 20),
-                  _infoRow("更新时间", "2026年1月12日"),
+                  _infoRow("更新时间", "2026年1月19日"),
                 ],
               ),
             ),
@@ -3933,9 +3748,10 @@ class AboutPage extends StatelessWidget {
 // ========== 详情页 ==========
 class DetailPage extends StatefulWidget {
   final Habit habit;
+  final List<Habit> allHabits;
   final VoidCallback onSave;
 
-  const DetailPage({super.key, required this.habit, required this.onSave});
+  const DetailPage({super.key, required this.habit,required this.allHabits, required this.onSave});
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -4992,12 +4808,23 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 新增：执行补卡
+// 新增：检查并显示成就
+  Future<void> _checkAndShowAchievements() async {
+    final newAchievements = await AchievementService.checkNewAchievements(widget.allHabits);
+
+    if (newAchievements.isNotEmpty && mounted) {
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (mounted) {
+        await AchievementUnlockDialog.showMultiple(context, newAchievements);
+      }
+    }
+  }
+
+  // 修改：执行补卡 - 添加成就检查
   void _performMakeUpCheckIn(String note) {
-    // 记录当前的完整时间，但存储到选中的日期
     final now = DateTime.now();
 
-    // 存储时使用选中的日期（用于归类到那一天）
     final makeUpTime = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
@@ -5009,7 +4836,6 @@ class _DetailPageState extends State<DetailPage> {
 
     final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(makeUpTime);
 
-    // 在备注中记录实际补卡的日期时间
     final actualTimeStr = DateFormat('MM月dd日 HH:mm').format(now);
     final noteContent = note.isNotEmpty
         ? "[补卡于$actualTimeStr] $note"
@@ -5032,6 +4858,9 @@ class _DetailPageState extends State<DetailPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+
+    // 新增：检查成就
+    _checkAndShowAchievements();
   }
 
   // 编辑备注 - 优化后的样式
@@ -5296,666 +5125,82 @@ class _DetailPageState extends State<DetailPage> {
 }
 
 // ========== 成就页面 ==========
-class AchievementPage extends StatelessWidget {
+class AchievementPage extends StatefulWidget {
   final List<Habit> habits;
 
   const AchievementPage({super.key, required this.habits});
 
-  // 计算总打卡次数
-  int get totalCheckIns {
-    return habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
+  @override
+  State<AchievementPage> createState() => _AchievementPageState();
+}
+
+class _AchievementPageState extends State<AchievementPage> {
+  bool _isLoading = true;
+  Set<String> _permanentlyUnlockedIds = {};
+  List<Achievement> _allAchievements = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAchievements();
   }
 
-  // 计算今日完成数
-  int get todayCheckIns {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return habits.where((h) => h.checkInTimes.any((t) => t.startsWith(today))).length;
-  }
+  Future<void> _loadAchievements() async {
+    // 获取永久解锁的成就ID
+    final unlockedIds = await AchievementService.getUnlockedAchievements();
 
-  // 计算历史最长连续天数
-  int get historyMaxStreak {
-    if (habits.isEmpty) return 0;
+    // 获取所有成就（带进度）
+    final checker = await AchievementChecker.create(widget.habits);
+    final allAchievements = checker.getAllAchievementsWithProgress();
 
-    int maxStreak = 0;
-    for (final habit in habits) {
-      final streak = _calculateHistoryMaxStreak(habit);
-      if (streak > maxStreak) {
-        maxStreak = streak;
-      }
-    }
-    return maxStreak;
-  }
-
-  int _calculateHistoryMaxStreak(Habit habit) {
-    if (habit.checkInRecords.isEmpty) return 0;
-
-    final dates = <String>[];
-    for (final record in habit.checkInRecords) {
-      if (record.time.length >= 10) {
-        final dateStr = record.time.substring(0, 10);
-        if (!dates.contains(dateStr)) {
-          dates.add(dateStr);
-        }
-      }
-    }
-
-    if (dates.isEmpty) return 0;
-
-    dates.sort();
-    int maxStreak = 1;
-    int currentStreak = 1;
-
-    for (int i = 1; i < dates.length; i++) {
-      final prevDate = DateTime.parse(dates[i - 1]);
-      final currDate = DateTime.parse(dates[i]);
-      final diff = currDate.difference(prevDate).inDays;
-
-      if (diff == 1) {
-        currentStreak++;
-        maxStreak = max(maxStreak, currentStreak);
-      } else if (diff > 1) {
-        currentStreak = 1;
+    // 标记永久解锁的成就为已解锁
+    for (int i = 0; i < allAchievements.length; i++) {
+      if (unlockedIds.contains(allAchievements[i].id)) {
+        final a = allAchievements[i];
+        allAchievements[i] = Achievement(
+          id: a.id,
+          icon: a.icon,
+          title: a.title,
+          description: a.description,
+          isUnlocked: true,
+          progress: 1.0,
+          current: a.target,
+          target: a.target,
+          category: a.category,
+        );
       }
     }
 
-    return maxStreak;
+    if (mounted) {
+      setState(() {
+        _permanentlyUnlockedIds = unlockedIds;
+        _allAchievements = allAchievements;
+        _isLoading = false;
+      });
+    }
   }
 
-  // ========== 特殊成就检查方法 ==========
-
-  // 起飞，芜湖！ - 创建飞机图标习惯并打卡一次
-  bool get isFlightUnlocked {
-    final flightIconIndex = HabitIcons.getIconIndex(Icons.flight_takeoff_outlined);
-    for (final habit in habits) {
-      if (habit.iconIndex == flightIconIndex && habit.checkInRecords.isNotEmpty) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // 缺勤大师 - 累计未打卡次数达到50次
-  int get totalMissedDays {
-    int missed = 0;
-    final today = DateTime.now();
-
-    for (final habit in habits) {
-      try {
-        final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
-        final daysSinceCreation = today.difference(createdDate).inDays + 1;
-
-        final checkedDates = <String>{};
-        for (final record in habit.checkInRecords) {
-          if (record.time.length >= 10) {
-            checkedDates.add(record.time.substring(0, 10));
-          }
-        }
-
-        missed += (daysSinceCreation - checkedDates.length).clamp(0, daysSinceCreation);
-      } catch (e) {
-        continue;
-      }
-    }
-
-    return missed;
-  }
-
-  // 夜猫子 - 在凌晨0-5点打卡
-  bool get isNightOwlUnlocked {
-    for (final habit in habits) {
-      for (final record in habit.checkInRecords) {
-        if (record.time.length >= 13) {
-          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
-          if (hour >= 0 && hour < 5) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // 早起的鸟儿 - 在早上5-7点打卡
-  bool get isEarlyBirdUnlocked {
-    for (final habit in habits) {
-      for (final record in habit.checkInRecords) {
-        if (record.time.length >= 13) {
-          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
-          if (hour >= 5 && hour < 7) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // 周末战士 - 累计在周末打卡10次
-  int get weekendCheckIns {
-    int count = 0;
-    for (final habit in habits) {
-      for (final record in habit.checkInRecords) {
-        if (record.time.length >= 10) {
-          try {
-            final date = DateTime.parse(record.time.substring(0, 10));
-            if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
-              count++;
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-      }
-    }
-    return count;
-  }
-
-  // 一心多用 - 同一天完成5个不同习惯
-  bool get isMultitaskerUnlocked {
-    final dateMap = <String, Set<String>>{};
-    for (final habit in habits) {
-      for (final record in habit.checkInRecords) {
-        if (record.time.length >= 10) {
-          final dateStr = record.time.substring(0, 10);
-          if (!dateMap.containsKey(dateStr)) {
-            dateMap[dateStr] = {};
-          }
-          dateMap[dateStr]!.add(habit.id);
-        }
-      }
-    }
-
-    for (final habitIds in dateMap.values) {
-      if (habitIds.length >= 5) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // 完美一周 - 连续7天完成所有习惯
-  bool get isPerfectWeekUnlocked {
-    if (habits.isEmpty) return false;
-
-    final today = DateTime.now();
-    int consecutivePerfectDays = 0;
-
-    for (int i = 0; i < 60; i++) {
-      final date = today.subtract(Duration(days: i));
-      final dateStr = DateFormat('yyyy-MM-dd').format(date);
-
-      bool allDone = true;
-      int validHabits = 0;
-
-      for (final habit in habits) {
-        try {
-          final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
-          if (date.isBefore(createdDate)) {
-            continue;
-          }
-          validHabits++;
-          if (!habit.checkInTimes.any((t) => t.startsWith(dateStr))) {
-            allDone = false;
-            break;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (validHabits > 0 && allDone) {
-        consecutivePerfectDays++;
-        if (consecutivePerfectDays >= 7) {
-          return true;
-        }
-      } else {
-        consecutivePerfectDays = 0;
-      }
-    }
-
-    return false;
-  }
-
-  // 深夜食堂 - 在晚上10点后打卡饮食相关习惯
-  bool get isLateNightFoodieUnlocked {
-    final foodIcons = [
-      Icons.restaurant_outlined,
-      Icons.local_dining_outlined,
-      Icons.fastfood_outlined,
-      Icons.ramen_dining_outlined,
-      Icons.rice_bowl_outlined,
-      Icons.local_pizza_outlined,
-      Icons.cake_outlined,
-      Icons.cookie_outlined,
-      Icons.icecream_outlined,
-    ];
-
-    final foodIconIndices = foodIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
-
-    for (final habit in habits) {
-      if (foodIconIndices.contains(habit.iconIndex)) {
-        for (final record in habit.checkInRecords) {
-          if (record.time.length >= 13) {
-            final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
-            if (hour >= 22 || hour < 4) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // 健身狂人 - 运动相关习惯累计打卡30次
-  int get fitnessCheckIns {
-    final fitnessIcons = [
-      Icons.fitness_center,
-      Icons.directions_run,
-      Icons.directions_walk,
-      Icons.sports_gymnastics,
-      Icons.pool_outlined,
-      Icons.pedal_bike_outlined,
-      Icons.hiking_outlined,
-    ];
-
-    final fitnessIconIndices = fitnessIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
-
-    int count = 0;
-    for (final habit in habits) {
-      if (fitnessIconIndices.contains(habit.iconIndex)) {
-        count += habit.checkInRecords.length;
-      }
-    }
-    return count;
-  }
-
-  // 书虫 - 阅读相关习惯累计打卡30次
-  int get readingCheckIns {
-    final readingIcons = [
-      Icons.menu_book_outlined,
-      Icons.auto_stories_outlined,
-      Icons.book_outlined,
-      Icons.library_books_outlined,
-    ];
-
-    final readingIconIndices = readingIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
-
-    int count = 0;
-    for (final habit in habits) {
-      if (readingIconIndices.contains(habit.iconIndex)) {
-        count += habit.checkInRecords.length;
-      }
-    }
-    return count;
-  }
-
-  // 佛系玩家 - 创建习惯后7天内未打卡
-  bool get isZenPlayerUnlocked {
-    final today = DateTime.now();
-    for (final habit in habits) {
-      try {
-        final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
-        final daysSinceCreation = today.difference(createdDate).inDays;
-
-        if (daysSinceCreation >= 7 && habit.checkInRecords.isEmpty) {
-          return true;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-    return false;
-  }
-
-  // 午夜惊魂 - 在凌晨3点打卡
-  bool get isMidnightHorrorUnlocked {
-    for (final habit in habits) {
-      for (final record in habit.checkInRecords) {
-        if (record.time.length >= 16) {
-          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
-          final minute = int.tryParse(record.time.substring(14, 16)) ?? 0;
-          if (hour == 3 && minute >= 0 && minute <= 30) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // 获取常规成就列表
+  // 获取常规成就
   List<Achievement> get regularAchievements {
-    final total = totalCheckIns;
-    final streak = historyMaxStreak;
-    final habitCount = habits.length;
-
-    return [
-      // 打卡次数成就
-      Achievement(
-        icon: Icons.star_outline,
-        title: '初次打卡',
-        description: '完成第一次打卡',
-        isUnlocked: total >= 1,
-        progress: total >= 1 ? 1.0 : 0.0,
-        current: total,
-        target: 1,
-        category: '打卡次数',
-      ),
-      Achievement(
-        icon: Icons.looks_one_outlined,
-        title: '小试牛刀',
-        description: '累计打卡10次',
-        isUnlocked: total >= 10,
-        progress: (total / 10).clamp(0.0, 1.0),
-        current: total,
-        target: 10,
-        category: '打卡次数',
-      ),
-      Achievement(
-        icon: Icons.looks_two_outlined,
-        title: '渐入佳境',
-        description: '累计打卡50次',
-        isUnlocked: total >= 50,
-        progress: (total / 50).clamp(0.0, 1.0),
-        current: total,
-        target: 50,
-        category: '打卡次数',
-      ),
-      Achievement(
-        icon: Icons.looks_3_outlined,
-        title: '百折不挠',
-        description: '累计打卡100次',
-        isUnlocked: total >= 100,
-        progress: (total / 100).clamp(0.0, 1.0),
-        current: total,
-        target: 100,
-        category: '打卡次数',
-      ),
-      Achievement(
-        icon: Icons.military_tech_outlined,
-        title: '打卡达人',
-        description: '累计打卡500次',
-        isUnlocked: total >= 500,
-        progress: (total / 500).clamp(0.0, 1.0),
-        current: total,
-        target: 500,
-        category: '打卡次数',
-      ),
-      Achievement(
-        icon: Icons.emoji_events_outlined,
-        title: '传奇人物',
-        description: '累计打卡1000次',
-        isUnlocked: total >= 1000,
-        progress: (total / 1000).clamp(0.0, 1.0),
-        current: total,
-        target: 1000,
-        category: '打卡次数',
-      ),
-
-      // 连续打卡成就
-      Achievement(
-        icon: Icons.local_fire_department_outlined,
-        title: '三天热情',
-        description: '连续打卡3天',
-        isUnlocked: streak >= 3,
-        progress: (streak / 3).clamp(0.0, 1.0),
-        current: streak,
-        target: 3,
-        category: '连续打卡',
-      ),
-      Achievement(
-        icon: Icons.whatshot_outlined,
-        title: '周末勇士',
-        description: '连续打卡7天',
-        isUnlocked: streak >= 7,
-        progress: (streak / 7).clamp(0.0, 1.0),
-        current: streak,
-        target: 7,
-        category: '连续打卡',
-      ),
-      Achievement(
-        icon: Icons.bolt_outlined,
-        title: '月度之星',
-        description: '连续打卡30天',
-        isUnlocked: streak >= 30,
-        progress: (streak / 30).clamp(0.0, 1.0),
-        current: streak,
-        target: 30,
-        category: '连续打卡',
-      ),
-      Achievement(
-        icon: Icons.diamond_outlined,
-        title: '习惯大师',
-        description: '连续打卡100天',
-        isUnlocked: streak >= 100,
-        progress: (streak / 100).clamp(0.0, 1.0),
-        current: streak,
-        target: 100,
-        category: '连续打卡',
-      ),
-      Achievement(
-        icon: Icons.workspace_premium_outlined,
-        title: '年度传奇',
-        description: '连续打卡365天',
-        isUnlocked: streak >= 365,
-        progress: (streak / 365).clamp(0.0, 1.0),
-        current: streak,
-        target: 365,
-        category: '连续打卡',
-      ),
-
-      // 习惯数量成就
-      Achievement(
-        icon: Icons.flag_outlined,
-        title: '新的开始',
-        description: '创建第一个习惯',
-        isUnlocked: habitCount >= 1,
-        progress: habitCount >= 1 ? 1.0 : 0.0,
-        current: habitCount,
-        target: 1,
-        category: '习惯数量',
-      ),
-      Achievement(
-        icon: Icons.auto_awesome_outlined,
-        title: '习惯收集者',
-        description: '拥有5个习惯',
-        isUnlocked: habitCount >= 5,
-        progress: (habitCount / 5).clamp(0.0, 1.0),
-        current: habitCount,
-        target: 5,
-        category: '习惯数量',
-      ),
-      Achievement(
-        icon: Icons.psychology_outlined,
-        title: '自律达人',
-        description: '拥有10个习惯',
-        isUnlocked: habitCount >= 10,
-        progress: (habitCount / 10).clamp(0.0, 1.0),
-        current: habitCount,
-        target: 10,
-        category: '习惯数量',
-      ),
-    ];
+    return _allAchievements.where((a) => a.category != '特殊成就').toList();
   }
 
-  // 获取特殊成就列表（只返回已解锁的）
+  // 获取特殊成就（只返回已解锁的）
   List<Achievement> get specialAchievements {
-    final todayDone = todayCheckIns;
-    final habitCount = habits.length;
-    final missed = totalMissedDays;
-    final weekend = weekendCheckIns;
-    final fitness = fitnessCheckIns;
-    final reading = readingCheckIns;
-
-    final allSpecial = [
-      // 完美一天
-      Achievement(
-        icon: Icons.check_circle_outline,
-        title: '完美一天',
-        description: '今日完成所有习惯',
-        isUnlocked: habitCount > 0 && todayDone == habitCount,
-        progress: habitCount > 0 ? (todayDone / habitCount).clamp(0.0, 1.0) : 0.0,
-        current: todayDone,
-        target: habitCount,
-        category: '特殊成就',
-      ),
-      // 起飞，芜湖！
-      Achievement(
-        icon: Icons.flight_takeoff_outlined,
-        title: '起飞，芜湖！',
-        description: '创建飞机图标习惯并完成打卡',
-        isUnlocked: isFlightUnlocked,
-        progress: isFlightUnlocked ? 1.0 : 0.0,
-        current: isFlightUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 缺勤大师
-      Achievement(
-        icon: Icons.hotel_outlined,
-        title: '缺勤大师',
-        description: '累计未打卡50次',
-        isUnlocked: missed >= 50,
-        progress: (missed / 50).clamp(0.0, 1.0),
-        current: missed,
-        target: 50,
-        category: '特殊成就',
-      ),
-      // 夜猫子
-      Achievement(
-        icon: Icons.nightlight_outlined,
-        title: '夜猫子',
-        description: '在凌晨0-5点打卡',
-        isUnlocked: isNightOwlUnlocked,
-        progress: isNightOwlUnlocked ? 1.0 : 0.0,
-        current: isNightOwlUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 早起的鸟儿
-      Achievement(
-        icon: Icons.wb_sunny_outlined,
-        title: '早起的鸟儿',
-        description: '在早上5-7点打卡',
-        isUnlocked: isEarlyBirdUnlocked,
-        progress: isEarlyBirdUnlocked ? 1.0 : 0.0,
-        current: isEarlyBirdUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 周末战士
-      Achievement(
-        icon: Icons.weekend_outlined,
-        title: '周末战士',
-        description: '在周末累计打卡10次',
-        isUnlocked: weekend >= 10,
-        progress: (weekend / 10).clamp(0.0, 1.0),
-        current: weekend,
-        target: 10,
-        category: '特殊成就',
-      ),
-      // 一心多用
-      Achievement(
-        icon: Icons.auto_awesome_mosaic_outlined,
-        title: '一心多用',
-        description: '同一天完成5个不同习惯',
-        isUnlocked: isMultitaskerUnlocked,
-        progress: isMultitaskerUnlocked ? 1.0 : 0.0,
-        current: isMultitaskerUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 完美一周
-      Achievement(
-        icon: Icons.date_range_outlined,
-        title: '完美一周',
-        description: '连续7天完成所有习惯',
-        isUnlocked: isPerfectWeekUnlocked,
-        progress: isPerfectWeekUnlocked ? 1.0 : 0.0,
-        current: isPerfectWeekUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 深夜食堂
-      Achievement(
-        icon: Icons.ramen_dining_outlined,
-        title: '深夜食堂',
-        description: '在晚上10点后打卡饮食习惯',
-        isUnlocked: isLateNightFoodieUnlocked,
-        progress: isLateNightFoodieUnlocked ? 1.0 : 0.0,
-        current: isLateNightFoodieUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 健身狂人
-      Achievement(
-        icon: Icons.fitness_center,
-        title: '健身狂人',
-        description: '运动相关习惯累计打卡30次',
-        isUnlocked: fitness >= 30,
-        progress: (fitness / 30).clamp(0.0, 1.0),
-        current: fitness,
-        target: 30,
-        category: '特殊成就',
-      ),
-      // 书虫
-      Achievement(
-        icon: Icons.menu_book_outlined,
-        title: '书虫',
-        description: '阅读相关习惯累计打卡30次',
-        isUnlocked: reading >= 30,
-        progress: (reading / 30).clamp(0.0, 1.0),
-        current: reading,
-        target: 30,
-        category: '特殊成就',
-      ),
-      // 佛系玩家
-      Achievement(
-        icon: Icons.self_improvement,
-        title: '佛系玩家',
-        description: '创建习惯7天后仍未打卡',
-        isUnlocked: isZenPlayerUnlocked,
-        progress: isZenPlayerUnlocked ? 1.0 : 0.0,
-        current: isZenPlayerUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-      // 午夜惊魂
-      Achievement(
-        icon: Icons.dark_mode_outlined,
-        title: '午夜惊魂',
-        description: '在凌晨3点打卡',
-        isUnlocked: isMidnightHorrorUnlocked,
-        progress: isMidnightHorrorUnlocked ? 1.0 : 0.0,
-        current: isMidnightHorrorUnlocked ? 1 : 0,
-        target: 1,
-        category: '特殊成就',
-      ),
-    ];
-
-    // 只返回已解锁的特殊成就
-    return allSpecial.where((a) => a.isUnlocked).toList();
+    return _allAchievements.where((a) => a.category == '特殊成就' && a.isUnlocked).toList();
   }
 
-  // 特殊成就总数（用于显示）
-  int get totalSpecialAchievements => 13;
-
-  // 所有成就
-  List<Achievement> get achievements {
-    return [...regularAchievements, ...specialAchievements];
-  }
+  // 特殊成就总数
+  int get totalSpecialAchievements =>
+      _allAchievements.where((a) => a.category == '特殊成就').length;
 
   // 已解锁成就数
   int get unlockedCount {
-    final regularUnlocked = regularAchievements.where((a) => a.isUnlocked).length;
-    return regularUnlocked + specialAchievements.length;
+    return _allAchievements.where((a) => a.isUnlocked).length;
   }
 
   // 成就总数
-  int get totalAchievements {
-    return regularAchievements.length + totalSpecialAchievements;
-  }
+  int get totalAchievements => _allAchievements.length;
 
   // 按类别分组（常规成就）
   Map<String, List<Achievement>> get groupedRegularAchievements {
@@ -5971,6 +5216,16 @@ class AchievementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("打卡成就", style: TextStyle(fontSize: 16)),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final grouped = groupedRegularAchievements;
@@ -5990,7 +5245,7 @@ class AchievementPage extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  themeColor.withValues(alpha: 0.8),
+                  themeColor.withOpacity(0.8),
                   themeColor,
                 ],
                 begin: Alignment.topLeft,
@@ -5999,7 +5254,7 @@ class AchievementPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: themeColor.withValues(alpha: 0.3),
+                  color: themeColor.withOpacity(0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -6011,7 +5266,7 @@ class AchievementPage extends StatelessWidget {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -6054,16 +5309,16 @@ class AchievementPage extends StatelessWidget {
                           width: 56,
                           height: 56,
                           child: CircularProgressIndicator(
-                            value: unlockedCount / totalAchievements,
+                            value: totalAchievements > 0 ? unlockedCount / totalAchievements : 0,
                             strokeWidth: 5,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            backgroundColor: Colors.white.withOpacity(0.2),
                             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
                       ),
                       Center(
                         child: Text(
-                          "${(unlockedCount / totalAchievements * 100).toInt()}%",
+                          "${totalAchievements > 0 ? (unlockedCount / totalAchievements * 100).toInt() : 0}%",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -6170,7 +5425,6 @@ class AchievementPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // 只显示已解锁的特殊成就
                 if (unlockedSpecial.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
@@ -6239,7 +5493,7 @@ class AchievementPage extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: achievement.isUnlocked
-                    ? (isSpecial ? Colors.amber[50] : themeColor.withValues(alpha: 0.1))
+                    ? (isSpecial ? Colors.amber[50] : themeColor.withOpacity(0.1))
                     : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -6292,7 +5546,7 @@ class AchievementPage extends StatelessWidget {
                               minHeight: 4,
                               backgroundColor: Colors.grey[200],
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                themeColor.withValues(alpha: 0.6),
+                                themeColor.withOpacity(0.6),
                               ),
                             ),
                           ),
@@ -6374,7 +5628,7 @@ class AchievementPage extends StatelessWidget {
                   height: 80,
                   decoration: BoxDecoration(
                     color: achievement.isUnlocked
-                        ? highlightColor.withValues(alpha: 0.1)
+                        ? highlightColor.withOpacity(0.1)
                         : Colors.grey[100],
                     shape: BoxShape.circle,
                   ),
@@ -6441,7 +5695,7 @@ class AchievementPage extends StatelessWidget {
                           minHeight: 8,
                           backgroundColor: Colors.grey[300],
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            achievement.isUnlocked ? highlightColor : highlightColor.withValues(alpha: 0.6),
+                            achievement.isUnlocked ? highlightColor : highlightColor.withOpacity(0.6),
                           ),
                         ),
                       ),

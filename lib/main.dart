@@ -23,6 +23,29 @@ void main() async {
   runApp(HabitApp(initialColorIndex: colorIndex));
 }
 
+// 成就数据类
+class Achievement {
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isUnlocked;
+  final double progress;
+  final int current;
+  final int target;
+  final String category;
+
+  const Achievement({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.isUnlocked,
+    required this.progress,
+    required this.current,
+    required this.target,
+    required this.category,
+  });
+}
+
 // 主题颜色配置
 class ThemeConfig {
   static const List<ThemeColorOption> colorOptions = [
@@ -1992,12 +2015,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (streak > 0) ...[
-                                      Icon(Icons.local_fire_department, size: 14, color: Colors.orange[600]),
-                                      const SizedBox(width: 4),
-                                    ],
+                                    Icon(
+                                      Icons.local_fire_department,
+                                      size: 14,
+                                      color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
+                                    ),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      streak > 0 ? "$streak天" : "未打卡",
+                                      "$streak天",
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
@@ -2139,7 +2164,12 @@ class ProfilePage extends StatelessWidget {
   final VoidCallback onSave;
   final Function(List<Habit>) onRestore;
 
-  const ProfilePage({super.key, required this.habits, required this.onSave, required this.onRestore,});
+  const ProfilePage({
+    super.key,
+    required this.habits,
+    required this.onSave,
+    required this.onRestore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2157,8 +2187,7 @@ class ProfilePage extends StatelessWidget {
         slivers: [
           SliverAppBar.large(
             title: const Text("我的",
-                style:
-                TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
+                style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: backgroundColor,
           ),
@@ -2179,23 +2208,24 @@ class ProfilePage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _statItem("习惯数", habits.length.toString(), themeColor),
-                        Container(
-                            width: 1, height: 40, color: Colors.grey[200]),
+                        Container(width: 1, height: 40, color: Colors.grey[200]),
                         _statItem("今日完成", todayCheckIns.toString(), themeColor),
-                        Container(
-                            width: 1, height: 40, color: Colors.grey[200]),
+                        Container(width: 1, height: 40, color: Colors.grey[200]),
                         _statItem("累计打卡", totalCheckIns.toString(), themeColor),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // 菜单项
+                  _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
+                      AchievementPage(habits: habits)),
                   _menuItem(context, Icons.notifications_none, "提醒设置",
                       ReminderSettingsPage(habits: habits, onSave: onSave)),
                   _menuItem(context, Icons.color_lens_outlined, "主题设置",
                       const ThemeSettingsPage()),
-                  _menuItem(context, Icons.cloud_outlined, "数据备份", BackupPage(habits: habits, onRestore: onRestore)),
-                  _menuItem(
-                      context, Icons.info_outline, "关于", const AboutPage()),
+                  _menuItem(context, Icons.cloud_outlined, "数据备份",
+                      BackupPage(habits: habits, onRestore: onRestore)),
+                  _menuItem(context, Icons.info_outline, "关于", const AboutPage()),
                 ],
               ),
             ),
@@ -2217,8 +2247,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _menuItem(
-      BuildContext context, IconData icon, String title, Widget? page) {
+  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page) {
     final themeColor = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -5262,6 +5291,1201 @@ class _DetailPageState extends State<DetailPage> {
         const SizedBox(height: 4),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
       ],
+    );
+  }
+}
+
+// ========== 成就页面 ==========
+class AchievementPage extends StatelessWidget {
+  final List<Habit> habits;
+
+  const AchievementPage({super.key, required this.habits});
+
+  // 计算总打卡次数
+  int get totalCheckIns {
+    return habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
+  }
+
+  // 计算今日完成数
+  int get todayCheckIns {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return habits.where((h) => h.checkInTimes.any((t) => t.startsWith(today))).length;
+  }
+
+  // 计算历史最长连续天数
+  int get historyMaxStreak {
+    if (habits.isEmpty) return 0;
+
+    int maxStreak = 0;
+    for (final habit in habits) {
+      final streak = _calculateHistoryMaxStreak(habit);
+      if (streak > maxStreak) {
+        maxStreak = streak;
+      }
+    }
+    return maxStreak;
+  }
+
+  int _calculateHistoryMaxStreak(Habit habit) {
+    if (habit.checkInRecords.isEmpty) return 0;
+
+    final dates = <String>[];
+    for (final record in habit.checkInRecords) {
+      if (record.time.length >= 10) {
+        final dateStr = record.time.substring(0, 10);
+        if (!dates.contains(dateStr)) {
+          dates.add(dateStr);
+        }
+      }
+    }
+
+    if (dates.isEmpty) return 0;
+
+    dates.sort();
+    int maxStreak = 1;
+    int currentStreak = 1;
+
+    for (int i = 1; i < dates.length; i++) {
+      final prevDate = DateTime.parse(dates[i - 1]);
+      final currDate = DateTime.parse(dates[i]);
+      final diff = currDate.difference(prevDate).inDays;
+
+      if (diff == 1) {
+        currentStreak++;
+        maxStreak = max(maxStreak, currentStreak);
+      } else if (diff > 1) {
+        currentStreak = 1;
+      }
+    }
+
+    return maxStreak;
+  }
+
+  // ========== 特殊成就检查方法 ==========
+
+  // 起飞，芜湖！ - 创建飞机图标习惯并打卡一次
+  bool get isFlightUnlocked {
+    final flightIconIndex = HabitIcons.getIconIndex(Icons.flight_takeoff_outlined);
+    for (final habit in habits) {
+      if (habit.iconIndex == flightIconIndex && habit.checkInRecords.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 缺勤大师 - 累计未打卡次数达到50次
+  int get totalMissedDays {
+    int missed = 0;
+    final today = DateTime.now();
+
+    for (final habit in habits) {
+      try {
+        final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
+        final daysSinceCreation = today.difference(createdDate).inDays + 1;
+
+        final checkedDates = <String>{};
+        for (final record in habit.checkInRecords) {
+          if (record.time.length >= 10) {
+            checkedDates.add(record.time.substring(0, 10));
+          }
+        }
+
+        missed += (daysSinceCreation - checkedDates.length).clamp(0, daysSinceCreation);
+      } catch (e) {
+        continue;
+      }
+    }
+
+    return missed;
+  }
+
+  // 夜猫子 - 在凌晨0-5点打卡
+  bool get isNightOwlUnlocked {
+    for (final habit in habits) {
+      for (final record in habit.checkInRecords) {
+        if (record.time.length >= 13) {
+          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
+          if (hour >= 0 && hour < 5) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 早起的鸟儿 - 在早上5-7点打卡
+  bool get isEarlyBirdUnlocked {
+    for (final habit in habits) {
+      for (final record in habit.checkInRecords) {
+        if (record.time.length >= 13) {
+          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
+          if (hour >= 5 && hour < 7) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 周末战士 - 累计在周末打卡10次
+  int get weekendCheckIns {
+    int count = 0;
+    for (final habit in habits) {
+      for (final record in habit.checkInRecords) {
+        if (record.time.length >= 10) {
+          try {
+            final date = DateTime.parse(record.time.substring(0, 10));
+            if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
+              count++;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  // 一心多用 - 同一天完成5个不同习惯
+  bool get isMultitaskerUnlocked {
+    final dateMap = <String, Set<String>>{};
+    for (final habit in habits) {
+      for (final record in habit.checkInRecords) {
+        if (record.time.length >= 10) {
+          final dateStr = record.time.substring(0, 10);
+          if (!dateMap.containsKey(dateStr)) {
+            dateMap[dateStr] = {};
+          }
+          dateMap[dateStr]!.add(habit.id);
+        }
+      }
+    }
+
+    for (final habitIds in dateMap.values) {
+      if (habitIds.length >= 5) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 完美一周 - 连续7天完成所有习惯
+  bool get isPerfectWeekUnlocked {
+    if (habits.isEmpty) return false;
+
+    final today = DateTime.now();
+    int consecutivePerfectDays = 0;
+
+    for (int i = 0; i < 60; i++) {
+      final date = today.subtract(Duration(days: i));
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+
+      bool allDone = true;
+      int validHabits = 0;
+
+      for (final habit in habits) {
+        try {
+          final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
+          if (date.isBefore(createdDate)) {
+            continue;
+          }
+          validHabits++;
+          if (!habit.checkInTimes.any((t) => t.startsWith(dateStr))) {
+            allDone = false;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (validHabits > 0 && allDone) {
+        consecutivePerfectDays++;
+        if (consecutivePerfectDays >= 7) {
+          return true;
+        }
+      } else {
+        consecutivePerfectDays = 0;
+      }
+    }
+
+    return false;
+  }
+
+  // 深夜食堂 - 在晚上10点后打卡饮食相关习惯
+  bool get isLateNightFoodieUnlocked {
+    final foodIcons = [
+      Icons.restaurant_outlined,
+      Icons.local_dining_outlined,
+      Icons.fastfood_outlined,
+      Icons.ramen_dining_outlined,
+      Icons.rice_bowl_outlined,
+      Icons.local_pizza_outlined,
+      Icons.cake_outlined,
+      Icons.cookie_outlined,
+      Icons.icecream_outlined,
+    ];
+
+    final foodIconIndices = foodIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
+
+    for (final habit in habits) {
+      if (foodIconIndices.contains(habit.iconIndex)) {
+        for (final record in habit.checkInRecords) {
+          if (record.time.length >= 13) {
+            final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
+            if (hour >= 22 || hour < 4) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 健身狂人 - 运动相关习惯累计打卡30次
+  int get fitnessCheckIns {
+    final fitnessIcons = [
+      Icons.fitness_center,
+      Icons.directions_run,
+      Icons.directions_walk,
+      Icons.sports_gymnastics,
+      Icons.pool_outlined,
+      Icons.pedal_bike_outlined,
+      Icons.hiking_outlined,
+    ];
+
+    final fitnessIconIndices = fitnessIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
+
+    int count = 0;
+    for (final habit in habits) {
+      if (fitnessIconIndices.contains(habit.iconIndex)) {
+        count += habit.checkInRecords.length;
+      }
+    }
+    return count;
+  }
+
+  // 书虫 - 阅读相关习惯累计打卡30次
+  int get readingCheckIns {
+    final readingIcons = [
+      Icons.menu_book_outlined,
+      Icons.auto_stories_outlined,
+      Icons.book_outlined,
+      Icons.library_books_outlined,
+    ];
+
+    final readingIconIndices = readingIcons.map((icon) => HabitIcons.getIconIndex(icon)).toSet();
+
+    int count = 0;
+    for (final habit in habits) {
+      if (readingIconIndices.contains(habit.iconIndex)) {
+        count += habit.checkInRecords.length;
+      }
+    }
+    return count;
+  }
+
+  // 佛系玩家 - 创建习惯后7天内未打卡
+  bool get isZenPlayerUnlocked {
+    final today = DateTime.now();
+    for (final habit in habits) {
+      try {
+        final createdDate = DateTime.parse(habit.createdAt.substring(0, 10));
+        final daysSinceCreation = today.difference(createdDate).inDays;
+
+        if (daysSinceCreation >= 7 && habit.checkInRecords.isEmpty) {
+          return true;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    return false;
+  }
+
+  // 午夜惊魂 - 在凌晨3点打卡
+  bool get isMidnightHorrorUnlocked {
+    for (final habit in habits) {
+      for (final record in habit.checkInRecords) {
+        if (record.time.length >= 16) {
+          final hour = int.tryParse(record.time.substring(11, 13)) ?? 12;
+          final minute = int.tryParse(record.time.substring(14, 16)) ?? 0;
+          if (hour == 3 && minute >= 0 && minute <= 30) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 获取常规成就列表
+  List<Achievement> get regularAchievements {
+    final total = totalCheckIns;
+    final streak = historyMaxStreak;
+    final habitCount = habits.length;
+
+    return [
+      // 打卡次数成就
+      Achievement(
+        icon: Icons.star_outline,
+        title: '初次打卡',
+        description: '完成第一次打卡',
+        isUnlocked: total >= 1,
+        progress: total >= 1 ? 1.0 : 0.0,
+        current: total,
+        target: 1,
+        category: '打卡次数',
+      ),
+      Achievement(
+        icon: Icons.looks_one_outlined,
+        title: '小试牛刀',
+        description: '累计打卡10次',
+        isUnlocked: total >= 10,
+        progress: (total / 10).clamp(0.0, 1.0),
+        current: total,
+        target: 10,
+        category: '打卡次数',
+      ),
+      Achievement(
+        icon: Icons.looks_two_outlined,
+        title: '渐入佳境',
+        description: '累计打卡50次',
+        isUnlocked: total >= 50,
+        progress: (total / 50).clamp(0.0, 1.0),
+        current: total,
+        target: 50,
+        category: '打卡次数',
+      ),
+      Achievement(
+        icon: Icons.looks_3_outlined,
+        title: '百折不挠',
+        description: '累计打卡100次',
+        isUnlocked: total >= 100,
+        progress: (total / 100).clamp(0.0, 1.0),
+        current: total,
+        target: 100,
+        category: '打卡次数',
+      ),
+      Achievement(
+        icon: Icons.military_tech_outlined,
+        title: '打卡达人',
+        description: '累计打卡500次',
+        isUnlocked: total >= 500,
+        progress: (total / 500).clamp(0.0, 1.0),
+        current: total,
+        target: 500,
+        category: '打卡次数',
+      ),
+      Achievement(
+        icon: Icons.emoji_events_outlined,
+        title: '传奇人物',
+        description: '累计打卡1000次',
+        isUnlocked: total >= 1000,
+        progress: (total / 1000).clamp(0.0, 1.0),
+        current: total,
+        target: 1000,
+        category: '打卡次数',
+      ),
+
+      // 连续打卡成就
+      Achievement(
+        icon: Icons.local_fire_department_outlined,
+        title: '三天热情',
+        description: '连续打卡3天',
+        isUnlocked: streak >= 3,
+        progress: (streak / 3).clamp(0.0, 1.0),
+        current: streak,
+        target: 3,
+        category: '连续打卡',
+      ),
+      Achievement(
+        icon: Icons.whatshot_outlined,
+        title: '周末勇士',
+        description: '连续打卡7天',
+        isUnlocked: streak >= 7,
+        progress: (streak / 7).clamp(0.0, 1.0),
+        current: streak,
+        target: 7,
+        category: '连续打卡',
+      ),
+      Achievement(
+        icon: Icons.bolt_outlined,
+        title: '月度之星',
+        description: '连续打卡30天',
+        isUnlocked: streak >= 30,
+        progress: (streak / 30).clamp(0.0, 1.0),
+        current: streak,
+        target: 30,
+        category: '连续打卡',
+      ),
+      Achievement(
+        icon: Icons.diamond_outlined,
+        title: '习惯大师',
+        description: '连续打卡100天',
+        isUnlocked: streak >= 100,
+        progress: (streak / 100).clamp(0.0, 1.0),
+        current: streak,
+        target: 100,
+        category: '连续打卡',
+      ),
+      Achievement(
+        icon: Icons.workspace_premium_outlined,
+        title: '年度传奇',
+        description: '连续打卡365天',
+        isUnlocked: streak >= 365,
+        progress: (streak / 365).clamp(0.0, 1.0),
+        current: streak,
+        target: 365,
+        category: '连续打卡',
+      ),
+
+      // 习惯数量成就
+      Achievement(
+        icon: Icons.flag_outlined,
+        title: '新的开始',
+        description: '创建第一个习惯',
+        isUnlocked: habitCount >= 1,
+        progress: habitCount >= 1 ? 1.0 : 0.0,
+        current: habitCount,
+        target: 1,
+        category: '习惯数量',
+      ),
+      Achievement(
+        icon: Icons.auto_awesome_outlined,
+        title: '习惯收集者',
+        description: '拥有5个习惯',
+        isUnlocked: habitCount >= 5,
+        progress: (habitCount / 5).clamp(0.0, 1.0),
+        current: habitCount,
+        target: 5,
+        category: '习惯数量',
+      ),
+      Achievement(
+        icon: Icons.psychology_outlined,
+        title: '自律达人',
+        description: '拥有10个习惯',
+        isUnlocked: habitCount >= 10,
+        progress: (habitCount / 10).clamp(0.0, 1.0),
+        current: habitCount,
+        target: 10,
+        category: '习惯数量',
+      ),
+    ];
+  }
+
+  // 获取特殊成就列表（只返回已解锁的）
+  List<Achievement> get specialAchievements {
+    final todayDone = todayCheckIns;
+    final habitCount = habits.length;
+    final missed = totalMissedDays;
+    final weekend = weekendCheckIns;
+    final fitness = fitnessCheckIns;
+    final reading = readingCheckIns;
+
+    final allSpecial = [
+      // 完美一天
+      Achievement(
+        icon: Icons.check_circle_outline,
+        title: '完美一天',
+        description: '今日完成所有习惯',
+        isUnlocked: habitCount > 0 && todayDone == habitCount,
+        progress: habitCount > 0 ? (todayDone / habitCount).clamp(0.0, 1.0) : 0.0,
+        current: todayDone,
+        target: habitCount,
+        category: '特殊成就',
+      ),
+      // 起飞，芜湖！
+      Achievement(
+        icon: Icons.flight_takeoff_outlined,
+        title: '起飞，芜湖！',
+        description: '创建飞机图标习惯并完成打卡',
+        isUnlocked: isFlightUnlocked,
+        progress: isFlightUnlocked ? 1.0 : 0.0,
+        current: isFlightUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 缺勤大师
+      Achievement(
+        icon: Icons.hotel_outlined,
+        title: '缺勤大师',
+        description: '累计未打卡50次',
+        isUnlocked: missed >= 50,
+        progress: (missed / 50).clamp(0.0, 1.0),
+        current: missed,
+        target: 50,
+        category: '特殊成就',
+      ),
+      // 夜猫子
+      Achievement(
+        icon: Icons.nightlight_outlined,
+        title: '夜猫子',
+        description: '在凌晨0-5点打卡',
+        isUnlocked: isNightOwlUnlocked,
+        progress: isNightOwlUnlocked ? 1.0 : 0.0,
+        current: isNightOwlUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 早起的鸟儿
+      Achievement(
+        icon: Icons.wb_sunny_outlined,
+        title: '早起的鸟儿',
+        description: '在早上5-7点打卡',
+        isUnlocked: isEarlyBirdUnlocked,
+        progress: isEarlyBirdUnlocked ? 1.0 : 0.0,
+        current: isEarlyBirdUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 周末战士
+      Achievement(
+        icon: Icons.weekend_outlined,
+        title: '周末战士',
+        description: '在周末累计打卡10次',
+        isUnlocked: weekend >= 10,
+        progress: (weekend / 10).clamp(0.0, 1.0),
+        current: weekend,
+        target: 10,
+        category: '特殊成就',
+      ),
+      // 一心多用
+      Achievement(
+        icon: Icons.auto_awesome_mosaic_outlined,
+        title: '一心多用',
+        description: '同一天完成5个不同习惯',
+        isUnlocked: isMultitaskerUnlocked,
+        progress: isMultitaskerUnlocked ? 1.0 : 0.0,
+        current: isMultitaskerUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 完美一周
+      Achievement(
+        icon: Icons.date_range_outlined,
+        title: '完美一周',
+        description: '连续7天完成所有习惯',
+        isUnlocked: isPerfectWeekUnlocked,
+        progress: isPerfectWeekUnlocked ? 1.0 : 0.0,
+        current: isPerfectWeekUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 深夜食堂
+      Achievement(
+        icon: Icons.ramen_dining_outlined,
+        title: '深夜食堂',
+        description: '在晚上10点后打卡饮食习惯',
+        isUnlocked: isLateNightFoodieUnlocked,
+        progress: isLateNightFoodieUnlocked ? 1.0 : 0.0,
+        current: isLateNightFoodieUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 健身狂人
+      Achievement(
+        icon: Icons.fitness_center,
+        title: '健身狂人',
+        description: '运动相关习惯累计打卡30次',
+        isUnlocked: fitness >= 30,
+        progress: (fitness / 30).clamp(0.0, 1.0),
+        current: fitness,
+        target: 30,
+        category: '特殊成就',
+      ),
+      // 书虫
+      Achievement(
+        icon: Icons.menu_book_outlined,
+        title: '书虫',
+        description: '阅读相关习惯累计打卡30次',
+        isUnlocked: reading >= 30,
+        progress: (reading / 30).clamp(0.0, 1.0),
+        current: reading,
+        target: 30,
+        category: '特殊成就',
+      ),
+      // 佛系玩家
+      Achievement(
+        icon: Icons.self_improvement,
+        title: '佛系玩家',
+        description: '创建习惯7天后仍未打卡',
+        isUnlocked: isZenPlayerUnlocked,
+        progress: isZenPlayerUnlocked ? 1.0 : 0.0,
+        current: isZenPlayerUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+      // 午夜惊魂
+      Achievement(
+        icon: Icons.dark_mode_outlined,
+        title: '午夜惊魂',
+        description: '在凌晨3点打卡',
+        isUnlocked: isMidnightHorrorUnlocked,
+        progress: isMidnightHorrorUnlocked ? 1.0 : 0.0,
+        current: isMidnightHorrorUnlocked ? 1 : 0,
+        target: 1,
+        category: '特殊成就',
+      ),
+    ];
+
+    // 只返回已解锁的特殊成就
+    return allSpecial.where((a) => a.isUnlocked).toList();
+  }
+
+  // 特殊成就总数（用于显示）
+  int get totalSpecialAchievements => 13;
+
+  // 所有成就
+  List<Achievement> get achievements {
+    return [...regularAchievements, ...specialAchievements];
+  }
+
+  // 已解锁成就数
+  int get unlockedCount {
+    final regularUnlocked = regularAchievements.where((a) => a.isUnlocked).length;
+    return regularUnlocked + specialAchievements.length;
+  }
+
+  // 成就总数
+  int get totalAchievements {
+    return regularAchievements.length + totalSpecialAchievements;
+  }
+
+  // 按类别分组（常规成就）
+  Map<String, List<Achievement>> get groupedRegularAchievements {
+    final map = <String, List<Achievement>>{};
+    for (final achievement in regularAchievements) {
+      if (!map.containsKey(achievement.category)) {
+        map[achievement.category] = [];
+      }
+      map[achievement.category]!.add(achievement);
+    }
+    return map;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final grouped = groupedRegularAchievements;
+    final unlockedSpecial = specialAchievements;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("打卡成就", style: TextStyle(fontSize: 16)),
+        backgroundColor: backgroundColor,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // 成就概览卡片
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  themeColor.withValues(alpha: 0.8),
+                  themeColor,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: themeColor.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "成就进度",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "$unlockedCount / $totalAchievements",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: CircularProgressIndicator(
+                            value: unlockedCount / totalAchievements,
+                            strokeWidth: 5,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          "${(unlockedCount / totalAchievements * 100).toInt()}%",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 常规成就（按类别显示）
+          ...grouped.entries.map((entry) {
+            final category = entry.key;
+            final categoryAchievements = entry.value;
+            final unlockedInCategory = categoryAchievements.where((a) => a.isUnlocked).length;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _getCategoryIcon(category),
+                          size: 18,
+                          color: themeColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          "$unlockedInCategory/${categoryAchievements.length}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...categoryAchievements.map((achievement) =>
+                        _buildAchievementListItem(context, achievement, themeColor)),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          // 特殊成就
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.stars_outlined,
+                      size: 18,
+                      color: Colors.amber[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "特殊成就",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      "${unlockedSpecial.length}/$totalSpecialAchievements",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // 只显示已解锁的特殊成就
+                if (unlockedSpecial.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.lock_outline, size: 32, color: Colors.grey[300]),
+                          const SizedBox(height: 8),
+                          Text(
+                            "暂无解锁的特殊成就",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "继续探索，发现隐藏成就吧！",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...unlockedSpecial.map((achievement) =>
+                      _buildAchievementListItem(context, achievement, themeColor, isSpecial: true)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case '打卡次数':
+        return Icons.check_circle_outline;
+      case '连续打卡':
+        return Icons.local_fire_department_outlined;
+      case '习惯数量':
+        return Icons.flag_outlined;
+      default:
+        return Icons.emoji_events_outlined;
+    }
+  }
+
+  Widget _buildAchievementListItem(BuildContext context, Achievement achievement, Color themeColor, {bool isSpecial = false}) {
+    return GestureDetector(
+      onTap: () => _showAchievementDetail(context, achievement, themeColor, isSpecial: isSpecial),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.grey[100]!, width: 1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: achievement.isUnlocked
+                    ? (isSpecial ? Colors.amber[50] : themeColor.withValues(alpha: 0.1))
+                    : Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                achievement.icon,
+                size: 24,
+                color: achievement.isUnlocked
+                    ? (isSpecial ? Colors.amber[600] : themeColor)
+                    : Colors.grey[400],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        achievement.title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: achievement.isUnlocked ? Colors.black87 : Colors.grey[600],
+                        ),
+                      ),
+                      if (isSpecial && achievement.isUnlocked) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.auto_awesome, size: 14, color: Colors.amber[600]),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    achievement.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  if (!achievement.isUnlocked) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: achievement.progress,
+                              minHeight: 4,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                themeColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "${achievement.current}/${achievement.target}",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (achievement.isUnlocked)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSpecial ? Colors.amber[50] : Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check, size: 14, color: isSpecial ? Colors.amber[700] : Colors.green[600]),
+                    const SizedBox(width: 2),
+                    Text(
+                      "已解锁",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isSpecial ? Colors.amber[700] : Colors.green[700],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAchievementDetail(BuildContext context, Achievement achievement, Color themeColor, {bool isSpecial = false}) {
+    final highlightColor = isSpecial ? Colors.amber[600]! : themeColor;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: achievement.isUnlocked
+                        ? highlightColor.withValues(alpha: 0.1)
+                        : Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    achievement.icon,
+                    size: 40,
+                    color: achievement.isUnlocked ? highlightColor : Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      achievement.title,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: achievement.isUnlocked ? Colors.black87 : Colors.grey[600],
+                      ),
+                    ),
+                    if (isSpecial && achievement.isUnlocked) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.auto_awesome, size: 20, color: Colors.amber[600]),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  achievement.description,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "进度",
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          ),
+                          Text(
+                            "${achievement.current}/${achievement.target}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: achievement.isUnlocked ? highlightColor : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: achievement.progress,
+                          minHeight: 8,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            achievement.isUnlocked ? highlightColor : highlightColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: achievement.isUnlocked
+                        ? (isSpecial ? Colors.amber[50] : Colors.green[50])
+                        : Colors.orange[50],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        achievement.isUnlocked ? Icons.check_circle : Icons.hourglass_empty,
+                        size: 16,
+                        color: achievement.isUnlocked
+                            ? (isSpecial ? Colors.amber[700] : Colors.green[600])
+                            : Colors.orange[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        achievement.isUnlocked ? "已解锁" : "进行中",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: achievement.isUnlocked
+                              ? (isSpecial ? Colors.amber[700] : Colors.green[700])
+                              : Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

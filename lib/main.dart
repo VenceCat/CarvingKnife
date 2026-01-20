@@ -15,6 +15,8 @@ import 'widgets/achievement_dialog.dart';
 import 'models/habit.dart';
 import 'services/widget_service.dart';
 import 'services/habit_icons.dart';
+import 'services/update_service.dart';
+import 'widgets/update_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -3661,8 +3663,70 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
   }
 }
 // ========== 关于页面 ==========
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  String _currentVersion = '';
+  bool _isChecking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentVersion();
+  }
+
+  Future<void> _loadCurrentVersion() async {
+    final version = await UpdateService.getCurrentVersion();
+    if (mounted) {
+      setState(() => _currentVersion = version);
+    }
+  }
+
+  Future<void> _checkUpdate() async {
+    if (_isChecking) return;
+
+    setState(() => _isChecking = true);
+
+    try {
+      final result = await UpdateService.checkUpdate();
+
+      if (!mounted) return;
+
+      if (result.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.error!)),
+        );
+      } else if (result.hasUpdate && result.updateInfo != null) {
+        await UpdateDialog.show(
+          context,
+          updateInfo: result.updateInfo!,
+          currentVersion: result.currentVersion ?? _currentVersion,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text("当前已是最新版本 v${result.currentVersion ?? _currentVersion}"),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isChecking = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3675,59 +3739,109 @@ class AboutPage extends StatelessWidget {
         backgroundColor: backgroundColor,
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
                       color: themeColor.withValues(alpha: 0.3),
                       blurRadius: 15,
-                      offset: const Offset(0, 5)),
-                ],
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/ic_launcher.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset('assets/images/ic_launcher.png',
-                    fit: BoxFit.cover),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text("雕刀",
+              const SizedBox(height: 20),
+              // 应用名称
+              const Text(
+                "雕刀",
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 4)),
-            const SizedBox(height: 8),
-            Text("版本 1.8.5",
-                style: TextStyle(fontSize: 14, color: Colors.grey[400])),
-            const SizedBox(height: 30),
-            Text("用极简的方式，雕刻更好的自己",
-                style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-            const SizedBox(height: 50),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 4,
+                ),
               ),
-              child: Column(
-                children: [
-                  _infoRow("开发者", "Vence的猫"),
-                  const Divider(height: 20),
-                  _infoRow("联系邮箱", "vence_cat@163.com"),
-                  const Divider(height: 20),
-                  _infoRow("更新时间", "2026年1月19日"),
-                ],
+              const SizedBox(height: 8),
+              // 版本号
+              Text(
+                "版本 ${_currentVersion.isNotEmpty ? _currentVersion : '1.8.5'}",
+                style: TextStyle(fontSize: 14, color: Colors.grey[400]),
               ),
-            ),
-          ],
+              const SizedBox(height: 30),
+              // Slogan
+              Text(
+                "用极简的方式，雕刻更好的自己",
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 30),
+              // 检查更新按钮
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isChecking ? null : _checkUpdate,
+                    icon: _isChecking
+                        ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: themeColor,
+                      ),
+                    )
+                        : Icon(Icons.refresh, size: 18, color: themeColor),
+                    label: Text(
+                      _isChecking ? "正在检查..." : "检查更新",
+                      style: TextStyle(color: themeColor),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              // 信息卡片
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    _infoRow("开发者", "Vence的猫"),
+                    const Divider(height: 20),
+                    _infoRow("联系邮箱", "vence_cat@163.com"),
+                    const Divider(height: 20),
+                    _infoRow("更新时间", "2025年1月20日"),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3738,8 +3852,7 @@ class AboutPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-        Text(value,
-            style: const TextStyle(fontSize: 14, color: Colors.black87)),
+        Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
       ],
     );
   }
@@ -5245,7 +5358,7 @@ class _AchievementPageState extends State<AchievementPage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  themeColor.withOpacity(0.8),
+                  themeColor.withValues(alpha: 0.8),
                   themeColor,
                 ],
                 begin: Alignment.topLeft,
@@ -5254,7 +5367,7 @@ class _AchievementPageState extends State<AchievementPage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: themeColor.withOpacity(0.3),
+                  color: themeColor.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -5266,7 +5379,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -5311,7 +5424,7 @@ class _AchievementPageState extends State<AchievementPage> {
                           child: CircularProgressIndicator(
                             value: totalAchievements > 0 ? unlockedCount / totalAchievements : 0,
                             strokeWidth: 5,
-                            backgroundColor: Colors.white.withOpacity(0.2),
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
                             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
@@ -5493,7 +5606,7 @@ class _AchievementPageState extends State<AchievementPage> {
               height: 44,
               decoration: BoxDecoration(
                 color: achievement.isUnlocked
-                    ? (isSpecial ? Colors.amber[50] : themeColor.withOpacity(0.1))
+                    ? (isSpecial ? Colors.amber[50] : themeColor.withValues(alpha: 0.1))
                     : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -5546,7 +5659,7 @@ class _AchievementPageState extends State<AchievementPage> {
                               minHeight: 4,
                               backgroundColor: Colors.grey[200],
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                themeColor.withOpacity(0.6),
+                                themeColor.withValues(alpha: 0.6),
                               ),
                             ),
                           ),
@@ -5628,7 +5741,7 @@ class _AchievementPageState extends State<AchievementPage> {
                   height: 80,
                   decoration: BoxDecoration(
                     color: achievement.isUnlocked
-                        ? highlightColor.withOpacity(0.1)
+                        ? highlightColor.withValues(alpha: 0.1)
                         : Colors.grey[100],
                     shape: BoxShape.circle,
                   ),
@@ -5695,7 +5808,7 @@ class _AchievementPageState extends State<AchievementPage> {
                           minHeight: 8,
                           backgroundColor: Colors.grey[300],
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            achievement.isUnlocked ? highlightColor : highlightColor.withOpacity(0.6),
+                            achievement.isUnlocked ? highlightColor : highlightColor.withValues(alpha: 0.6),
                           ),
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -16,16 +17,34 @@ class UpdateInfo {
   });
 }
 
+class UpdateResult {
+  final bool hasUpdate;
+  final UpdateInfo? updateInfo;
+  final String? currentVersion;
+  final String? latestVersion;
+  final String? error;
+
+  UpdateResult({
+    required this.hasUpdate,
+    this.updateInfo,
+    this.currentVersion,
+    this.latestVersion,
+    this.error,
+  });
+}
+
 class UpdateService {
-  // 替换为你的 Gitee 用户名和仓库名
-  static const String _owner = 'VenceCat';
+  // 你的 Gitee 信息
+  static const String _owner = 'Vence_Cat';
   static const String _repo = 'CarvingKnife';
 
   /// 检查更新
   static Future<UpdateResult> checkUpdate() async {
+    final url = 'https://gitee.com/api/v5/repos/$_owner/$_repo/releases/latest';
+
     try {
       final response = await http.get(
-        Uri.parse('https://gitee.com/api/v5/repos/$_owner/$_repo/releases/latest'),
+        Uri.parse(url),
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
@@ -46,8 +65,7 @@ class UpdateService {
             }
           }
         }
-
-        // 如果没有找到APK附件，尝试使用Release的源码包或其他链接
+        // 如果没有APK附件，使用Release页面链接
         downloadUrl ??= data['html_url'] as String? ?? '';
 
         // 获取当前版本
@@ -90,13 +108,12 @@ class UpdateService {
     }
   }
 
-  /// 比较版本号，判断是否有新版本
+  /// 比较版本号
   static bool _isNewerVersion(String latest, String current) {
     try {
       final latestParts = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
       final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
-      // 确保两个列表长度一致
       while (latestParts.length < 3) latestParts.add(0);
       while (currentParts.length < 3) currentParts.add(0);
 
@@ -116,21 +133,4 @@ class UpdateService {
     final packageInfo = await PackageInfo.fromPlatform();
     return packageInfo.version;
   }
-}
-
-/// 更新检查结果
-class UpdateResult {
-  final bool hasUpdate;
-  final UpdateInfo? updateInfo;
-  final String? currentVersion;
-  final String? latestVersion;
-  final String? error;
-
-  UpdateResult({
-    required this.hasUpdate,
-    this.updateInfo,
-    this.currentVersion,
-    this.latestVersion,
-    this.error,
-  });
 }

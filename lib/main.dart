@@ -17,6 +17,7 @@ import 'services/widget_service.dart';
 import 'services/habit_icons.dart';
 import 'services/update_service.dart';
 import 'widgets/update_dialog.dart';
+import 'services/wallpaper_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -262,24 +263,108 @@ class HabitApp extends StatefulWidget {
 class HabitAppState extends State<HabitApp> {
   late int _currentColorIndex;
 
+  // ===== 新增：壁纸相关状态 =====
+  WallpaperData? _wallpaperData;
+  bool _useWallpaper = false;
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
     _currentColorIndex = widget.initialColorIndex;
+    _loadWallpaper(); // 新增：加载壁纸
   }
 
+  // ===== 新增：加载壁纸 =====
+  Future<void> _loadWallpaper() async {
+    _wallpaperData = await WallpaperService.getSavedWallpaper();
+    _useWallpaper = _wallpaperData != null;
+    setState(() {
+      _isInitialized = true;
+    });
+  }
+
+  // ===== 现有的主题相关 =====
   ThemeColorOption get currentTheme =>
       ThemeConfig.colorOptions[_currentColorIndex];
 
   Future<void> setThemeColor(int index) async {
-    setState(() => _currentColorIndex = index);
+    setState(() {
+      _currentColorIndex = index;
+      _useWallpaper = false; // 切换主题时关闭壁纸
+    });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('theme_color_index', index);
+    await prefs.setBool('use_wallpaper', false);
+  }
+
+  // ===== 新增：壁纸相关 Getters =====
+  WallpaperData? get wallpaperData => _wallpaperData;
+  bool get useWallpaper => _useWallpaper && _wallpaperData != null;
+
+  /// 当前使用的主题色（优先壁纸提取色）
+  Color get currentColor {
+    if (useWallpaper && _wallpaperData != null) {
+      return _wallpaperData!.vibrantColor ?? _wallpaperData!.dominantColor;
+    }
+    return currentTheme.color;
+  }
+
+  /// 当前使用的背景色
+  Color get currentBackgroundColor {
+    if (useWallpaper && _wallpaperData != null) {
+      return WallpaperService.generateBackgroundColor(
+          _wallpaperData!.dominantColor);
+    }
+    return currentTheme.backgroundColor;
+  }
+
+  /// 壁纸背景装饰
+  BoxDecoration? get wallpaperDecoration {
+    if (!useWallpaper || _wallpaperData == null) return null;
+    return BoxDecoration(
+      image: DecorationImage(
+        image: FileImage(File(_wallpaperData!.path)),
+        fit: BoxFit.cover,
+      ),
+    );
+  }
+
+  // ===== 新增：壁纸方法 =====
+
+  /// 设置壁纸
+  Future<bool> setWallpaper(BuildContext context) async {
+    try {
+      final file = await WallpaperService.pickAndCropImage(context);
+      if (file == null) return false;
+
+      final data = await WallpaperService.extractColors(file.path);
+      if (data == null) return false;
+
+      setState(() {
+        _wallpaperData = data;
+        _useWallpaper = true;
+      });
+      return true;
+    } catch (e) {
+      debugPrint('设置壁纸失败: $e');
+      return false;
+    }
+  }
+
+  /// 清除壁纸
+  Future<void> clearWallpaper() async {
+    await WallpaperService.clearWallpaper();
+    setState(() {
+      _wallpaperData = null;
+      _useWallpaper = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = currentTheme;
+    final themeColor = currentColor;
+    final bgColor = currentBackgroundColor;
 
     return MaterialApp(
       title: '雕刀',
@@ -287,15 +372,19 @@ class HabitAppState extends State<HabitApp> {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: theme.color,
-          primary: theme.color,
+          seedColor: themeColor,
+          primary: themeColor,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: theme.backgroundColor,
+        // 壁纸模式下使用透明背景
+        scaffoldBackgroundColor: useWallpaper ? Colors.transparent : bgColor,
         appBarTheme: AppBarTheme(
-          backgroundColor: theme.backgroundColor,
+          // 壁纸模式下 AppBar 半透明
+          backgroundColor: useWallpaper
+              ? Colors.white.withOpacity(0.9)
+              : bgColor,
           foregroundColor: Colors.black87,
-          elevation: 0,
+          elevation: useWallpaper ? 0.5 : 0,
         ),
       ),
       home: const MainPage(),
@@ -327,11 +416,7 @@ class _MainPageState extends State<MainPage> {
     if (data != null) {
       setState(() => habits =
           (jsonDecode(data) as List).map((e) => Habit.fromJson(e)).toList());
-
-      // 更新小组件
       await WidgetService.updateWidget(habits);
-
-      // 修改：仅首次初始化时同步成就状态
       await AchievementService.initializeIfNeeded(habits);
     }
   }
@@ -339,8 +424,6 @@ class _MainPageState extends State<MainPage> {
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('simple_habits', jsonEncode(habits));
-
-    // 更新小组件
     await WidgetService.updateWidget(habits);
   }
 
@@ -359,40 +442,87 @@ class _MainPageState extends State<MainPage> {
     _saveData();
   }
 
-  // 修改：恢复数据方法 - 添加成就同步
   void _restoreHabits(List<Habit> newHabits) {
     setState(() => habits = newHabits);
     _saveData();
-    // 恢复后同步成就状态，防止重复弹窗
   }
-
 
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      // 关键：壁纸模式下背景透明
+      backgroundColor: useWallpaper ? Colors.transparent : null,
+
+      // 使用 Stack 实现壁纸背景
+      body: Stack(
         children: [
-          CheckInPage(
-            habits: habits,
-            onSave: _refreshAndSave,
-            onAdd: _addHabit,
-            onDelete: _removeHabit,
-          ),
-          StatisticsPage(habits: habits),
-          ProfilePage(
-            habits: habits,
-            onSave: _refreshAndSave,
-            onRestore: _restoreHabits, // 新增参数
+          // ===== 壁纸背景层 =====
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(
+              child: Container(
+                decoration: wallpaperDecoration,
+              ),
+            ),
+
+          // ===== 半透明遮罩层（可选，让内容更易读） =====
+          if (useWallpaper)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.05),
+              ),
+            ),
+
+          // ===== 内容层 =====
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              CheckInPage(
+                habits: habits,
+                onSave: _refreshAndSave,
+                onAdd: _addHabit,
+                onDelete: _removeHabit,
+              ),
+              StatisticsPage(habits: habits),
+              ProfilePage(
+                habits: habits,
+                onSave: _refreshAndSave,
+                onRestore: _restoreHabits,
+              ),
+            ],
           ),
         ],
       ),
+
+      // ===== 底部导航栏（适配壁纸模式） =====
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey[100]!, width: 1)),
+          // 壁纸模式下使用半透明白色
+          color: useWallpaper
+              ? Colors.white.withOpacity(0.95)
+              : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: useWallpaper
+                  ? Colors.grey[200]!.withOpacity(0.5)
+                  : Colors.grey[100]!,
+              width: 1,
+            ),
+          ),
+          // 壁纸模式下添加阴影
+          boxShadow: useWallpaper
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ]
+              : null,
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -474,27 +604,21 @@ class _CheckInPageState extends State<CheckInPage> {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    // 查找今日的打卡记录
     final todayRecordIndex = habit.checkInRecords.indexWhere(
           (r) => r.time.startsWith(todayStr),
     );
 
     if (todayRecordIndex != -1) {
-      // 已打卡，显示取消确认对话框
       _showCancelCheckInDialog(habit, todayRecordIndex);
     } else {
-      // 未打卡，执行打卡
       final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
       final record = CheckInRecord(time: timeStr);
       habit.checkInRecords.add(record);
       widget.onSave();
-
-      // 弹出打卡对话框
       _showEncouragementDialog(habit, record);
     }
   }
 
-// 取消打卡确认对话框
   void _showCancelCheckInDialog(Habit habit, int recordIndex) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final record = habit.checkInRecords[recordIndex];
@@ -516,7 +640,6 @@ class _CheckInPageState extends State<CheckInPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 拖动指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -526,14 +649,13 @@ class _CheckInPageState extends State<CheckInPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // 标题行
                 Row(
                   children: [
                     Container(
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
+                        color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.undo, color: Colors.orange, size: 22),
@@ -570,14 +692,13 @@ class _CheckInPageState extends State<CheckInPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // 打卡信息卡片
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.05),
+                    color: themeColor.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+                    border: Border.all(color: themeColor.withOpacity(0.2)),
                   ),
                   child: Row(
                     children: [
@@ -585,7 +706,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
+                          color: themeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -601,16 +722,19 @@ class _CheckInPageState extends State<CheckInPage> {
                           children: [
                             Text(
                               habit.title,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.access_time, size: 14, color: Colors.grey[400]),
+                                Icon(Icons.access_time,
+                                    size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
                                   "今日 $timeStr 打卡",
-                                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                                  style: TextStyle(
+                                      fontSize: 13, color: Colors.grey[500]),
                                 ),
                               ],
                             ),
@@ -620,7 +744,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     ],
                   ),
                 ),
-                // 显示备注（如果有）
                 if (record.note != null && record.note!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -651,14 +774,13 @@ class _CheckInPageState extends State<CheckInPage> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                // 提示
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.08),
+                    color: Colors.orange.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                    border: Border.all(color: Colors.orange.withOpacity(0.2)),
                   ),
                   child: Row(
                     children: [
@@ -674,7 +796,6 @@ class _CheckInPageState extends State<CheckInPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 按钮区域
                 Row(
                   children: [
                     Expanded(
@@ -695,7 +816,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          // 记录取消打卡（用于成就）
                           await AchievementService.recordCancelledCheckIn();
 
                           setState(() {
@@ -711,7 +831,6 @@ class _CheckInPageState extends State<CheckInPage> {
                             ),
                           );
 
-                          // 检查成就
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
@@ -736,9 +855,9 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  // 新增：检查并显示成就
   Future<void> _checkAndShowAchievements() async {
-    final newAchievements = await AchievementService.checkNewAchievements(widget.habits);
+    final newAchievements =
+    await AchievementService.checkNewAchievements(widget.habits);
 
     if (newAchievements.isNotEmpty && mounted) {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -748,7 +867,6 @@ class _CheckInPageState extends State<CheckInPage> {
     }
   }
 
-  // 修改打卡对话框中的完成按钮
   void _showEncouragementDialog(Habit habit, CheckInRecord record) {
     final noteController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -774,7 +892,6 @@ class _CheckInPageState extends State<CheckInPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 拖动指示条
                   Container(
                     width: 40,
                     height: 4,
@@ -784,18 +901,16 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // 成功图标
                   Container(
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.1),
+                      color: themeColor.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.celebration, color: themeColor, size: 36),
                   ),
                   const SizedBox(height: 16),
-                  // 标题
                   const Text(
                     "打卡成功！",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
@@ -806,7 +921,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     style: TextStyle(color: Colors.grey[500], fontSize: 14),
                   ),
                   const SizedBox(height: 24),
-                  // 备注输入框
                   TextField(
                     controller: noteController,
                     maxLines: 3,
@@ -829,7 +943,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // 完成按钮 - 修改这里添加成就检查
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -839,8 +952,6 @@ class _CheckInPageState extends State<CheckInPage> {
                           widget.onSave();
                         }
                         Navigator.pop(ctx);
-
-                        // 新增：检查成就
                         await _checkAndShowAchievements();
                       },
                       icon: const Icon(Icons.check, size: 20),
@@ -865,7 +976,6 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  // 修改：添加习惯对话框
   void _showAddDialog() {
     final titleController = TextEditingController();
     final descController = TextEditingController();
@@ -894,7 +1004,6 @@ class _CheckInPageState extends State<CheckInPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 拖动指示条
                       Container(
                         width: 40,
                         height: 4,
@@ -904,17 +1013,17 @@ class _CheckInPageState extends State<CheckInPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // 标题行
                       Row(
                         children: [
                           Container(
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: themeColor.withValues(alpha: 0.1),
+                              color: themeColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
+                            child: Icon(HabitIcons.getIcon(selectedIconIndex),
+                                color: themeColor, size: 22),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
@@ -923,12 +1032,14 @@ class _CheckInPageState extends State<CheckInPage> {
                               children: [
                                 Text(
                                   "新计划",
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                      fontSize: 18, fontWeight: FontWeight.w600),
                                 ),
                                 SizedBox(height: 2),
                                 Text(
                                   "开启一个新习惯",
-                                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                                  style:
+                                  TextStyle(fontSize: 13, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -942,18 +1053,21 @@ class _CheckInPageState extends State<CheckInPage> {
                                 color: Colors.grey[100],
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                              child: Icon(Icons.close,
+                                  size: 18, color: Colors.grey[500]),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // 图标选择
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           "选择图标",
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -965,7 +1079,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      // 习惯名称输入框
                       TextField(
                         controller: titleController,
                         onChanged: (value) {
@@ -986,15 +1099,18 @@ class _CheckInPageState extends State<CheckInPage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                            borderSide:
+                            BorderSide(color: themeColor, width: 1.5),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                            borderSide:
+                            BorderSide(color: Colors.red[300]!, width: 1.5),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.red[300]!, width: 1.5),
+                            borderSide:
+                            BorderSide(color: Colors.red[300]!, width: 1.5),
                           ),
                           errorText: errorText,
                           errorStyle: TextStyle(color: Colors.red[400]),
@@ -1002,7 +1118,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // 描述输入框
                       TextField(
                         controller: descController,
                         maxLines: 2,
@@ -1019,14 +1134,14 @@ class _CheckInPageState extends State<CheckInPage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
+                            borderSide:
+                            BorderSide(color: themeColor, width: 1.5),
                           ),
                           contentPadding: const EdgeInsets.all(16),
                           counterStyle: TextStyle(color: Colors.grey[400]),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // 确认按钮 - 修改为 async 并添加成就检查
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -1051,12 +1166,12 @@ class _CheckInPageState extends State<CheckInPage> {
                                 ),
                               );
 
-                              // 新增：创建习惯后检查成就
                               await _checkAndShowAchievements();
                             }
                           },
                           icon: const Icon(Icons.check, size: 20),
-                          label: const Text("创建习惯", style: TextStyle(fontSize: 16)),
+                          label:
+                          const Text("创建习惯", style: TextStyle(fontSize: 16)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeColor,
                             foregroundColor: Colors.white,
@@ -1079,7 +1194,6 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  // 修改：删除习惯对话框
   void _deleteHabit(Habit habit) {
     final themeColor = Theme.of(context).colorScheme.primary;
 
@@ -1098,7 +1212,6 @@ class _CheckInPageState extends State<CheckInPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 拖动指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -1108,17 +1221,17 @@ class _CheckInPageState extends State<CheckInPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // 标题行
                 Row(
                   children: [
                     Container(
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.delete_outline, color: Colors.red[400], size: 22),
+                      child: Icon(Icons.delete_outline,
+                          color: Colors.red[400], size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1127,12 +1240,14 @@ class _CheckInPageState extends State<CheckInPage> {
                         children: [
                           const Text(
                             "删除习惯",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             "确定要删除这个习惯吗？",
-                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            style:
+                            TextStyle(fontSize: 13, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -1146,13 +1261,13 @@ class _CheckInPageState extends State<CheckInPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child:
+                        Icon(Icons.close, size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                // 习惯信息卡片
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -1167,10 +1282,11 @@ class _CheckInPageState extends State<CheckInPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
+                          color: themeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(HabitIcons.getIcon(habit.iconIndex), color: themeColor, size: 22),
+                        child: Icon(HabitIcons.getIcon(habit.iconIndex),
+                            color: themeColor, size: 22),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -1179,12 +1295,14 @@ class _CheckInPageState extends State<CheckInPage> {
                           children: [
                             Text(
                               habit.title,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               "已打卡 ${habit.checkInRecords.length} 次",
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[500]),
                             ),
                           ],
                         ),
@@ -1193,30 +1311,30 @@ class _CheckInPageState extends State<CheckInPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 警告提示
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.08),
+                    color: Colors.red.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.red[400], size: 22),
+                      Icon(Icons.warning_amber_rounded,
+                          color: Colors.red[400], size: 22),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           "删除后所有打卡记录将一并清除，此操作不可撤销！",
-                          style: TextStyle(color: Colors.red[700], fontSize: 13, height: 1.4),
+                          style: TextStyle(
+                              color: Colors.red[700], fontSize: 13, height: 1.4),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 按钮区域
                 Row(
                   children: [
                     Expanded(
@@ -1237,7 +1355,6 @@ class _CheckInPageState extends State<CheckInPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          // 记录删除习惯（用于成就）
                           await AchievementService.recordDeletedHabit();
 
                           final habitTitle = habit.title;
@@ -1251,7 +1368,6 @@ class _CheckInPageState extends State<CheckInPage> {
                             ),
                           );
 
-                          // 检查成就
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
@@ -1281,132 +1397,223 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // ===== 获取壁纸状态 =====
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            title: const Text("雕刀",
-                style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w300)),
-            centerTitle: true,
-            backgroundColor: backgroundColor,
-          ),
-          SliverToBoxAdapter(
-            child: GestureDetector(
-              onTap: () => setState(
-                      () => currentQuote = quotes[Random().nextInt(quotes.length)]),
+      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      body: Stack(
+        children: [
+          // ===== 壁纸背景层 =====
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(
+              child: Container(decoration: wallpaperDecoration),
+            ),
+
+          // ===== 半透明遮罩层 =====
+          if (useWallpaper)
+            Positioned.fill(
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
-                child: Text(
-                  currentQuote,
-                  textAlign: TextAlign.center,
+                color: Colors.black.withOpacity(0.03),
+              ),
+            ),
+
+          // ===== 内容层 =====
+          CustomScrollView(
+            slivers: [
+              // ===== AppBar =====
+              SliverAppBar.large(
+                title: Text(
+                  "雕刀",
                   style: TextStyle(
-                    color: themeColor.withValues(alpha: 0.6),
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w300,
+                    shadows: useWallpaper
+                        ? [
+                      Shadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 3,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
+                    ]
+                        : null,
+                  ),
+                ),
+                centerTitle: true,
+                backgroundColor: useWallpaper
+                    ? Colors.white.withOpacity(0.85)
+                    : backgroundColor,
+                surfaceTintColor: useWallpaper ? Colors.transparent : null,
+                elevation: 0,
+              ),
+
+              // ===== 名言区域 =====
+              SliverToBoxAdapter(
+                child: GestureDetector(
+                  onTap: () => setState(() =>
+                  currentQuote = quotes[Random().nextInt(quotes.length)]),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+                    decoration: BoxDecoration(
+                      color: useWallpaper
+                          ? Colors.white.withOpacity(0.85)
+                          : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: useWallpaper
+                          ? null
+                          : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Text(
+                      currentQuote,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: themeColor.withOpacity(0.8),
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                final habit = widget.habits[index];
-                final isTodayDone = habit.checkInTimes.any((t) => t.startsWith(
-                    DateFormat('yyyy-MM-dd').format(DateTime.now())));
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: InkWell(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (c) => DetailPage(
-                          habit: habit,
-                          allHabits: widget.habits,
-                          onSave: widget.onSave,
+              // ===== 习惯列表 =====
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                    final habit = widget.habits[index];
+                    final isTodayDone = habit.checkInTimes.any((t) =>
+                        t.startsWith(DateFormat('yyyy-MM-dd').format(DateTime.now())));
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) => DetailPage(
+                              habit: habit,
+                              allHabits: widget.habits,
+                              onSave: widget.onSave,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    onLongPress: () => _deleteHabit(habit),
-                    borderRadius: BorderRadius.circular(15),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+                        onLongPress: () => _deleteHabit(habit),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: isTodayDone
-                              ? themeColor.withValues(alpha: 0.4)
-                              : Colors.grey[200]!,
-                          width: isTodayDone ? 1.5 : 1,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: useWallpaper
+                                ? Colors.white.withOpacity(0.95)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: isTodayDone
+                                  ? themeColor.withOpacity(0.4)
+                                  : Colors.grey[200]!,
+                              width: isTodayDone ? 1.5 : 1,
+                            ),
+                            boxShadow: useWallpaper
+                                ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isTodayDone
+                                      ? themeColor.withOpacity(0.1)
+                                      : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  HabitIcons.getIcon(habit.iconIndex),
+                                  color: isTodayDone ? themeColor : Colors.grey[500],
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      habit.title,
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w400
+                                      ),
+                                    ),
+                                    if (habit.description.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        habit.description,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[400]
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                isTodayDone
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_off,
+                                color: isTodayDone ? themeColor : Colors.grey[300],
+                              ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: Icon(
+                                    Icons.add_task,
+                                    size: 20,
+                                    color: themeColor
+                                ),
+                                onPressed: () => _toggleCheckIn(habit),
+                              )
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          // 新增：习惯图标
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isTodayDone
-                                  ? themeColor.withValues(alpha: 0.1)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              HabitIcons.getIcon(habit.iconIndex),
-                              color: isTodayDone ? themeColor : Colors.grey[500],
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(habit.title,
-                                    style: const TextStyle(
-                                        fontSize: 16, fontWeight: FontWeight.w400)),
-                                if (habit.description.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    habit.description,
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.grey[400]),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            isTodayDone
-                                ? Icons.check_circle
-                                : Icons.radio_button_off,
-                            color: isTodayDone ? themeColor : Colors.grey[300],
-                          ),
-                          const SizedBox(width: 10),
-                          IconButton(
-                            icon: Icon(Icons.add_task, size: 20, color: themeColor),
-                            onPressed: () => _toggleCheckIn(habit),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-              childCount: widget.habits.length,
-            ),
+                    );
+                  },
+                  childCount: widget.habits.length,
+                ),
+              ),
+
+              // ===== 空白占位 =====
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
+
+      // ===== 浮动按钮 =====
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        elevation: 2,
+        elevation: useWallpaper ? 4 : 2,
         backgroundColor: themeColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -1446,7 +1653,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return maxStreak;
   }
 
-// 计算累计打卡次数最多的习惯
+  // 计算累计打卡次数最多的习惯
   int get maxTotalCheckIns {
     if (widget.habits.isEmpty) return 0;
 
@@ -1589,268 +1796,340 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            title: const Text("统计",
-                style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
-            centerTitle: true,
-            backgroundColor: backgroundColor,
-          ),
+      backgroundColor: useWallpaper ? Colors.transparent : null,
+      body: Stack(
+        children: [
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
 
-          // 概览卡片
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                children: [
-                  _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor),
-                  const SizedBox(width: 12),
-                  _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor),
-                  const SizedBox(width: 12),
-                  _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange),
-                  const SizedBox(width: 12),
-                  _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber),
-                ],
-              ),
-            ),
-          ),
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
 
-          // 完成率卡片
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
+          // 内容
+          CustomScrollView(
+            slivers: [
+              SliverAppBar.large(
+                title: Text(
+                  "统计",
+                  style: TextStyle(
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w300,
+                    shadows: useWallpaper
+                        ? [
+                      Shadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 3,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
+                    ]
+                        : null,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
-                        const SizedBox(width: 8),
-                        Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildProgressRing("今日", todayCompletionRate, themeColor),
-                        _buildProgressRing("本周", weekCompletionRate, Colors.blue),
-                        _buildProgressRing("本月", monthCompletionRate, Colors.purple),
-                      ],
-                    ),
-                  ],
+                centerTitle: true,
+                backgroundColor: useWallpaper
+                    ? Colors.white.withOpacity(0.85)
+                    : backgroundColor,
+                surfaceTintColor: useWallpaper ? Colors.transparent : null,
+              ),
+
+              // 概览卡片
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    children: [
+                      _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor, useWallpaper),
+                      const SizedBox(width: 12),
+                      _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor, useWallpaper),
+                      const SizedBox(width: 12),
+                      _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange, useWallpaper),
+                      const SizedBox(width: 12),
+                      _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber, useWallpaper),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          // 打卡热力图
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
-                        const SizedBox(width: 8),
-                        Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildHeatmap(themeColor),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                        const SizedBox(width: 4),
-                        ...List.generate(5, (i) => Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          decoration: BoxDecoration(
-                            color: themeColor.withValues(alpha: 0.2 + i * 0.2),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        )),
-                        const SizedBox(width: 4),
-                        Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 习惯排行
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
-                        const SizedBox(width: 8),
-                        Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (habitRanking.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
+              // 完成率卡片
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                      )
-                    else
-                      ...habitRanking.take(5).toList().asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final item = entry.value;
-                        final habit = item['habit'] as Habit;
-                        final streak = item['streak'] as int;
-                        final total = item['total'] as int;
+                      ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
+                            const SizedBox(width: 8),
+                            Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildProgressRing("今日", todayCompletionRate, themeColor),
+                            _buildProgressRing("本周", weekCompletionRate, Colors.blue),
+                            _buildProgressRing("本月", monthCompletionRate, Colors.purple),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              // 排名
-                              Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: index == 0 ? Colors.amber[100] :
-                                  index == 1 ? Colors.grey[200] :
-                                  index == 2 ? Colors.orange[100] :
-                                  Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    "${index + 1}",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: index == 0 ? Colors.amber[800] :
-                                      index == 1 ? Colors.grey[600] :
-                                      index == 2 ? Colors.orange[800] :
-                                      Colors.grey[500],
-                                    ),
-                                  ),
-                                ),
+              // 打卡热力图
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
+                            const SizedBox(width: 8),
+                            Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildHeatmap(themeColor),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                            const SizedBox(width: 4),
+                            ...List.generate(5, (i) => Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              decoration: BoxDecoration(
+                                color: themeColor.withValues(alpha: 0.2 + i * 0.2),
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              const SizedBox(width: 12),
-                              // 图标
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: themeColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  HabitIcons.getIcon(habit.iconIndex),
-                                  color: themeColor,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // 名称
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      habit.title,
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            )),
+                            const SizedBox(width: 4),
+                            Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 习惯排行
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
+                            const SizedBox(width: 8),
+                            Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (habitRanking.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
+                            ),
+                          )
+                        else
+                          ...habitRanking.take(5).toList().asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final item = entry.value;
+                            final habit = item['habit'] as Habit;
+                            final streak = item['streak'] as int;
+                            final total = item['total'] as int;
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  // 排名
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: index == 0 ? Colors.amber[100] :
+                                      index == 1 ? Colors.grey[200] :
+                                      index == 2 ? Colors.orange[100] :
+                                      Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    Text(
-                                      "共打卡 $total 次",
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // 连续天数
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.local_fire_department,
-                                      size: 14,
-                                      color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      "$streak天",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                    child: Center(
+                                      child: Text(
+                                        "${index + 1}",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: index == 0 ? Colors.amber[800] :
+                                          index == 1 ? Colors.grey[600] :
+                                          index == 2 ? Colors.orange[800] :
+                                          Colors.grey[500],
+                                        ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // 图标
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: themeColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      HabitIcons.getIcon(habit.iconIndex),
+                                      color: themeColor,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // 名称
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          habit.title,
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                        ),
+                                        Text(
+                                          "共打卡 $total 次",
+                                          style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // 连续天数
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.local_fire_department,
+                                          size: 14,
+                                          color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "$streak天",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
         ],
       ),
     );
   }
 
   // 构建统计卡片
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool useWallpaper) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+          boxShadow: useWallpaper
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ]
+              : null,
         ),
         child: Column(
           children: [
@@ -1970,6 +2249,11 @@ class ProfilePage extends StatelessWidget {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
     int todayCheckIns = habits
         .where((h) => h.checkInTimes.any((t) =>
@@ -1977,52 +2261,92 @@ class ProfilePage extends StatelessWidget {
         .length;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            title: const Text("我的",
-                style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w300)),
-            centerTitle: true,
-            backgroundColor: backgroundColor,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // 统计卡片
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _statItem("习惯数", habits.length.toString(), themeColor),
-                        Container(width: 1, height: 40, color: Colors.grey[200]),
-                        _statItem("今日完成", todayCheckIns.toString(), themeColor),
-                        Container(width: 1, height: 40, color: Colors.grey[200]),
-                        _statItem("累计打卡", totalCheckIns.toString(), themeColor),
-                      ],
-                    ),
+      backgroundColor: useWallpaper ? Colors.transparent : null,
+      body: Stack(
+        children: [
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
+
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+
+          // 内容
+          CustomScrollView(
+            slivers: [
+              SliverAppBar.large(
+                title: Text(
+                  "我的",
+                  style: TextStyle(
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w300,
+                    shadows: useWallpaper
+                        ? [
+                      Shadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 3,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
+                    ]
+                        : null,
                   ),
-                  const SizedBox(height: 24),
-                  // 菜单项
-                  _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
-                      AchievementPage(habits: habits)),
-                  _menuItem(context, Icons.notifications_none, "提醒设置",
-                      ReminderSettingsPage(habits: habits, onSave: onSave)),
-                  _menuItem(context, Icons.color_lens_outlined, "主题设置",
-                      const ThemeSettingsPage()),
-                  _menuItem(context, Icons.cloud_outlined, "数据备份",
-                      BackupPage(habits: habits, onRestore: onRestore)),
-                  _menuItem(context, Icons.info_outline, "关于", const AboutPage()),
-                ],
+                ),
+                centerTitle: true,
+                backgroundColor: useWallpaper
+                    ? Colors.white.withOpacity(0.85)
+                    : backgroundColor,
+                surfaceTintColor: useWallpaper ? Colors.transparent : null,
               ),
-            ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // 统计卡片
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                          boxShadow: useWallpaper
+                              ? [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _statItem("习惯数", habits.length.toString(), themeColor),
+                            Container(width: 1, height: 40, color: Colors.grey[200]),
+                            _statItem("今日完成", todayCheckIns.toString(), themeColor),
+                            Container(width: 1, height: 40, color: Colors.grey[200]),
+                            _statItem("累计打卡", totalCheckIns.toString(), themeColor),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // 菜单项
+                      _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
+                          AchievementPage(habits: habits), useWallpaper),
+                      _menuItem(context, Icons.notifications_none, "提醒设置",
+                          ReminderSettingsPage(habits: habits, onSave: onSave), useWallpaper),
+                      _menuItem(context, Icons.color_lens_outlined, "主题设置",
+                          const ThemeSettingsPage(), useWallpaper),
+                      _menuItem(context, Icons.cloud_outlined, "数据备份",
+                          BackupPage(habits: habits, onRestore: onRestore), useWallpaper),
+                      _menuItem(context, Icons.info_outline, "关于", const AboutPage(), useWallpaper),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2041,7 +2365,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page) {
+  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page, bool useWallpaper) {
     final themeColor = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -2061,9 +2385,18 @@ class ProfilePage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
+            border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+            boxShadow: useWallpaper
+                ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ]
+                : null,
           ),
           child: Row(
             children: [
@@ -2444,9 +2777,9 @@ class _BackupPageState extends State<BackupPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatItem("习惯数量", "${habits.length} 个", themeColor),
+                      _buildDialogStatItem("习惯数量", "${habits.length} 个", themeColor),
                       Container(width: 1, height: 40, color: themeColor.withValues(alpha: 0.2)),
-                      _buildStatItem("打卡记录", "$totalCheckIns 次", themeColor),
+                      _buildDialogStatItem("打卡记录", "$totalCheckIns 次", themeColor),
                     ],
                   ),
                 ),
@@ -2608,8 +2941,8 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
-// 辅助方法：构建统计项
-  Widget _buildStatItem(String label, String value, Color color) {
+// 辅助方法：构建弹窗统计项（重命名避免冲突）
+  Widget _buildDialogStatItem(String label, String value, Color color) {
     return Column(
       children: [
         Text(
@@ -2630,92 +2963,167 @@ class _BackupPageState extends State<BackupPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
+      backgroundColor: useWallpaper ? Colors.transparent : null,
       appBar: AppBar(
-        title: const Text("数据备份", style: TextStyle(fontSize: 16)),
-        backgroundColor: backgroundColor,
+        title: Text(
+          "数据备份",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
+              ),
+            ]
+                : null,
+          ),
+        ),
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.85)
+            : backgroundColor,
+        surfaceTintColor: useWallpaper ? Colors.transparent : null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+      body: Stack(
         children: [
-          Container(
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
+
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+
+          // 内容
+          ListView(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.folder_outlined, size: 40, color: themeColor),
-                const SizedBox(height: 12),
-                Text("当前数据", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                const SizedBox(height: 8),
-                Text(
-                  "${widget.habits.length} 个习惯",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: themeColor),
+            children: [
+              // 当前数据卡片
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: useWallpaper
+                      ? themeColor.withValues(alpha: 0.15)
+                      : themeColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: useWallpaper
+                      ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                      : null,
                 ),
-                Text(
-                  "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
-                  style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text("导出备份", style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.download_outlined,
-            title: "保存到本地",
-            subtitle: "将备份文件保存到下载目录",
-            color: themeColor,
-            isLoading: _isExporting,
-            onTap: _exportToLocal,
-          ),
-          const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.share_outlined,
-            title: "分享备份文件",
-            subtitle: "通过微信、邮件等方式分享",
-            color: themeColor,
-            isLoading: _isExporting,
-            onTap: _shareBackup,
-          ),
-          const SizedBox(height: 24),
-          Text("导入备份", style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-          const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.upload_outlined,
-            title: "从文件恢复",
-            subtitle: "选择备份文件恢复数据",
-            color: Colors.orange,
-            isLoading: _isImporting,
-            onTap: _importBackup,
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Column(
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text("备份说明", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                    Icon(Icons.folder_outlined, size: 40, color: themeColor),
+                    const SizedBox(height: 12),
+                    Text("当前数据", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${widget.habits.length} 个习惯",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: themeColor),
+                    ),
+                    Text(
+                      "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildTip("• 备份文件包含所有习惯和打卡记录"),
-                _buildTip("• 建议定期备份，防止数据丢失"),
-                _buildTip("• 恢复数据会覆盖当前所有数据"),
-                _buildTip("• 备份文件可以跨设备使用"),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "导出备份",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildActionCard(
+                icon: Icons.download_outlined,
+                title: "保存到本地",
+                subtitle: "将备份文件保存到下载目录",
+                color: themeColor,
+                isLoading: _isExporting,
+                onTap: _exportToLocal,
+                useWallpaper: useWallpaper,
+              ),
+              const SizedBox(height: 12),
+              _buildActionCard(
+                icon: Icons.share_outlined,
+                title: "分享备份文件",
+                subtitle: "通过微信、邮件等方式分享",
+                color: themeColor,
+                isLoading: _isExporting,
+                onTap: _shareBackup,
+                useWallpaper: useWallpaper,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "导入备份",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildActionCard(
+                icon: Icons.upload_outlined,
+                title: "从文件恢复",
+                subtitle: "选择备份文件恢复数据",
+                color: Colors.orange,
+                isLoading: _isImporting,
+                onTap: _importBackup,
+                useWallpaper: useWallpaper,
+              ),
+              const SizedBox(height: 24),
+              // 备份说明卡片
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: useWallpaper ? Colors.white.withOpacity(0.9) : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: useWallpaper
+                      ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                      : null,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
+                        const SizedBox(width: 8),
+                        Text("备份说明", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTip("• 备份文件包含所有习惯和打卡记录"),
+                    _buildTip("• 建议定期备份，防止数据丢失"),
+                    _buildTip("• 恢复数据会覆盖当前所有数据"),
+                    _buildTip("• 备份文件可以跨设备使用"),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2729,6 +3137,7 @@ class _BackupPageState extends State<BackupPage> {
     required Color color,
     required bool isLoading,
     required VoidCallback onTap,
+    required bool useWallpaper,
   }) {
     return InkWell(
       onTap: isLoading ? null : onTap,
@@ -2736,9 +3145,18 @@ class _BackupPageState extends State<BackupPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+          boxShadow: useWallpaper
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ]
+              : null,
         ),
         child: Row(
           children: [
@@ -2783,95 +3201,433 @@ class _BackupPageState extends State<BackupPage> {
 }
 
 // ========== 主题设置页面 ==========
-class ThemeSettingsPage extends StatelessWidget {
+class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
 
   @override
+  State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
+}
+
+class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
-    final appState = HabitApp.of(context);
-    final currentTheme = appState?.currentTheme;
+    final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final currentTheme = appState?.currentTheme;
+    final wallpaperData = appState?.wallpaperData;
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
+      backgroundColor: useWallpaper ? Colors.transparent : null,
+
       appBar: AppBar(
-        title: const Text("主题设置", style: TextStyle(fontSize: 16)),
-        backgroundColor: backgroundColor,
+        title: Text(
+          "主题设置",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
+              ),
+            ]
+                : null,
+          ),
+        ),
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.85)
+            : backgroundColor,
+        surfaceTintColor: useWallpaper ? Colors.transparent : null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+
+      body: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: currentTheme?.backgroundColor ?? Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
+          // ===== 壁纸背景层 =====
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(
+              child: Container(decoration: wallpaperDecoration),
             ),
+
+          // ===== 半透明遮罩 =====
+          if (useWallpaper)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.03),
+              ),
+            ),
+
+          // ===== 内容层 =====
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("预览效果",
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color:
-                      (currentTheme?.color ?? Colors.grey).withValues(alpha: 0.4),
+                // ===== 壁纸设置卡片 =====
+                _buildWallpaperCard(
+                  context,
+                  appState,
+                  wallpaperData,
+                  useWallpaper,
+                  themeColor,
+                ),
+
+                const SizedBox(height: 24),
+
+                // ===== 预览效果 =====
+                _buildPreviewCard(
+                  wallpaperData,
+                  useWallpaper,
+                  themeColor,
+                ),
+
+                // ===== 预设主题颜色 =====
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Text(
+                      "选择主题颜色",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: useWallpaper ? Colors.white70 : Colors.grey[500],
+                        fontWeight: FontWeight.w500,
+                        shadows: useWallpaper
+                            ? [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 2,
+                          ),
+                        ]
+                            : null,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("示例习惯",
-                                style: TextStyle(fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 4),
-                            Text("每天坚持",
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[400])),
-                          ],
+                    if (useWallpaper) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "壁纸模式",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange[700],
+                          ),
                         ),
                       ),
-                      Icon(Icons.check_circle,
-                          color: currentTheme?.color ?? Colors.grey),
                     ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 遍历所有主题选项
+                ...ThemeConfig.colorOptions.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final option = entry.value;
+                  final isSelected =
+                      !useWallpaper && currentTheme?.name == option.name;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildThemeOption(
+                      appState,
+                      index,
+                      option,
+                      isSelected,
+                      useWallpaper,
+                    ),
+                  );
+                }),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+
+          // 加载遮罩
+          if (_isLoading) _buildLoadingOverlay(),
+        ],
+      ),
+    );
+  }
+
+  /// 壁纸设置卡片
+  Widget _buildWallpaperCard(
+      BuildContext context,
+      HabitAppState? appState,
+      WallpaperData? wallpaperData,
+      bool useWallpaper,
+      Color themeColor,
+      ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        // 壁纸模式下卡片半透明
+        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(useWallpaper ? 0.1 : 0.04),
+            blurRadius: useWallpaper ? 15 : 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 标题
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: themeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.wallpaper, color: themeColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "壁纸背景",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      "上传壁纸作为全局背景",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // 壁纸内容
+          if (useWallpaper && wallpaperData != null) ...[
+            // 已有壁纸：显示预览
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(wallpaperData.path),
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          "使用中",
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Text("选择主题颜色",
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 16),
-          ...ThemeConfig.colorOptions.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-            final isSelected = currentTheme?.name == option.name;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
+            const SizedBox(height: 16),
+            // 操作按钮
+            Row(
+              children: [
+                Expanded(
+                  child: _buildButton(
+                    icon: Icons.refresh,
+                    label: "更换壁纸",
+                    color: themeColor,
+                    onTap: () => _pickWallpaper(context, appState),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildButton(
+                    icon: Icons.delete_outline,
+                    label: "移除壁纸",
+                    color: Colors.red[400]!,
+                    isOutlined: true,
+                    onTap: () => _removeWallpaper(context, appState),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // 无壁纸：显示上传按钮
+            Center(
               child: InkWell(
-                onTap: () => appState?.setThemeColor(index),
+                onTap: () => _pickWallpaper(context, appState),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected ? option.color : Colors.grey[200]!,
-                      width: isSelected ? 2 : 1,
+                      color: Colors.grey[300]!,
+                      style: BorderStyle.solid,
                     ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 32,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "点击上传壁纸",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "支持 JPG、PNG 格式",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 预览卡片
+  Widget _buildPreviewCard(
+      WallpaperData? wallpaperData,
+      bool useWallpaper,
+      Color themeColor,
+      ) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(useWallpaper ? 0.15 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: useWallpaper
+                  ? null
+                  : Theme.of(context).scaffoldBackgroundColor,
+              image: useWallpaper && wallpaperData != null
+                  ? DecorationImage(
+                image: FileImage(File(wallpaperData.path)),
+                fit: BoxFit.cover,
+              )
+                  : null,
+            ),
+          ),
+          if (useWallpaper)
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.05),
+                    Colors.black.withOpacity(0.15),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          Container(
+            height: 180,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "预览效果",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: useWallpaper ? Colors.white70 : Colors.grey[500],
+                    shadows: useWallpaper
+                        ? [Shadow(color: Colors.black38, blurRadius: 2)]
+                        : null,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(useWallpaper ? 0.95 : 1),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -2879,55 +3635,433 @@ class ThemeSettingsPage extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: option.color,
+                          color: themeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: isSelected
-                            ? const Icon(Icons.check,
-                            color: Colors.white, size: 22)
-                            : null,
+                        child: Icon(
+                          Icons.fitness_center,
+                          color: themeColor,
+                          size: 22,
+                        ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              option.name,
+                            const Text(
+                              "每日运动",
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: List.generate(4, (i) {
-                                return Container(
-                                  width: 20,
-                                  height: 8,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: option.color
-                                        .withValues(alpha: 0.25 + i * 0.25),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                );
-                              }),
+                            const SizedBox(height: 4),
+                            Text(
+                              "已坚持 30 天",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      if (isSelected)
-                        Icon(Icons.check_circle, color: option.color, size: 24),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: themeColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            );
-          }),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// 主题选项
+  Widget _buildThemeOption(
+      HabitAppState? appState,
+      int index,
+      ThemeColorOption option,
+      bool isSelected,
+      bool useWallpaper,
+      ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          await appState?.setThemeColor(index);
+          if (mounted) setState(() {});
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            // 壁纸模式下卡片半透明
+            color: useWallpaper ? Colors.white.withOpacity(0.85) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? option.color : Colors.grey[200]!,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? option.color.withOpacity(0.2)
+                    : Colors.black.withOpacity(useWallpaper ? 0.08 : 0.02),
+                blurRadius: isSelected ? 8 : 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Opacity(
+            opacity: useWallpaper ? 0.6 : 1.0,
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: option.color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: option.color.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 24)
+                      : null,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: isSelected ? option.color : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: List.generate(5, (i) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: isSelected ? 28 : 24,
+                            height: 8,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: option.color.withOpacity(0.2 + i * 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: isSelected ? 1 : 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: option.color.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: option.color,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool isOutlined = false,
+  }) {
+    return Material(
+      color: isOutlined ? Colors.transparent : color,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: isOutlined
+              ? BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color),
+          )
+              : null,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: isOutlined ? color : Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isOutlined ? color : Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: Colors.black38,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("处理中..."),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickWallpaper(BuildContext context, HabitAppState? appState) async {
+    if (appState == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final success = await appState.setWallpaper(context);
+      if (success && mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text("壁纸设置成功"),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("设置失败: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// ===== 移除壁纸确认弹窗（优化为底部弹窗） =====
+  Future<void> _removeWallpaper(BuildContext context, HabitAppState? appState) async {
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 顶部拖拽指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // 标题区域
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.delete_outline,
+                          color: Colors.red[400], size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "移除壁纸",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "确定要移除当前壁纸吗？",
+                            style:
+                            TextStyle(fontSize: 13, color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child:
+                        Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // 警告信息（移除了预览部分，直接显示警告）
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          size: 18, color: Colors.red[700]),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "移除后所有页面将恢复默认背景样式",
+                          style: TextStyle(
+                              color: Colors.red[700], fontSize: 12, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 操作按钮
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("保留壁纸", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(ctx); // 先关闭弹窗
+                          setState(() => _isLoading = true);
+                          await appState?.clearWallpaper();
+                          if (mounted) setState(() => _isLoading = false);
+
+                          // 显示简洁的成功提示
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text("壁纸已移除"),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("移除", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2951,67 +4085,142 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
+      backgroundColor: useWallpaper ? Colors.transparent : null,
       appBar: AppBar(
-        title: const Text("提醒设置", style: TextStyle(fontSize: 16)),
-        backgroundColor: backgroundColor,
-      ),
-      body: widget.habits.isEmpty
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.notifications_off_outlined,
-                size: 48, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text("暂无习惯", style: TextStyle(color: Colors.grey[400])),
-          ],
-        ),
-      )
-          : ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // 顶部说明
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 20),
-            decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: themeColor, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "设置提醒后将添加到系统日历，每天定时提醒你打卡",
-                    style: TextStyle(fontSize: 13, color: themeColor),
-                  ),
-                ),
-              ],
-            ),
+        title: Text(
+          "提醒设置",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
+              ),
+            ]
+                : null,
           ),
-          // 习惯列表
-          ...widget.habits.map((habit) => _buildHabitCard(habit, themeColor)),
+        ),
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.85)
+            : backgroundColor,
+        surfaceTintColor: useWallpaper ? Colors.transparent : null,
+      ),
+      body: Stack(
+        children: [
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
+
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+
+          // 内容
+          widget.habits.isEmpty
+              ? Center(
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              margin: const EdgeInsets.all(20),
+              decoration: useWallpaper
+                  ? BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              )
+                  : null,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.notifications_off_outlined,
+                      size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text("暂无习惯", style: TextStyle(color: Colors.grey[400])),
+                ],
+              ),
+            ),
+          )
+              : ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // 顶部说明
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: useWallpaper
+                      ? themeColor.withValues(alpha: 0.15)
+                      : themeColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: useWallpaper
+                      ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: themeColor, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "设置提醒后将添加到系统日历，每天定时提醒你打卡",
+                        style: TextStyle(fontSize: 13, color: themeColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 习惯列表
+              ...widget.habits.map((habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHabitCard(Habit habit, Color themeColor) {
+  Widget _buildHabitCard(Habit habit, Color themeColor, bool useWallpaper) {
     final hasReminder = habit.reminderTime != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+        border: useWallpaper
+            ? null
+            : Border.all(
           color: hasReminder
               ? themeColor.withValues(alpha: 0.3)
               : Colors.grey[200]!,
         ),
+        boxShadow: useWallpaper
+            ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -3662,6 +4871,7 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
     );
   }
 }
+
 // ========== 关于页面 ==========
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -3698,8 +4908,12 @@ class _AboutPageState extends State<AboutPage> {
       if (!mounted) return;
 
       if (result.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.error!)),
+        // ===== 统一SnackBar样式：更新失败 =====
+        _showSnackBar(
+          context,
+          icon: Icons.error,
+          message: result.error!,
+          backgroundColor: Colors.red,
         );
       } else if (result.hasUpdate && result.updateInfo != null) {
         await UpdateDialog.show(
@@ -3708,17 +4922,12 @@ class _AboutPageState extends State<AboutPage> {
           currentVersion: result.currentVersion ?? _currentVersion,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text("当前已是最新版本 v${result.currentVersion ?? _currentVersion}"),
-              ],
-            ),
-            backgroundColor: Colors.green,
-          ),
+        // ===== 统一SnackBar样式：已是最新版本 =====
+        _showSnackBar(
+          context,
+          icon: Icons.check_circle,
+          message: "当前已是最新版本 v${result.currentVersion ?? _currentVersion}",
+          backgroundColor: Colors.green,
         );
       }
     } finally {
@@ -3728,121 +4937,230 @@ class _AboutPageState extends State<AboutPage> {
     }
   }
 
+  /// ===== 统一的SnackBar显示方法 =====
+  void _showSnackBar(
+      BuildContext context, {
+        required IconData icon,
+        required String message,
+        required Color backgroundColor,
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     return Scaffold(
+      backgroundColor: useWallpaper ? Colors.transparent : null,
       appBar: AppBar(
-        title: const Text("关于", style: TextStyle(fontSize: 16)),
-        backgroundColor: backgroundColor,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColor.withValues(alpha: 0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/images/ic_launcher.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
+        title: Text(
+          "关于",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
               ),
-              const SizedBox(height: 20),
-              // 应用名称
-              const Text(
-                "雕刀",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // 版本号
-              Text(
-                "版本 ${_currentVersion.isNotEmpty ? _currentVersion : '1.8.5'}",
-                style: TextStyle(fontSize: 14, color: Colors.grey[400]),
-              ),
-              const SizedBox(height: 30),
-              // Slogan
-              Text(
-                "用极简的方式，雕刻更好的自己",
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              ),
-              const SizedBox(height: 30),
-              // 检查更新按钮
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isChecking ? null : _checkUpdate,
-                    icon: _isChecking
-                        ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: themeColor,
-                      ),
-                    )
-                        : Icon(Icons.refresh, size: 18, color: themeColor),
-                    label: Text(
-                      _isChecking ? "正在检查..." : "检查更新",
-                      style: TextStyle(color: themeColor),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              // 信息卡片
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 40),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  children: [
-                    _infoRow("开发者", "Vence的猫"),
-                    const Divider(height: 20),
-                    _infoRow("联系邮箱", "vence_cat@163.com"),
-                    const Divider(height: 20),
-                    _infoRow("更新时间", "2025年1月20日"),
-                  ],
-                ),
-              ),
-            ],
+            ]
+                : null,
           ),
         ),
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.85)
+            : backgroundColor,
+        surfaceTintColor: useWallpaper ? Colors.transparent : null,
+      ),
+      body: Stack(
+        children: [
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
+
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+
+          // 内容
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo 卡片容器（壁纸模式下添加背景）
+                  Container(
+                    padding: useWallpaper ? const EdgeInsets.all(24) : EdgeInsets.zero,
+                    margin: useWallpaper ? const EdgeInsets.symmetric(horizontal: 40) : EdgeInsets.zero,
+                    decoration: useWallpaper
+                        ? BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    )
+                        : null,
+                    child: Column(
+                      children: [
+                        // Logo
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: themeColor.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/ic_launcher.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // 应用名称
+                        const Text(
+                          "雕刀",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w300,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // 版本号 - 自动读取
+                        Text(
+                          "版本 ${_currentVersion.isNotEmpty ? _currentVersion : '...'}",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                        ),
+                        const SizedBox(height: 20),
+                        // Slogan
+                        Text(
+                          "用极简的方式，雕刻更好的自己",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  // 检查更新按钮
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: useWallpaper
+                            ? BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        )
+                            : null,
+                        child: OutlinedButton.icon(
+                          onPressed: _isChecking ? null : _checkUpdate,
+                          icon: _isChecking
+                              ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: themeColor,
+                            ),
+                          )
+                              : Icon(Icons.refresh, size: 18, color: themeColor),
+                          label: Text(
+                            _isChecking ? "正在检查..." : "检查更新",
+                            style: TextStyle(color: themeColor),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: useWallpaper
+                                  ? Colors.transparent
+                                  : themeColor.withOpacity(0.5),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 信息卡片
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Column(
+                      children: [
+                        _infoRow("开发者", "Vence的猫"),
+                        const Divider(height: 20),
+                        _infoRow("联系邮箱", "vence_cat@163.com"),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3858,13 +5176,19 @@ class _AboutPageState extends State<AboutPage> {
   }
 }
 
+
 // ========== 详情页 ==========
 class DetailPage extends StatefulWidget {
   final Habit habit;
   final List<Habit> allHabits;
   final VoidCallback onSave;
 
-  const DetailPage({super.key, required this.habit,required this.allHabits, required this.onSave});
+  const DetailPage({
+    super.key,
+    required this.habit,
+    required this.allHabits,
+    required this.onSave,
+  });
 
   @override
   State<DetailPage> createState() => _DetailPageState();
@@ -3873,7 +5197,7 @@ class DetailPage extends StatefulWidget {
 class _DetailPageState extends State<DetailPage> {
   late PageController _pageController;
   late DateTime _currentMonth;
-  DateTime? _selectedDate; // 新增：选中的日期
+  DateTime? _selectedDate;
 
   static const int _initialPage = 1200;
 
@@ -3888,7 +5212,7 @@ class _DetailPageState extends State<DetailPage> {
     super.initState();
     _currentMonth = DateTime(DateTime.now().year, DateTime.now().month);
     _pageController = PageController(initialPage: _initialPage);
-    _selectedDate = DateTime.now(); // 默认选中今天
+    _selectedDate = DateTime.now();
   }
 
   @override
@@ -3903,7 +5227,6 @@ class _DetailPageState extends State<DetailPage> {
         .toSet();
   }
 
-  // 新增：获取选中日期的打卡记录
   List<CheckInRecord> get _selectedDateRecords {
     if (_selectedDate == null) return [];
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
@@ -3915,49 +5238,90 @@ class _DetailPageState extends State<DetailPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
+    // ===== 获取壁纸状态 =====
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      // 壁纸模式下背景透明
+      backgroundColor: useWallpaper ? Colors.transparent : null,
+      extendBodyBehindAppBar: useWallpaper,
+
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        // 壁纸模式下 AppBar 半透明
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.9)
+            : Theme.of(context).scaffoldBackgroundColor,
+        elevation: useWallpaper ? 0.5 : 0,
         title: const Text("习惯详情", style: TextStyle(fontSize: 16)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+
+      body: Stack(
         children: [
-          _buildInfoCard(themeColor),
-          const SizedBox(height: 24),
-          _buildCalendarCard(themeColor),
-          const SizedBox(height: 24),
-          _buildRecordHeader(themeColor),
-          const SizedBox(height: 12),
-          _buildRecordList(themeColor),
-          const SizedBox(height: 50),
+          // ===== 壁纸背景层 =====
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(
+              child: Container(decoration: wallpaperDecoration),
+            ),
+
+          // ===== 半透明遮罩 =====
+          if (useWallpaper)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.03),
+              ),
+            ),
+
+          // ===== 内容层 =====
+          ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              _buildInfoCard(themeColor, useWallpaper),
+              const SizedBox(height: 24),
+              _buildCalendarCard(themeColor, useWallpaper),
+              const SizedBox(height: 24),
+              _buildRecordHeader(themeColor, useWallpaper),
+              const SizedBox(height: 12),
+              _buildRecordList(themeColor, useWallpaper),
+              const SizedBox(height: 50),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard(Color themeColor) {
+  Widget _buildInfoCard(Color themeColor, bool useWallpaper) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // 壁纸模式下半透明
+        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+        border: Border.all(color: themeColor.withOpacity(0.3)),
+        // 壁纸模式下添加阴影
+        boxShadow: useWallpaper
+            ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              // 修改：使用习惯自己的图标
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: themeColor.withValues(alpha: 0.1),
+                  color: themeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -3973,13 +5337,12 @@ class _DetailPageState extends State<DetailPage> {
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
               ),
-              // 编辑按钮
               GestureDetector(
                 onTap: () => _showEditHabitDialog(),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.1),
+                    color: themeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.edit_outlined, size: 18, color: themeColor),
@@ -3997,7 +5360,8 @@ class _DetailPageState extends State<DetailPage> {
                 Expanded(
                   child: Text(
                     widget.habit.description,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                    style: TextStyle(
+                        fontSize: 14, color: Colors.grey[600], height: 1.5),
                   ),
                 ),
               ],
@@ -4018,16 +5382,16 @@ class _DetailPageState extends State<DetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.05),
+              color: themeColor.withOpacity(0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                Container(width: 1, height: 30, color: themeColor.withOpacity(0.2)),
                 _statItem("连续天数", "${_calculateStreak()}天", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                Container(width: 1, height: 30, color: themeColor.withOpacity(0.2)),
                 _statItem("本月打卡", "${_getMonthCheckIns()}天", themeColor),
               ],
             ),
@@ -4037,198 +5401,13 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 新增：编辑习惯对话框
-  void _showEditHabitDialog() {
-    final titleController = TextEditingController(text: widget.habit.title);
-    final descController = TextEditingController(text: widget.habit.description);
-    final themeColor = Theme.of(context).colorScheme.primary;
-    int selectedIconIndex = widget.habit.iconIndex;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 拖动指示条
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 标题行
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: themeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(HabitIcons.getIcon(selectedIconIndex), color: themeColor, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              "编辑习惯",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          // 关闭按钮
-                          GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      // 图标选择
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "选择图标",
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      IconSelector(
-                        selectedIndex: selectedIconIndex,
-                        themeColor: themeColor,
-                        onSelect: (index) {
-                          setModalState(() => selectedIconIndex = index);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      // 习惯名称输入框
-                      TextField(
-                        controller: titleController,
-                        decoration: InputDecoration(
-                          labelText: "习惯名称",
-                          hintText: "例如：早起",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // 描述输入框
-                      TextField(
-                        controller: descController,
-                        maxLines: 2,
-                        maxLength: 100,
-                        decoration: InputDecoration(
-                          labelText: "描述（选填）",
-                          hintText: "例如：每天6点前起床",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                          counterStyle: TextStyle(color: Colors.grey[400]),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 保存按钮
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (titleController.text.trim().isNotEmpty) {
-                              setState(() {
-                                widget.habit.title = titleController.text.trim();
-                                widget.habit.description = descController.text.trim();
-                                widget.habit.iconIndex = selectedIconIndex;
-                              });
-                              widget.onSave();
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("已保存修改"),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(
-                                  content: Text("习惯名称不能为空"),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                          ),
-                          child: const Text("保存修改", style: TextStyle(fontSize: 16)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCalendarCard(Color themeColor) {
+  Widget _buildCalendarCard(Color themeColor, bool useWallpaper) {
     int getRowCount(DateTime month) {
       final firstDayOfMonth = DateTime(month.year, month.month, 1);
       final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
       final daysInMonth = lastDayOfMonth.day;
-      final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+      final firstWeekday =
+      firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
       return ((firstWeekday + daysInMonth) / 7).ceil();
     }
 
@@ -4236,9 +5415,20 @@ class _DetailPageState extends State<DetailPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // 壁纸模式下半透明
+        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey[200]!),
+        // 壁纸模式下添加阴影
+        boxShadow: useWallpaper
+            ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ]
+            : null,
       ),
       child: Column(
         children: [
@@ -4250,7 +5440,9 @@ class _DetailPageState extends State<DetailPage> {
                 const SizedBox(width: 8),
                 Text("打卡日历",
                     style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700])),
                 const Spacer(),
                 GestureDetector(
                   onTap: () {
@@ -4264,12 +5456,14 @@ class _DetailPageState extends State<DetailPage> {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.1),
+                      color: themeColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text("今天", style: TextStyle(fontSize: 12, color: themeColor)),
+                    child: Text("今天",
+                        style: TextStyle(fontSize: 12, color: themeColor)),
                   ),
                 ),
               ],
@@ -4290,7 +5484,8 @@ class _DetailPageState extends State<DetailPage> {
                   },
                 ),
                 Text(DateFormat('yyyy年MM月').format(_currentMonth),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
                 IconButton(
                   icon: Icon(Icons.chevron_right, color: Colors.grey[600]),
                   onPressed: () {
@@ -4326,7 +5521,8 @@ class _DetailPageState extends State<DetailPage> {
               builder: (context, constraints) {
                 final cellWidth = (constraints.maxWidth - 24) / 7;
                 final cellHeight = cellWidth;
-                final calendarHeight = rowCount * cellHeight + (rowCount - 1) * 4;
+                final calendarHeight =
+                    rowCount * cellHeight + (rowCount - 1) * 4;
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -4372,7 +5568,8 @@ class _DetailPageState extends State<DetailPage> {
     final firstDayOfMonth = DateTime(month.year, month.month, 1);
     final lastDayOfMonth = DateTime(month.year, month.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
-    final firstWeekday = firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+    final firstWeekday =
+    firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
     final rowCount = ((firstWeekday + daysInMonth) / 7).ceil();
     final totalCells = rowCount * 7;
 
@@ -4394,12 +5591,12 @@ class _DetailPageState extends State<DetailPage> {
 
         final date = DateTime(month.year, month.month, dayNumber);
         final dateStr = DateFormat('yyyy-MM-dd').format(date);
-        final isToday =
-            date.year == today.year && date.month == today.month && date.day == today.day;
+        final isToday = date.year == today.year &&
+            date.month == today.month &&
+            date.day == today.day;
         final isCheckedIn = _checkInDates.contains(dateStr);
         final isFuture = date.isAfter(today);
 
-        // 新增：判断是否选中
         final isSelected = _selectedDate != null &&
             date.year == _selectedDate!.year &&
             date.month == _selectedDate!.month &&
@@ -4414,9 +5611,9 @@ class _DetailPageState extends State<DetailPage> {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? themeColor.withValues(alpha: 0.3)
+                  ? themeColor.withOpacity(0.3)
                   : isCheckedIn
-                  ? themeColor.withValues(alpha: 0.15)
+                  ? themeColor.withOpacity(0.15)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: isToday && !isSelected
@@ -4432,7 +5629,9 @@ class _DetailPageState extends State<DetailPage> {
                   '$dayNumber',
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: isToday || isCheckedIn || isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isToday || isCheckedIn || isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     color: isFuture
                         ? Colors.grey[300]
                         : isSelected
@@ -4448,7 +5647,8 @@ class _DetailPageState extends State<DetailPage> {
                     child: Container(
                       width: 5,
                       height: 5,
-                      decoration: BoxDecoration(color: themeColor, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: themeColor, shape: BoxShape.circle),
                     ),
                   ),
               ],
@@ -4467,7 +5667,7 @@ class _DetailPageState extends State<DetailPage> {
           width: 14,
           height: 14,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.2),
+            color: color.withOpacity(0.2),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Center(
@@ -4492,7 +5692,7 @@ class _DetailPageState extends State<DetailPage> {
           width: 14,
           height: 14,
           decoration: BoxDecoration(
-            color: themeColor.withValues(alpha: 0.3),
+            color: themeColor.withOpacity(0.3),
             border: Border.all(color: themeColor, width: 1.5),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -4503,77 +5703,96 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // 修改：显示选中日期的标题
-  Widget _buildRecordHeader(Color themeColor) {
+  Widget _buildRecordHeader(Color themeColor, bool useWallpaper) {
     final records = _selectedDateRecords;
     final hasRecord = records.isNotEmpty;
+    final isMakeUp =
+        hasRecord && records.any((r) => r.note != null && r.note!.contains("[补卡于"));
 
-    // 判断是否是补卡记录
-    final isMakeUp = hasRecord &&
-        records.any((r) => r.note != null && r.note!.contains("[补卡于"));
-
-    return Row(
-      children: [
-        Icon(Icons.article_outlined, color: themeColor, size: 20),
-        const SizedBox(width: 8),
-        Text(
-          "打卡日志",
-          style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[700]),
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: hasRecord
-                ? isMakeUp
-                ? Colors.orange.withValues(alpha: 0.1)
-                : themeColor.withValues(alpha: 0.1)
-                : Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            hasRecord
-                ? isMakeUp
-                ? "已补卡"
-                : "已打卡"
-                : "未打卡",
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Icon(Icons.article_outlined, color: themeColor, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            "打卡日志",
             style: TextStyle(
-              fontSize: 12,
-              color: hasRecord
-                  ? isMakeUp
-                  ? Colors.orange
-                  : themeColor
-                  : Colors.grey[400],
+              fontSize: 16,
               fontWeight: FontWeight.w500,
+              color: useWallpaper ? Colors.white : Colors.grey[700],
+              shadows: useWallpaper
+                  ? [Shadow(color: Colors.black.withOpacity(0.3), blurRadius: 2)]
+                  : null,
             ),
           ),
-        ),
-      ],
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: hasRecord
+                  ? isMakeUp
+                  ? Colors.orange.withOpacity(useWallpaper ? 0.9 : 0.1)
+                  : themeColor.withOpacity(useWallpaper ? 0.9 : 0.1)
+                  : useWallpaper
+                  ? Colors.white.withOpacity(0.9)
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              hasRecord
+                  ? isMakeUp
+                  ? "已补卡"
+                  : "已打卡"
+                  : "未打卡",
+              style: TextStyle(
+                fontSize: 12,
+                color: hasRecord
+                    ? isMakeUp
+                    ? useWallpaper ? Colors.white : Colors.orange
+                    : useWallpaper ? Colors.white : themeColor
+                    : Colors.grey[400],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // 修改：只显示选中日期的打卡记录
-  Widget _buildRecordList(Color themeColor) {
+  Widget _buildRecordList(Color themeColor, bool useWallpaper) {
     final records = _selectedDateRecords;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
     final isFuture = _selectedDate != null &&
-        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day).isAfter(today);
+        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day)
+            .isAfter(today);
     final isToday = _selectedDate != null &&
         DateFormat('yyyy-MM-dd').format(_selectedDate!) ==
             DateFormat('yyyy-MM-dd').format(DateTime.now());
     final isPast = _selectedDate != null &&
-        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day).isBefore(today);
+        DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day)
+            .isBefore(today);
 
     if (records.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
-          color: Colors.white,
+          // 壁纸模式下半透明
+          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey[200]!),
+          boxShadow: useWallpaper
+              ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ]
+              : null,
         ),
         child: Column(
           children: [
@@ -4584,9 +5803,7 @@ class _DetailPageState extends State<DetailPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              isFuture
-                  ? "这是未来的日期"
-                  : "这天没有打卡记录",
+              isFuture ? "这是未来的日期" : "这天没有打卡记录",
               style: TextStyle(color: Colors.grey[400]),
             ),
             const SizedBox(height: 8),
@@ -4605,11 +5822,12 @@ class _DetailPageState extends State<DetailPage> {
                 icon: Icon(Icons.add_task, size: 18, color: themeColor),
                 label: Text("补卡", style: TextStyle(color: themeColor)),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
+                  side: BorderSide(color: themeColor.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 ),
               ),
             ],
@@ -4627,13 +5845,23 @@ class _DetailPageState extends State<DetailPage> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            // 壁纸模式下半透明
+            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isMakeUp
-                  ? Colors.orange.withValues(alpha: 0.3)
-                  : themeColor.withValues(alpha: 0.3),
+                  ? Colors.orange.withOpacity(0.3)
+                  : themeColor.withOpacity(0.3),
             ),
+            boxShadow: useWallpaper
+                ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ]
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -4645,8 +5873,8 @@ class _DetailPageState extends State<DetailPage> {
                     height: 36,
                     decoration: BoxDecoration(
                       color: isMakeUp
-                          ? Colors.orange.withValues(alpha: 0.1)
-                          : themeColor.withValues(alpha: 0.1),
+                          ? Colors.orange.withOpacity(0.1)
+                          : themeColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -4673,14 +5901,16 @@ class _DetailPageState extends State<DetailPage> {
                             if (isMakeUp) ...[
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  color: Colors.orange.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   _extractMakeUpTime(record.note!),
-                                  style: const TextStyle(fontSize: 10, color: Colors.orange),
+                                  style: const TextStyle(
+                                      fontSize: 10, color: Colors.orange),
                                 ),
                               ),
                             ],
@@ -4689,7 +5919,8 @@ class _DetailPageState extends State<DetailPage> {
                         const SizedBox(height: 2),
                         Text(
                           DateFormat('HH:mm:ss').format(dateTime),
-                          style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                          style:
+                          TextStyle(fontSize: 13, color: Colors.grey[400]),
                         ),
                       ],
                     ),
@@ -4721,7 +5952,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 新增：提取补卡时间
   String _extractMakeUpTime(String note) {
     final regex = RegExp(r'\[补卡于(.+?)\]');
     final match = regex.firstMatch(note);
@@ -4731,13 +5961,12 @@ class _DetailPageState extends State<DetailPage> {
     return "补签";
   }
 
-// 新增：构建备注区域
-  Widget _buildNoteSection(CheckInRecord record, bool isMakeUp, Color themeColor) {
+  Widget _buildNoteSection(
+      CheckInRecord record, bool isMakeUp, Color themeColor) {
     if (record.note == null || record.note!.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // 处理显示的备注内容，去掉补卡标记
     String displayNote = record.note!;
     final regex = RegExp(r'\[补卡于.+?\]\s*');
     displayNote = displayNote.replaceAll(regex, '').trim();
@@ -4754,13 +5983,13 @@ class _DetailPageState extends State<DetailPage> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isMakeUp
-                ? Colors.orange.withValues(alpha: 0.05)
-                : themeColor.withValues(alpha: 0.05),
+                ? Colors.orange.withOpacity(0.05)
+                : themeColor.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isMakeUp
-                  ? Colors.orange.withValues(alpha: 0.1)
-                  : themeColor.withValues(alpha: 0.1),
+                  ? Colors.orange.withOpacity(0.1)
+                  : themeColor.withOpacity(0.1),
             ),
           ),
           child: Row(
@@ -4770,8 +5999,8 @@ class _DetailPageState extends State<DetailPage> {
                 Icons.format_quote,
                 size: 16,
                 color: isMakeUp
-                    ? Colors.orange.withValues(alpha: 0.5)
-                    : themeColor.withValues(alpha: 0.5),
+                    ? Colors.orange.withOpacity(0.5)
+                    : themeColor.withOpacity(0.5),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -4792,7 +6021,196 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 新增：补卡对话框
+  // ===== 以下方法保持不变 =====
+
+  void _showEditHabitDialog() {
+    final titleController = TextEditingController(text: widget.habit.title);
+    final descController = TextEditingController(text: widget.habit.description);
+    final themeColor = Theme.of(context).colorScheme.primary;
+    int selectedIconIndex = widget.habit.iconIndex;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: themeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(HabitIcons.getIcon(selectedIconIndex),
+                                color: themeColor, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              "编辑习惯",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close,
+                                  size: 18, color: Colors.grey[500]),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "选择图标",
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      IconSelector(
+                        selectedIndex: selectedIconIndex,
+                        themeColor: themeColor,
+                        onSelect: (index) {
+                          setModalState(() => selectedIconIndex = index);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: "习惯名称",
+                          hintText: "例如：早起",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                            BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: descController,
+                        maxLines: 2,
+                        maxLength: 100,
+                        decoration: InputDecoration(
+                          labelText: "描述（选填）",
+                          hintText: "例如：每天6点前起床",
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                            BorderSide(color: themeColor, width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          counterStyle: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (titleController.text.trim().isNotEmpty) {
+                              setState(() {
+                                widget.habit.title = titleController.text.trim();
+                                widget.habit.description =
+                                    descController.text.trim();
+                                widget.habit.iconIndex = selectedIconIndex;
+                              });
+                              widget.onSave();
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("已保存修改"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(
+                                  content: Text("习惯名称不能为空"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          child: const Text("保存修改",
+                              style: TextStyle(fontSize: 16)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showMakeUpCheckInDialog() {
     final noteController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -4817,7 +6235,6 @@ class _DetailPageState extends State<DetailPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 拖动指示条
                   Container(
                     width: 40,
                     height: 4,
@@ -4827,17 +6244,17 @@ class _DetailPageState extends State<DetailPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // 标题行
                   Row(
                     children: [
                       Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.history, color: Colors.orange, size: 22),
+                        child: const Icon(Icons.history,
+                            color: Colors.orange, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -4846,17 +6263,18 @@ class _DetailPageState extends State<DetailPage> {
                           children: [
                             const Text(
                               "补卡",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               selectedDateStr,
-                              style: const TextStyle(fontSize: 14, color: Colors.orange),
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.orange),
                             ),
                           ],
                         ),
                       ),
-                      // 关闭按钮
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
                         child: Container(
@@ -4866,13 +6284,13 @@ class _DetailPageState extends State<DetailPage> {
                             color: Colors.grey[100],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                          child: Icon(Icons.close,
+                              size: 18, color: Colors.grey[500]),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // 输入框
                   TextField(
                     controller: noteController,
                     maxLines: 3,
@@ -4880,7 +6298,8 @@ class _DetailPageState extends State<DetailPage> {
                     autofocus: true,
                     decoration: InputDecoration(
                       hintText: "写点什么记录一下吧...",
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(
@@ -4892,7 +6311,6 @@ class _DetailPageState extends State<DetailPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // 确认按钮
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -4909,7 +6327,8 @@ class _DetailPageState extends State<DetailPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                       ),
-                      child: const Text("确认补卡", style: TextStyle(fontSize: 16)),
+                      child:
+                      const Text("确认补卡", style: TextStyle(fontSize: 16)),
                     ),
                   ),
                 ],
@@ -4921,9 +6340,9 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-// 新增：检查并显示成就
   Future<void> _checkAndShowAchievements() async {
-    final newAchievements = await AchievementService.checkNewAchievements(widget.allHabits);
+    final newAchievements =
+    await AchievementService.checkNewAchievements(widget.allHabits);
 
     if (newAchievements.isNotEmpty && mounted) {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -4934,7 +6353,6 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  // 修改：执行补卡 - 添加成就检查
   void _performMakeUpCheckIn(String note) {
     final now = DateTime.now();
 
@@ -4972,18 +6390,14 @@ class _DetailPageState extends State<DetailPage> {
       ),
     );
 
-    // 新增：检查成就
     _checkAndShowAchievements();
   }
 
-  // 编辑备注 - 优化后的样式
   void _editNote(CheckInRecord record) {
-    // 处理备注内容，保留补卡标记但只编辑用户备注部分
     String originalNote = record.note ?? '';
     String makeUpPrefix = '';
     String userNote = originalNote;
 
-    // 检查是否有补卡标记
     final regex = RegExp(r'(\[补卡于.+?\])\s*');
     final match = regex.firstMatch(originalNote);
     if (match != null) {
@@ -5015,7 +6429,6 @@ class _DetailPageState extends State<DetailPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 拖动指示条
                   Container(
                     width: 40,
                     height: 4,
@@ -5025,17 +6438,17 @@ class _DetailPageState extends State<DetailPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // 标题行
                   Row(
                     children: [
                       Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withValues(alpha: 0.1),
+                          color: themeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.edit_note, color: themeColor, size: 22),
+                        child:
+                        Icon(Icons.edit_note, color: themeColor, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -5044,17 +6457,18 @@ class _DetailPageState extends State<DetailPage> {
                           children: [
                             const Text(
                               "编辑备注",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               dateStr,
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[500]),
                             ),
                           ],
                         ),
                       ),
-                      // 关闭按钮
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
                         child: Container(
@@ -5064,13 +6478,13 @@ class _DetailPageState extends State<DetailPage> {
                             color: Colors.grey[100],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                          child: Icon(Icons.close,
+                              size: 18, color: Colors.grey[500]),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // 备注输入框
                   TextField(
                     controller: noteController,
                     maxLines: 4,
@@ -5078,7 +6492,8 @@ class _DetailPageState extends State<DetailPage> {
                     autofocus: true,
                     decoration: InputDecoration(
                       hintText: "写点什么记录一下吧...",
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(
@@ -5094,15 +6509,12 @@ class _DetailPageState extends State<DetailPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // 按钮区域
                   Row(
                     children: [
-                      // 删除按钮（如果有备注内容才显示）
                       if (userNote.isNotEmpty)
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              // 如果有补卡标记，只保留标记
                               if (makeUpPrefix.isNotEmpty) {
                                 record.note = makeUpPrefix;
                               } else {
@@ -5126,17 +6538,16 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: const Text("删除备注", style: TextStyle(fontSize: 15)),
+                            child: const Text("删除备注",
+                                style: TextStyle(fontSize: 15)),
                           ),
                         ),
                       if (userNote.isNotEmpty) const SizedBox(width: 12),
-                      // 保存按钮
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
                             String newNote = noteController.text.trim();
 
-                            // 如果有补卡标记，需要保留
                             if (makeUpPrefix.isNotEmpty) {
                               if (newNote.isNotEmpty) {
                                 record.note = '$makeUpPrefix $newNote';
@@ -5166,7 +6577,8 @@ class _DetailPageState extends State<DetailPage> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             elevation: 0,
                           ),
-                          child: const Text("保存备注", style: TextStyle(fontSize: 15)),
+                          child: const Text("保存备注",
+                              style: TextStyle(fontSize: 15)),
                         ),
                       ),
                     ],
@@ -5229,7 +6641,8 @@ class _DetailPageState extends State<DetailPage> {
     return Column(
       children: [
         Text(value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: color)),
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w600, color: color)),
         const SizedBox(height: 4),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
       ],
@@ -5329,138 +6742,263 @@ class _AchievementPageState extends State<AchievementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
+    // 获取壁纸状态
+    final appState = HabitApp.of(context);
+    final useWallpaper = appState?.useWallpaper ?? false;
+    final wallpaperDecoration = appState?.wallpaperDecoration;
+
     if (_isLoading) {
       return Scaffold(
+        backgroundColor: useWallpaper ? Colors.transparent : null,
         appBar: AppBar(
-          title: const Text("打卡成就", style: TextStyle(fontSize: 16)),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          title: Text(
+            "打卡成就",
+            style: TextStyle(
+              fontSize: 16,
+              shadows: useWallpaper
+                  ? [
+                Shadow(
+                  offset: const Offset(0, 1),
+                  blurRadius: 3,
+                  color: Colors.black.withOpacity(0.3),
+                ),
+              ]
+                  : null,
+            ),
+          ),
+          backgroundColor: useWallpaper
+              ? Colors.white.withOpacity(0.85)
+              : backgroundColor,
+          surfaceTintColor: useWallpaper ? Colors.transparent : null,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Stack(
+          children: [
+            if (useWallpaper && wallpaperDecoration != null)
+              Positioned.fill(child: Container(decoration: wallpaperDecoration)),
+            if (useWallpaper)
+              Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            const Center(child: CircularProgressIndicator()),
+          ],
+        ),
       );
     }
 
-    final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final grouped = groupedRegularAchievements;
     final unlockedSpecial = specialAchievements;
 
     return Scaffold(
+      backgroundColor: useWallpaper ? Colors.transparent : null,
       appBar: AppBar(
-        title: const Text("打卡成就", style: TextStyle(fontSize: 16)),
-        backgroundColor: backgroundColor,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // 成就概览卡片
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  themeColor.withValues(alpha: 0.8),
-                  themeColor,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        title: Text(
+          "打卡成就",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: themeColor.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.emoji_events,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "成就进度",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "$unlockedCount / $totalAchievements",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: CircularProgressIndicator(
-                            value: totalAchievements > 0 ? unlockedCount / totalAchievements : 0,
-                            strokeWidth: 5,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Text(
-                          "${totalAchievements > 0 ? (unlockedCount / totalAchievements * 100).toInt() : 0}%",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            ]
+                : null,
           ),
-          const SizedBox(height: 16),
+        ),
+        backgroundColor: useWallpaper
+            ? Colors.white.withOpacity(0.85)
+            : backgroundColor,
+        surfaceTintColor: useWallpaper ? Colors.transparent : null,
+      ),
+      body: Stack(
+        children: [
+          // 壁纸背景
+          if (useWallpaper && wallpaperDecoration != null)
+            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
 
-          // 常规成就（按类别显示）
-          ...grouped.entries.map((entry) {
-            final category = entry.key;
-            final categoryAchievements = entry.value;
-            final unlockedInCategory = categoryAchievements.where((a) => a.isUnlocked).length;
+          // 遮罩层
+          if (useWallpaper)
+            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
+          // 内容
+          ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // 成就概览卡片
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      themeColor.withValues(alpha: 0.8),
+                      themeColor,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColor.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.emoji_events,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "成就进度",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "$unlockedCount / $totalAchievements",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: SizedBox(
+                              width: 56,
+                              height: 56,
+                              child: CircularProgressIndicator(
+                                value: totalAchievements > 0 ? unlockedCount / totalAchievements : 0,
+                                strokeWidth: 5,
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          ),
+                          Center(
+                            child: Text(
+                              "${totalAchievements > 0 ? (unlockedCount / totalAchievements * 100).toInt() : 0}%",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 常规成就（按类别显示）
+              ...grouped.entries.map((entry) {
+                final category = entry.key;
+                final categoryAchievements = entry.value;
+                final unlockedInCategory = categoryAchievements.where((a) => a.isUnlocked).length;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                      boxShadow: useWallpaper
+                          ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _getCategoryIcon(category),
+                              size: 18,
+                              color: themeColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              "$unlockedInCategory/${categoryAchievements.length}",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...categoryAchievements.map((achievement) =>
+                            _buildAchievementListItem(context, achievement, themeColor)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+              // 特殊成就
+              Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
+                  border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                  boxShadow: useWallpaper
+                      ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -5468,13 +7006,13 @@ class _AchievementPageState extends State<AchievementPage> {
                     Row(
                       children: [
                         Icon(
-                          _getCategoryIcon(category),
+                          Icons.stars_outlined,
                           size: 18,
-                          color: themeColor,
+                          color: Colors.amber[600],
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          category,
+                          "特殊成就",
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -5483,7 +7021,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         ),
                         const Spacer(),
                         Text(
-                          "$unlockedInCategory/${categoryAchievements.length}",
+                          "${unlockedSpecial.length}/$totalSpecialAchievements",
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[500],
@@ -5492,84 +7030,40 @@ class _AchievementPageState extends State<AchievementPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...categoryAchievements.map((achievement) =>
-                        _buildAchievementListItem(context, achievement, themeColor)),
+                    if (unlockedSpecial.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.lock_outline, size: 32, color: Colors.grey[300]),
+                              const SizedBox(height: 8),
+                              Text(
+                                "暂无解锁的特殊成就",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "继续探索，发现隐藏成就吧！",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ...unlockedSpecial.map((achievement) =>
+                          _buildAchievementListItem(context, achievement, themeColor, isSpecial: true)),
                   ],
                 ),
               ),
-            );
-          }),
-
-          // 特殊成就
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.stars_outlined,
-                      size: 18,
-                      color: Colors.amber[600],
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      "特殊成就",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      "${unlockedSpecial.length}/$totalSpecialAchievements",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (unlockedSpecial.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.lock_outline, size: 32, color: Colors.grey[300]),
-                          const SizedBox(height: 8),
-                          Text(
-                            "暂无解锁的特殊成就",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "继续探索，发现隐藏成就吧！",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ...unlockedSpecial.map((achievement) =>
-                      _buildAchievementListItem(context, achievement, themeColor, isSpecial: true)),
-              ],
-            ),
+            ],
           ),
         ],
       ),

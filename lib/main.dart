@@ -594,6 +594,33 @@ class _CheckInPageState extends State<CheckInPage> {
 
   late String currentQuote;
 
+  /// ===== 统一的SnackBar显示方法 =====
+  void _showSnackBar(
+      BuildContext context, {
+        required IconData icon,
+        required String message,
+        required Color backgroundColor,
+        Duration duration = const Duration(seconds: 2),
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: duration,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -824,11 +851,12 @@ class _CheckInPageState extends State<CheckInPage> {
                           widget.onSave();
                           Navigator.pop(ctx);
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("已取消「${habit.title}」的打卡"),
-                              duration: const Duration(seconds: 2),
-                            ),
+                          // ===== 统一SnackBar样式：取消打卡成功 =====
+                          _showSnackBar(
+                            context,
+                            icon: Icons.undo,
+                            message: "已取消「${habit.title}」的打卡",
+                            backgroundColor: Colors.orange,
                           );
 
                           await _checkAndShowAchievements();
@@ -1159,11 +1187,13 @@ class _CheckInPageState extends State<CheckInPage> {
                               ));
                               Navigator.pop(ctx);
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("已添加「$habitTitle」"),
-                                  duration: const Duration(seconds: 1),
-                                ),
+                              // ===== 统一SnackBar样式：添加习惯成功 =====
+                              _showSnackBar(
+                                context,
+                                icon: Icons.check_circle,
+                                message: "已添加「$habitTitle」",
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 1),
                               );
 
                               await _checkAndShowAchievements();
@@ -1361,11 +1391,12 @@ class _CheckInPageState extends State<CheckInPage> {
                           widget.onDelete(habit);
                           Navigator.pop(ctx);
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("已删除「$habitTitle」"),
-                              duration: const Duration(seconds: 2),
-                            ),
+                          // ===== 统一SnackBar样式：删除习惯成功 =====
+                          _showSnackBar(
+                            context,
+                            icon: Icons.delete_outline,
+                            message: "已删除「$habitTitle」",
+                            backgroundColor: Colors.red[400]!,
                           );
 
                           await _checkAndShowAchievements();
@@ -4080,6 +4111,31 @@ class ReminderSettingsPage extends StatefulWidget {
 }
 
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
+  /// ===== 统一的SnackBar显示方法 =====
+  void _showSnackBar(
+      BuildContext context, {
+        required IconData icon,
+        required String message,
+        required Color backgroundColor,
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -4162,8 +4218,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: useWallpaper
-                      ? themeColor.withValues(alpha: 0.15)
-                      : themeColor.withValues(alpha: 0.1),
+                      ? themeColor.withOpacity(0.15)
+                      : themeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: useWallpaper
                       ? [
@@ -4189,7 +4245,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 ),
               ),
               // 习惯列表
-              ...widget.habits.map((habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
+              ...widget.habits
+                  .map((habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
             ],
           ),
         ],
@@ -4209,7 +4266,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
             ? null
             : Border.all(
           color: hasReminder
-              ? themeColor.withValues(alpha: 0.3)
+              ? themeColor.withOpacity(0.3)
               : Colors.grey[200]!,
         ),
         boxShadow: useWallpaper
@@ -4237,7 +4294,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: hasReminder
-                        ? themeColor.withValues(alpha: 0.1)
+                        ? themeColor.withOpacity(0.1)
                         : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -4280,7 +4337,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.1),
+                      color: themeColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -4356,7 +4413,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.1),
+                        color: themeColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.notifications_active,
@@ -4446,7 +4503,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.1),
+                color: themeColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.calendar_month, color: themeColor, size: 28),
@@ -4539,7 +4596,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
   // 删除提醒确认 - 优化后的样式
   void _showDeleteReminderDialog(Habit habit) {
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -4570,7 +4626,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: Colors.red.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.notifications_off_outlined, color: Colors.red[400], size: 36),
@@ -4593,9 +4649,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.08),
+                    color: Colors.orange.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
@@ -4635,11 +4691,12 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           setState(() => habit.reminderTime = null);
                           widget.onSave();
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("已删除提醒"),
-                              duration: Duration(seconds: 1),
-                            ),
+                          // ===== 统一SnackBar样式：删除提醒成功 =====
+                          _showSnackBar(
+                            context,
+                            icon: Icons.check_circle,
+                            message: "已删除提醒",
+                            backgroundColor: Colors.green,
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -4682,18 +4739,22 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       try {
         await intent.launch();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("已为「${habit.title}」设置提醒"),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
+          // ===== 统一SnackBar样式：打开日历成功 =====
+          _showSnackBar(
+            context,
+            icon: Icons.check_circle,
+            message: "已为「${habit.title}」设置提醒",
+            backgroundColor: Colors.green,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("打开日历失败: $e")),
+          // ===== 统一SnackBar样式：打开日历失败 =====
+          _showSnackBar(
+            context,
+            icon: Icons.error,
+            message: "打开日历失败: $e",
+            backgroundColor: Colors.red,
           );
         }
       }
@@ -4748,10 +4809,10 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: widget.themeColor.withValues(alpha: 0.05),
+            color: widget.themeColor.withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: widget.themeColor.withValues(alpha: 0.2),
+              color: widget.themeColor.withOpacity(0.2),
             ),
           ),
           child: Stack(
@@ -4762,7 +4823,7 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
                   height: 44,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: widget.themeColor.withValues(alpha: 0.1),
+                    color: widget.themeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -5200,6 +5261,33 @@ class _DetailPageState extends State<DetailPage> {
   DateTime? _selectedDate;
 
   static const int _initialPage = 1200;
+
+  /// ===== 统一的SnackBar显示方法 =====
+  void _showSnackBar(
+      BuildContext context, {
+        required IconData icon,
+        required String message,
+        required Color backgroundColor,
+        Duration duration = const Duration(seconds: 2),
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: duration,
+      ),
+    );
+  }
 
   DateTime _getMonthFromPage(int page) {
     final now = DateTime.now();
@@ -6021,8 +6109,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  // ===== 以下方法保持不变 =====
-
   void _showEditHabitDialog() {
     final titleController = TextEditingController(text: widget.habit.title);
     final descController = TextEditingController(text: widget.habit.description);
@@ -6172,18 +6258,23 @@ class _DetailPageState extends State<DetailPage> {
                               });
                               widget.onSave();
                               Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("已保存修改"),
-                                  duration: Duration(seconds: 1),
-                                ),
+
+                              // ===== 统一SnackBar样式：编辑习惯保存成功 =====
+                              _showSnackBar(
+                                context,
+                                icon: Icons.check_circle,
+                                message: "已保存修改",
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 1),
                               );
                             } else {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(
-                                  content: Text("习惯名称不能为空"),
-                                  duration: Duration(seconds: 1),
-                                ),
+                              // ===== 统一SnackBar样式：编辑习惯验证失败 =====
+                              _showSnackBar(
+                                ctx,
+                                icon: Icons.error,
+                                message: "习惯名称不能为空",
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 1),
                               );
                             }
                           },
@@ -6382,12 +6473,12 @@ class _DetailPageState extends State<DetailPage> {
 
     setState(() {});
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("已补卡 ${DateFormat('MM月dd日').format(_selectedDate!)}"),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
+    // ===== 统一SnackBar样式：补卡成功 =====
+    _showSnackBar(
+      context,
+      icon: Icons.history,
+      message: "已补卡 ${DateFormat('MM月dd日').format(_selectedDate!)}",
+      backgroundColor: Colors.green,
     );
 
     _checkAndShowAchievements();
@@ -6523,11 +6614,14 @@ class _DetailPageState extends State<DetailPage> {
                               widget.onSave();
                               setState(() {});
                               Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("已删除备注"),
-                                  duration: Duration(seconds: 1),
-                                ),
+
+                              // ===== 统一SnackBar样式：删除备注成功 =====
+                              _showSnackBar(
+                                context,
+                                icon: Icons.delete_outline,
+                                message: "已删除备注",
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 1),
                               );
                             },
                             style: OutlinedButton.styleFrom(
@@ -6561,11 +6655,14 @@ class _DetailPageState extends State<DetailPage> {
                             widget.onSave();
                             setState(() {});
                             Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("已保存备注"),
-                                duration: Duration(seconds: 1),
-                              ),
+
+                            // ===== 统一SnackBar样式：保存备注成功 =====
+                            _showSnackBar(
+                              context,
+                              icon: Icons.check_circle,
+                              message: "已保存备注",
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 1),
                             );
                           },
                           style: ElevatedButton.styleFrom(

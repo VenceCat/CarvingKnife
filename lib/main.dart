@@ -1435,6 +1435,8 @@ class _CheckInPageState extends State<CheckInPage> {
 
     return Scaffold(
       backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
+
       body: Stack(
         children: [
           // ===== 壁纸背景层 =====
@@ -1451,192 +1453,239 @@ class _CheckInPageState extends State<CheckInPage> {
               ),
             ),
 
-          // ===== 内容层 =====
-          CustomScrollView(
-            slivers: [
-              // ===== AppBar =====
-              SliverAppBar.large(
-                title: Text(
-                  "雕刀",
-                  style: TextStyle(
-                    letterSpacing: 4,
-                    fontWeight: FontWeight.w300,
-                    shadows: useWallpaper
-                        ? [
-                      Shadow(
-                        offset: const Offset(0, 1),
-                        blurRadius: 3,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ]
-                        : null,
-                  ),
-                ),
-                centerTitle: true,
-                backgroundColor: useWallpaper
-                    ? Colors.white.withOpacity(0.85)
-                    : backgroundColor,
-                surfaceTintColor: useWallpaper ? Colors.transparent : null,
-                elevation: 0,
+          // ===== 固定标题栏 =====
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                bottom: 16,
+                left: 20,
+                right: 20,
               ),
-
-              // ===== 名言区域 =====
-              SliverToBoxAdapter(
-                child: GestureDetector(
-                  onTap: () => setState(() =>
-                  currentQuote = quotes[Random().nextInt(quotes.length)]),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
-                    decoration: BoxDecoration(
-                      color: useWallpaper
-                          ? Colors.white.withOpacity(0.85)
-                          : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: useWallpaper
-                          ? null
-                          : Border.all(color: Colors.grey[200]!),
-                      boxShadow: useWallpaper
+              decoration: BoxDecoration(
+                gradient: useWallpaper
+                    ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent,
+                  ],
+                )
+                    : null,
+                color: useWallpaper ? Colors.transparent : backgroundColor,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // 应用名称
+                  Text(
+                    "雕刀",
+                    style: TextStyle(
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.w300,
+                      fontSize: 24,
+                      color: useWallpaper ? Colors.white : null,
+                      shadows: useWallpaper
                           ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                        Shadow(
+                          offset: const Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black.withOpacity(0.6),
                         ),
                       ]
                           : null,
                     ),
-                    child: Text(
-                      currentQuote,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: themeColor.withOpacity(0.8),
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
                   ),
-                ),
+                  // 可以在这里添加其他标题栏按钮
+                ],
               ),
+            ),
+          ),
 
-              // ===== 习惯列表 =====
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final habit = widget.habits[index];
-                    final isTodayDone = habit.checkInTimes.any((t) =>
-                        t.startsWith(DateFormat('yyyy-MM-dd').format(DateTime.now())));
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (c) => DetailPage(
-                              habit: habit,
-                              allHabits: widget.habits,
-                              onSave: widget.onSave,
-                            ),
-                          ),
-                        ),
-                        onLongPress: () => _deleteHabit(habit),
-                        borderRadius: BorderRadius.circular(15),
+          // ===== 内容层 =====
+          Positioned.fill(
+            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (scrollNotification) {
+                return false;
+              },
+              child: CustomScrollView(
+                slivers: [
+                  // ===== 名言区域 =====
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: const EdgeInsets.only(
+                        top: 8,
+                        left: 20,
+                        right: 20,
+                        bottom: 16,
+                      ),
+                      child: GestureDetector(
+                        onTap: () => setState(() =>
+                        currentQuote = quotes[Random().nextInt(quotes.length)]),
                         child: Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 20, horizontal: 40),
                           decoration: BoxDecoration(
                             color: useWallpaper
-                                ? Colors.white.withOpacity(0.95)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: isTodayDone
-                                  ? themeColor.withOpacity(0.4)
-                                  : Colors.grey[200]!,
-                              width: isTodayDone ? 1.5 : 1,
-                            ),
+                                ? Colors.white.withOpacity(0.85)
+                                : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: useWallpaper
+                                ? null
+                                : Border.all(color: Colors.grey[200]!),
                             boxShadow: useWallpaper
                                 ? [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
+                                blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ]
                                 : null,
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: isTodayDone
-                                      ? themeColor.withOpacity(0.1)
-                                      : Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  HabitIcons.getIcon(habit.iconIndex),
-                                  color: isTodayDone ? themeColor : Colors.grey[500],
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      habit.title,
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w400
-                                      ),
-                                    ),
-                                    if (habit.description.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        habit.description,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[400]
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                isTodayDone
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_off,
-                                color: isTodayDone ? themeColor : Colors.grey[300],
-                              ),
-                              const SizedBox(width: 10),
-                              IconButton(
-                                icon: Icon(
-                                    Icons.add_task,
-                                    size: 20,
-                                    color: themeColor
-                                ),
-                                onPressed: () => _toggleCheckIn(habit),
-                              )
-                            ],
+                          child: Text(
+                            currentQuote,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: themeColor.withOpacity(0.8),
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         ),
                       ),
-                    );
-                  },
-                  childCount: widget.habits.length,
-                ),
-              ),
+                    ),
+                  ),
 
-              // ===== 空白占位 =====
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+                  // ===== 习惯列表 =====
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        final habit = widget.habits[index];
+                        final isTodayDone = habit.checkInTimes.any((t) =>
+                            t.startsWith(DateFormat('yyyy-MM-dd')
+                                .format(DateTime.now())));
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          child: InkWell(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (c) => DetailPage(
+                                  habit: habit,
+                                  allHabits: widget.habits,
+                                  onSave: widget.onSave,
+                                ),
+                              ),
+                            ),
+                            onLongPress: () => _deleteHabit(habit),
+                            borderRadius: BorderRadius.circular(15),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: useWallpaper
+                                    ? Colors.white.withOpacity(0.95)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: isTodayDone
+                                      ? themeColor.withOpacity(0.4)
+                                      : Colors.grey[200]!,
+                                  width: isTodayDone ? 1.5 : 1,
+                                ),
+                                boxShadow: useWallpaper
+                                    ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: isTodayDone
+                                          ? themeColor.withOpacity(0.1)
+                                          : Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      HabitIcons.getIcon(habit.iconIndex),
+                                      color: isTodayDone
+                                          ? themeColor
+                                          : Colors.grey[500],
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          habit.title,
+                                          style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w400),
+                                        ),
+                                        if (habit.description.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            habit.description,
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[400]),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    isTodayDone
+                                        ? Icons.check_circle
+                                        : Icons.radio_button_off,
+                                    color: isTodayDone
+                                        ? themeColor
+                                        : Colors.grey[300],
+                                  ),
+                                  const SizedBox(width: 10),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.add_task,
+                                      size: 20,
+                                      color: themeColor,
+                                    ),
+                                    onPressed: () => _toggleCheckIn(habit),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: widget.habits.length,
+                    ),
+                  ),
+
+                  // ===== 底部空白占位 =====
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -1833,7 +1882,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final wallpaperDecoration = appState?.wallpaperDecoration;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : null,
+      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
+
       body: Stack(
         children: [
           // 壁纸背景
@@ -1844,299 +1895,329 @@ class _StatisticsPageState extends State<StatisticsPage> {
           if (useWallpaper)
             Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
 
-          // 内容
-          CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                title: Text(
-                  "统计",
-                  style: TextStyle(
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w300,
-                    shadows: useWallpaper
-                        ? [
-                      Shadow(
-                        offset: const Offset(0, 1),
-                        blurRadius: 3,
-                        color: Colors.black.withOpacity(0.3),
+          // ===== 固定标题栏（居左对齐） =====
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                bottom: 16,
+                left: 20,
+                right: 20,
+              ),
+              decoration: BoxDecoration(
+                gradient: useWallpaper
+                    ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent,
+                  ],
+                )
+                    : null,
+                color: useWallpaper ? Colors.transparent : backgroundColor,
+              ),
+              child: Row(
+                // 改为居左对齐，与打卡页面一致
+                children: [
+                  Text(
+                    "统计",
+                    style: TextStyle(
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w300,
+                      fontSize: 24,
+                      color: useWallpaper ? Colors.white : null,
+                      shadows: useWallpaper
+                          ? [
+                        Shadow(
+                          offset: const Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black.withOpacity(0.6),
+                        ),
+                      ]
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ===== 内容层 =====
+          Positioned.fill(
+            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            child: CustomScrollView(
+              slivers: [
+                // 概览卡片
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      children: [
+                        _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor, useWallpaper),
+                        const SizedBox(width: 12),
+                        _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor, useWallpaper),
+                        const SizedBox(width: 12),
+                        _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange, useWallpaper),
+                        const SizedBox(width: 12),
+                        _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber, useWallpaper),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 完成率卡片
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                        boxShadow: useWallpaper
+                            ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                            : null,
                       ),
-                    ]
-                        : null,
-                  ),
-                ),
-                centerTitle: true,
-                backgroundColor: useWallpaper
-                    ? Colors.white.withOpacity(0.85)
-                    : backgroundColor,
-                surfaceTintColor: useWallpaper ? Colors.transparent : null,
-              ),
-
-              // 概览卡片
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Row(
-                    children: [
-                      _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor, useWallpaper),
-                      const SizedBox(width: 12),
-                      _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor, useWallpaper),
-                      const SizedBox(width: 12),
-                      _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange, useWallpaper),
-                      const SizedBox(width: 12),
-                      _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber, useWallpaper),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 完成率卡片
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                      boxShadow: useWallpaper
-                          ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
-                            const SizedBox(width: 8),
-                            Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildProgressRing("今日", todayCompletionRate, themeColor),
-                            _buildProgressRing("本周", weekCompletionRate, Colors.blue),
-                            _buildProgressRing("本月", monthCompletionRate, Colors.purple),
-                          ],
-                        ),
-                      ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
+                              const SizedBox(width: 8),
+                              Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildProgressRing("今日", todayCompletionRate, themeColor),
+                              _buildProgressRing("本周", weekCompletionRate, Colors.blue),
+                              _buildProgressRing("本月", monthCompletionRate, Colors.purple),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // 打卡热力图
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                      boxShadow: useWallpaper
-                          ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                          : null,
+                // 打卡热力图
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                        boxShadow: useWallpaper
+                            ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
+                              const SizedBox(width: 8),
+                              Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildHeatmap(themeColor),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                              const SizedBox(width: 4),
+                              ...List.generate(5, (i) => Container(
+                                width: 12,
+                                height: 12,
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                decoration: BoxDecoration(
+                                  color: themeColor.withOpacity(0.2 + i * 0.2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              )),
+                              const SizedBox(width: 4),
+                              Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
-                            const SizedBox(width: 8),
-                            Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildHeatmap(themeColor),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                            const SizedBox(width: 4),
-                            ...List.generate(5, (i) => Container(
-                              width: 12,
-                              height: 12,
-                              margin: const EdgeInsets.symmetric(horizontal: 2),
-                              decoration: BoxDecoration(
-                                color: themeColor.withValues(alpha: 0.2 + i * 0.2),
-                                borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // 习惯排行
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                        boxShadow: useWallpaper
+                            ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
+                              const SizedBox(width: 8),
+                              Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          if (habitRanking.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
                               ),
-                            )),
-                            const SizedBox(width: 4),
-                            Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+                            )
+                          else
+                            ...habitRanking.take(5).toList().asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final item = entry.value;
+                              final habit = item['habit'] as Habit;
+                              final streak = item['streak'] as int;
+                              final total = item['total'] as int;
 
-              // 习惯排行
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                      boxShadow: useWallpaper
-                          ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
-                            const SizedBox(width: 8),
-                            Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (habitRanking.isEmpty)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
-                            ),
-                          )
-                        else
-                          ...habitRanking.take(5).toList().asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final item = entry.value;
-                            final habit = item['habit'] as Habit;
-                            final streak = item['streak'] as int;
-                            final total = item['total'] as int;
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  // 排名
-                                  Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      color: index == 0 ? Colors.amber[100] :
-                                      index == 1 ? Colors.grey[200] :
-                                      index == 2 ? Colors.orange[100] :
-                                      Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        "${index + 1}",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: index == 0 ? Colors.amber[800] :
-                                          index == 1 ? Colors.grey[600] :
-                                          index == 2 ? Colors.orange[800] :
-                                          Colors.grey[500],
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    // 排名
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: index == 0 ? Colors.amber[100] :
+                                        index == 1 ? Colors.grey[200] :
+                                        index == 2 ? Colors.orange[100] :
+                                        Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          "${index + 1}",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: index == 0 ? Colors.amber[800] :
+                                            index == 1 ? Colors.grey[600] :
+                                            index == 2 ? Colors.orange[800] :
+                                            Colors.grey[500],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // 图标
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: themeColor.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(10),
+                                    const SizedBox(width: 12),
+                                    // 图标
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: themeColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        HabitIcons.getIcon(habit.iconIndex),
+                                        color: themeColor,
+                                        size: 18,
+                                      ),
                                     ),
-                                    child: Icon(
-                                      HabitIcons.getIcon(habit.iconIndex),
-                                      color: themeColor,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // 名称
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          habit.title,
-                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                        ),
-                                        Text(
-                                          "共打卡 $total 次",
-                                          style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // 连续天数
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.local_fire_department,
-                                          size: 14,
-                                          color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "$streak天",
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                    const SizedBox(width: 12),
+                                    // 名称
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            habit.title,
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                                           ),
-                                        ),
-                                      ],
+                                          Text(
+                                            "共打卡 $total 次",
+                                            style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                      ],
+                                    // 连续天数
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.local_fire_department,
+                                            size: 14,
+                                            color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "$streak天",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            ),
           ),
         ],
       ),
@@ -2292,7 +2373,9 @@ class ProfilePage extends StatelessWidget {
         .length;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : null,
+      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      extendBodyBehindAppBar: true,
+
       body: Stack(
         children: [
           // 壁纸背景
@@ -2303,81 +2386,113 @@ class ProfilePage extends StatelessWidget {
           if (useWallpaper)
             Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
 
-          // 内容
-          CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                title: Text(
-                  "我的",
-                  style: TextStyle(
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w300,
-                    shadows: useWallpaper
-                        ? [
-                      Shadow(
-                        offset: const Offset(0, 1),
-                        blurRadius: 3,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ]
-                        : null,
+          // ===== 固定标题栏（居左对齐） =====
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+                bottom: 16,
+                left: 20,
+                right: 20,
+              ),
+              decoration: BoxDecoration(
+                gradient: useWallpaper
+                    ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent,
+                  ],
+                )
+                    : null,
+                color: useWallpaper ? Colors.transparent : backgroundColor,
+              ),
+              child: Row(
+                // 居左对齐
+                children: [
+                  Text(
+                    "我的",
+                    style: TextStyle(
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w300,
+                      fontSize: 24,
+                      color: useWallpaper ? Colors.white : null,
+                      shadows: useWallpaper
+                          ? [
+                        Shadow(
+                          offset: const Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black.withOpacity(0.6),
+                        ),
+                      ]
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ===== 内容层 =====
+          Positioned.fill(
+            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // 统计卡片
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
+                            boxShadow: useWallpaper
+                                ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _statItem("习惯数", habits.length.toString(), themeColor),
+                              Container(width: 1, height: 40, color: Colors.grey[200]),
+                              _statItem("今日完成", todayCheckIns.toString(), themeColor),
+                              Container(width: 1, height: 40, color: Colors.grey[200]),
+                              _statItem("累计打卡", totalCheckIns.toString(), themeColor),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // 菜单项
+                        _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
+                            AchievementPage(habits: habits), useWallpaper, themeColor),
+                        _menuItem(context, Icons.notifications_none, "提醒设置",
+                            ReminderSettingsPage(habits: habits, onSave: onSave), useWallpaper, themeColor),
+                        _menuItem(context, Icons.color_lens_outlined, "主题设置",
+                            const ThemeSettingsPage(), useWallpaper, themeColor),
+                        _menuItem(context, Icons.cloud_outlined, "数据备份",
+                            BackupPage(habits: habits, onRestore: onRestore), useWallpaper, themeColor),
+                        _menuItem(context, Icons.info_outline, "关于", const AboutPage(), useWallpaper, themeColor),
+                      ],
+                    ),
                   ),
                 ),
-                centerTitle: true,
-                backgroundColor: useWallpaper
-                    ? Colors.white.withOpacity(0.85)
-                    : backgroundColor,
-                surfaceTintColor: useWallpaper ? Colors.transparent : null,
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // 统计卡片
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                          boxShadow: useWallpaper
-                              ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _statItem("习惯数", habits.length.toString(), themeColor),
-                            Container(width: 1, height: 40, color: Colors.grey[200]),
-                            _statItem("今日完成", todayCheckIns.toString(), themeColor),
-                            Container(width: 1, height: 40, color: Colors.grey[200]),
-                            _statItem("累计打卡", totalCheckIns.toString(), themeColor),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // 菜单项
-                      _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
-                          AchievementPage(habits: habits), useWallpaper),
-                      _menuItem(context, Icons.notifications_none, "提醒设置",
-                          ReminderSettingsPage(habits: habits, onSave: onSave), useWallpaper),
-                      _menuItem(context, Icons.color_lens_outlined, "主题设置",
-                          const ThemeSettingsPage(), useWallpaper),
-                      _menuItem(context, Icons.cloud_outlined, "数据备份",
-                          BackupPage(habits: habits, onRestore: onRestore), useWallpaper),
-                      _menuItem(context, Icons.info_outline, "关于", const AboutPage(), useWallpaper),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            ),
           ),
         ],
       ),
@@ -2396,8 +2511,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page, bool useWallpaper) {
-    final themeColor = Theme.of(context).colorScheme.primary;
+  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page, bool useWallpaper, Color themeColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -3242,6 +3356,33 @@ class ThemeSettingsPage extends StatefulWidget {
 class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   bool _isLoading = false;
 
+  /// ===== 统一的SnackBar显示方法 =====
+  void _showSnackBar(
+      BuildContext context, {
+        required IconData icon,
+        required String message,
+        required Color backgroundColor,
+        Duration duration = const Duration(seconds: 2),
+      }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        duration: duration,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -3908,27 +4049,22 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       final success = await appState.setWallpaper(context);
       if (success && mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text("壁纸设置成功"),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+        // ===== 使用统一的SnackBar方法 =====
+        _showSnackBar(
+          context,
+          icon: Icons.check_circle,
+          message: "壁纸设置成功",
+          backgroundColor: Colors.green,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("设置失败: $e"), backgroundColor: Colors.red),
+        // ===== 使用统一的SnackBar方法 =====
+        _showSnackBar(
+          context,
+          icon: Icons.error,
+          message: "设置失败: $e",
+          backgroundColor: Colors.red,
         );
       }
     } finally {
@@ -4067,12 +4203,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           await appState?.clearWallpaper();
                           if (mounted) setState(() => _isLoading = false);
 
-                          // 显示简洁的成功提示
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text("壁纸已移除"),
-                              duration: const Duration(seconds: 2),
-                            ),
+                          // ===== 优化后的SnackBar样式 =====
+                          _showSnackBar(
+                            context,
+                            icon: Icons.check_circle,
+                            message: "壁纸已移除",
+                            backgroundColor: Colors.green,
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -5335,7 +5471,7 @@ class _DetailPageState extends State<DetailPage> {
     return Scaffold(
       // 壁纸模式下背景透明
       backgroundColor: useWallpaper ? Colors.transparent : null,
-      extendBodyBehindAppBar: useWallpaper,
+      extendBodyBehindAppBar: useWallpaper, // 关键：壁纸模式下让内容延伸到AppBar下面
 
       appBar: AppBar(
         // 壁纸模式下 AppBar 半透明
@@ -5343,7 +5479,21 @@ class _DetailPageState extends State<DetailPage> {
             ? Colors.white.withOpacity(0.9)
             : Theme.of(context).scaffoldBackgroundColor,
         elevation: useWallpaper ? 0.5 : 0,
-        title: const Text("习惯详情", style: TextStyle(fontSize: 16)),
+        title: Text(
+          "习惯详情",
+          style: TextStyle(
+            fontSize: 16,
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withOpacity(0.3),
+              ),
+            ]
+                : null,
+          ),
+        ),
       ),
 
       body: Stack(
@@ -5363,18 +5513,26 @@ class _DetailPageState extends State<DetailPage> {
             ),
 
           // ===== 内容层 =====
-          ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildInfoCard(themeColor, useWallpaper),
-              const SizedBox(height: 24),
-              _buildCalendarCard(themeColor, useWallpaper),
-              const SizedBox(height: 24),
-              _buildRecordHeader(themeColor, useWallpaper),
-              const SizedBox(height: 12),
-              _buildRecordList(themeColor, useWallpaper),
-              const SizedBox(height: 50),
-            ],
+          Padding(
+            // 关键：调整顶部padding来避免内容被AppBar遮挡
+            padding: EdgeInsets.only(
+              top: useWallpaper
+                  ? MediaQuery.of(context).padding.top + kToolbarHeight
+                  : 0,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _buildInfoCard(themeColor, useWallpaper),
+                const SizedBox(height: 24),
+                _buildCalendarCard(themeColor, useWallpaper),
+                const SizedBox(height: 24),
+                _buildRecordHeader(themeColor, useWallpaper),
+                const SizedBox(height: 12),
+                _buildRecordList(themeColor, useWallpaper),
+                const SizedBox(height: 50),
+              ],
+            ),
           ),
         ],
       ),

@@ -7,7 +7,8 @@ class Habit {
   List<CheckInRecord> checkInRecords;
   String? reminderTime;
   String createdAt;
-  int iconIndex; // 新增：图标索引
+  int iconIndex;
+  int dailyTarget; // 新增：每日目标次数
 
   Habit({
     required this.id,
@@ -16,11 +17,27 @@ class Habit {
     List<CheckInRecord>? checkInRecords,
     this.reminderTime,
     String? createdAt,
-    this.iconIndex = 0, // 默认图标索引
+    this.iconIndex = 0,
+    this.dailyTarget = 1, // 默认每日1次
   })  : checkInRecords = checkInRecords ?? [],
         createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
   List<String> get checkInTimes => checkInRecords.map((r) => r.time).toList();
+
+  /// 获取指定日期的打卡次数
+  int getCheckInCountForDate(DateTime date) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    return checkInRecords.where((r) => r.time.startsWith(dateStr)).length;
+  }
+
+  /// 获取今日打卡次数
+  int get todayCheckInCount => getCheckInCountForDate(DateTime.now());
+
+  /// 今日是否已完成所有目标
+  bool get isTodayCompleted => todayCheckInCount >= dailyTarget;
+
+  /// 今日剩余打卡次数
+  int get todayRemainingCount => (dailyTarget - todayCheckInCount).clamp(0, dailyTarget);
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -29,7 +46,8 @@ class Habit {
     'checkInRecords': checkInRecords.map((r) => r.toJson()).toList(),
     'reminderTime': reminderTime,
     'createdAt': createdAt,
-    'iconIndex': iconIndex, // 新增
+    'iconIndex': iconIndex,
+    'dailyTarget': dailyTarget, // 新增
   };
 
   factory Habit.fromJson(Map<String, dynamic> json) {
@@ -51,7 +69,8 @@ class Habit {
       checkInRecords: records,
       reminderTime: json['reminderTime'] as String?,
       createdAt: json['createdAt'] as String?,
-      iconIndex: (json['iconIndex'] as int?) ?? 0, // 新增
+      iconIndex: (json['iconIndex'] as int?) ?? 0,
+      dailyTarget: (json['dailyTarget'] as int?) ?? 1, // 新增，兼容旧数据
     );
   }
 }

@@ -631,27 +631,175 @@ class _CheckInPageState extends State<CheckInPage> {
 
   void _toggleCheckIn(Habit habit) {
     final now = DateTime.now();
-    final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    final todayRecordIndex = habit.checkInRecords.indexWhere(
-          (r) => r.time.startsWith(todayStr),
-    );
+    // 获取今日打卡次数
+    final todayCount = habit.todayCheckInCount;
 
-    if (todayRecordIndex != -1) {
-      _showCancelCheckInDialog(habit, todayRecordIndex);
+    // 如果已完成所有目标，询问是否取消打卡
+    if (todayCount >= habit.dailyTarget) {
+      _showCancelCheckInDialog(habit);
     } else {
+      // 还可以继续打卡，添加记录并弹出备注对话框
       final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
       final record = CheckInRecord(time: timeStr);
       habit.checkInRecords.add(record);
       widget.onSave();
-      _showEncouragementDialog(habit, record);
+
+      // 始终弹出备注对话框
+      _showCheckInNoteDialog(habit, record);
     }
   }
 
-  void _showCancelCheckInDialog(Habit habit, int recordIndex) {
+  /// 打卡成功后的备注对话框
+  void _showCheckInNoteDialog(Habit habit, CheckInRecord record) {
+    final noteController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
-    final record = habit.checkInRecords[recordIndex];
-    final checkInTime = DateTime.parse(record.time);
+    final todayCount = habit.todayCheckInCount;
+    final isCompleted = todayCount >= habit.dailyTarget;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : themeColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isCompleted ? Icons.celebration : Icons.check_circle,
+                      color: isCompleted ? Colors.green : themeColor,
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isCompleted ? "太棒了！目标完成 🎉" : "打卡成功！",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    habit.dailyTarget > 1
+                        ? "「${habit.title}」 $todayCount/${habit.dailyTarget} 次"
+                        : "「${habit.title}」已完成",
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  ),
+                  // 多次打卡进度条
+                  if (habit.dailyTarget > 1) ...[
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: todayCount / habit.dailyTarget,
+                        minHeight: 8,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isCompleted ? Colors.green : themeColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    maxLength: 100,
+                    decoration: InputDecoration(
+                      hintText: "写点什么记录一下吧...",
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: themeColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: TextStyle(color: Colors.grey[400]),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (noteController.text.trim().isNotEmpty) {
+                          record.note = noteController.text.trim();
+                          widget.onSave();
+                        }
+                        Navigator.pop(ctx);
+                        await _checkAndShowAchievements();
+                      },
+                      icon: const Icon(Icons.check, size: 20),
+                      label: const Text("完成", style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isCompleted ? Colors.green : themeColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCancelCheckInDialog(Habit habit) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+    // 获取今日所有打卡记录
+    final todayRecords = habit.checkInRecords
+        .where((r) => r.time.startsWith(todayStr))
+        .toList();
+
+    if (todayRecords.isEmpty) return;
+
+    // 获取最后一次打卡记录
+    final lastRecord = todayRecords.last;
+    final checkInTime = DateTime.parse(lastRecord.time);
     final timeStr = DateFormat('HH:mm').format(checkInTime);
 
     showModalBottomSheet(
@@ -700,7 +848,9 @@ class _CheckInPageState extends State<CheckInPage> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "确定要取消今日的打卡吗？",
+                            habit.dailyTarget > 1
+                                ? "取消最后一次打卡？"
+                                : "确定要取消今日的打卡吗？",
                             style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                           ),
                         ],
@@ -765,6 +915,25 @@ class _CheckInPageState extends State<CheckInPage> {
                                   style: TextStyle(
                                       fontSize: 13, color: Colors.grey[500]),
                                 ),
+                                if (habit.dailyTarget > 1) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: themeColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      "${todayRecords.length}/${habit.dailyTarget}次",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: themeColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ],
@@ -773,7 +942,7 @@ class _CheckInPageState extends State<CheckInPage> {
                     ],
                   ),
                 ),
-                if (record.note != null && record.note!.isNotEmpty) ...[
+                if (lastRecord.note != null && lastRecord.note!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
@@ -790,7 +959,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            record.note!,
+                            lastRecord.note!,
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
@@ -817,7 +986,9 @@ class _CheckInPageState extends State<CheckInPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          "取消后今日的打卡记录和备注将被删除",
+                          habit.dailyTarget > 1
+                              ? "将取消最后一次打卡记录"
+                              : "取消后今日的打卡记录和备注将被删除",
                           style: TextStyle(fontSize: 12, color: Colors.orange[700]),
                         ),
                       ),
@@ -848,12 +1019,15 @@ class _CheckInPageState extends State<CheckInPage> {
                           await AchievementService.recordCancelledCheckIn();
 
                           setState(() {
-                            habit.checkInRecords.removeAt(recordIndex);
+                            // 移除最后一条今日打卡记录
+                            final index = habit.checkInRecords.indexOf(lastRecord);
+                            if (index != -1) {
+                              habit.checkInRecords.removeAt(index);
+                            }
                           });
                           widget.onSave();
                           Navigator.pop(ctx);
 
-                          // ===== 统一SnackBar样式：取消打卡成功 =====
                           _showSnackBar(
                             context,
                             icon: Icons.undo,
@@ -1012,6 +1186,7 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     String? errorText;
     int selectedIconIndex = 0;
+    int dailyTarget = 1; // 新增：每日目标次数
 
     showModalBottomSheet(
       context: context,
@@ -1119,7 +1294,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         },
                         decoration: InputDecoration(
                           labelText: "习惯名称",
-                          hintText: "例如：早起",
+                          hintText: "例如：喝水",
                           labelStyle: TextStyle(color: Colors.grey[600]),
                           filled: true,
                           fillColor: Colors.grey[50],
@@ -1154,7 +1329,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         maxLength: 100,
                         decoration: InputDecoration(
                           labelText: "描述（选填）",
-                          hintText: "例如：每天6点前起床",
+                          hintText: "例如：每天喝8杯水",
                           labelStyle: TextStyle(color: Colors.grey[600]),
                           filled: true,
                           fillColor: Colors.grey[50],
@@ -1169,6 +1344,103 @@ class _CheckInPageState extends State<CheckInPage> {
                           ),
                           contentPadding: const EdgeInsets.all(16),
                           counterStyle: TextStyle(color: Colors.grey[400]),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // ===== 新增：每日目标次数选择器 =====
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.repeat, size: 20, color: Colors.grey[600]),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "每日目标",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "每天需要完成的次数",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // 减少按钮
+                            GestureDetector(
+                              onTap: () {
+                                if (dailyTarget > 1) {
+                                  setModalState(() => dailyTarget--);
+                                }
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: dailyTarget > 1
+                                      ? themeColor.withValues(alpha: 0.1)
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.remove,
+                                  size: 20,
+                                  color: dailyTarget > 1
+                                      ? themeColor
+                                      : Colors.grey[400],
+                                ),
+                              ),
+                            ),
+                            // 次数显示
+                            Container(
+                              width: 50,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '$dailyTarget',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: themeColor,
+                                ),
+                              ),
+                            ),
+                            // 增加按钮
+                            GestureDetector(
+                              onTap: () {
+                                if (dailyTarget < 99) {
+                                  setModalState(() => dailyTarget++);
+                                }
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: themeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.add,
+                                  size: 20,
+                                  color: themeColor,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -1186,10 +1458,10 @@ class _CheckInPageState extends State<CheckInPage> {
                                 title: habitTitle,
                                 description: descController.text.trim(),
                                 iconIndex: selectedIconIndex,
+                                dailyTarget: dailyTarget, // 新增
                               ));
                               Navigator.pop(ctx);
 
-                              // ===== 统一SnackBar样式：添加习惯成功 =====
                               _showSnackBar(
                                 context,
                                 icon: Icons.check_circle,
@@ -1592,14 +1864,9 @@ class _CheckInPageState extends State<CheckInPage> {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    // 分组：待办 vs 已完成
-    final todoHabits = widget.habits.where((h) =>
-    !h.checkInRecords.any((r) => r.time.startsWith(todayStr))
-    ).toList();
-
-    final doneHabits = widget.habits.where((h) =>
-        h.checkInRecords.any((r) => r.time.startsWith(todayStr))
-    ).toList();
+    // 分组：待办 vs 已完成（使用新的判断逻辑）
+    final todoHabits = widget.habits.where((h) => !h.isTodayCompleted).toList();
+    final doneHabits = widget.habits.where((h) => h.isTodayCompleted).toList();
 
     return [
       // ===== 今日待办 =====
@@ -1874,143 +2141,227 @@ class _CheckInPageState extends State<CheckInPage> {
         bool isLast = false,
       }) {
     final streak = _calculateStreak(habit);
+    final todayCount = habit.todayCheckInCount;
+    final dailyTarget = habit.dailyTarget;
+    final progress = todayCount / dailyTarget;
 
     // 根据位置确定圆角
-    BorderRadius? inkWellRadius;
+    BorderRadius itemRadius;
     if (isFirst && isLast) {
-      inkWellRadius = BorderRadius.circular(16);
+      itemRadius = BorderRadius.circular(16);
     } else if (isFirst) {
-      inkWellRadius = const BorderRadius.vertical(top: Radius.circular(16));
+      itemRadius = const BorderRadius.vertical(top: Radius.circular(16));
     } else if (isLast) {
-      inkWellRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+      itemRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+    } else {
+      itemRadius = BorderRadius.zero;
     }
 
-    return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (c) => DetailPage(
-            habit: habit,
-            allHabits: widget.habits,
-            onSave: widget.onSave,
+    return ClipRRect(
+      borderRadius: itemRadius,
+      child: Dismissible(
+        key: Key('todo_${habit.id}'),
+        direction: DismissDirection.endToStart,
+        confirmDismiss: (direction) async {
+          _showSwipeActions(habit, hasTodayRecord: todayCount > 0);
+          return false;
+        },
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.red.withValues(alpha: 0.1),
+                Colors.red.withValues(alpha: 0.2),
+              ],
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (todayCount > 0) ...[
+                Icon(Icons.undo, color: Colors.orange[400], size: 22),
+                const SizedBox(width: 16),
+              ],
+              Icon(Icons.delete_outline, color: Colors.red[400], size: 22),
+              const SizedBox(width: 8),
+            ],
           ),
         ),
-      ),
-      onLongPress: () => _deleteHabit(habit),
-      borderRadius: inkWellRadius,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: Colors.grey[100]!)),
-        ),
-        child: Row(
-          children: [
-            // 图标
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                HabitIcons.getIcon(habit.iconIndex),
-                color: themeColor,
-                size: 24,
+        // ===== 移除内部的 Container 背景色，使用透明 =====
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (c) => DetailPage(
+                  habit: habit,
+                  allHabits: widget.habits,
+                  onSave: widget.onSave,
+                ),
               ),
             ),
-            const SizedBox(width: 14),
-            // 内容
-            Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: isLast
+                    ? null
+                    : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    habit.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      if (streak > 0) ...[
-                        Icon(
-                          Icons.local_fire_department,
-                          size: 14,
-                          color: Colors.orange[400],
+                      // 图标
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$streak天连续',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[400],
-                          ),
+                        child: Icon(
+                          HabitIcons.getIcon(habit.iconIndex),
+                          color: themeColor,
+                          size: 24,
                         ),
-                      ] else if (habit.description.isNotEmpty) ...[
-                        Expanded(
-                          child: Text(
-                            habit.description,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 14),
+                      // 内容
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  habit.title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (dailyTarget > 1) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: themeColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      "$todayCount/$dailyTarget",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: themeColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                if (streak > 0) ...[
+                                  Icon(
+                                    Icons.local_fire_department,
+                                    size: 14,
+                                    color: Colors.orange[400],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$streak天连续',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange[400],
+                                    ),
+                                  ),
+                                ] else if (habit.description.isNotEmpty) ...[
+                                  Expanded(
+                                    child: Text(
+                                      habit.description,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[500],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Text(
+                                    '待完成',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 打卡按钮
+                      GestureDetector(
+                        onTap: () => _toggleCheckIn(habit),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: themeColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check, size: 16, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                '打卡',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ] else ...[
-                        Text(
-                          '待完成',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            // 打卡按钮
-            GestureDetector(
-              onTap: () => _toggleCheckIn(habit),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: themeColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColor.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check, size: 16, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text(
-                      '打卡',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                  // 多次打卡进度条
+                  if (dailyTarget > 1 && todayCount > 0) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 4,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          themeColor.withValues(alpha: 0.7),
+                        ),
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2025,120 +2376,185 @@ class _CheckInPageState extends State<CheckInPage> {
       }) {
     final streak = _calculateStreak(habit);
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final todayCount = habit.todayCheckInCount;
 
-    // 获取今日打卡时间
-    final todayRecord = habit.checkInRecords.firstWhere(
-          (r) => r.time.startsWith(todayStr),
-    );
-    final checkInTime = DateFormat('HH:mm').format(DateTime.parse(todayRecord.time));
+    // 获取今日打卡记录
+    final todayRecords = habit.checkInRecords
+        .where((r) => r.time.startsWith(todayStr))
+        .toList();
+
+    // 获取最后一次打卡时间
+    final lastRecord = todayRecords.isNotEmpty ? todayRecords.last : null;
+    final checkInTime = lastRecord != null
+        ? DateFormat('HH:mm').format(DateTime.parse(lastRecord.time))
+        : '--:--';
 
     // 根据位置确定圆角
-    BorderRadius? inkWellRadius;
+    BorderRadius itemRadius;
     if (isFirst && isLast) {
-      inkWellRadius = BorderRadius.circular(16);
+      itemRadius = BorderRadius.circular(16);
     } else if (isFirst) {
-      inkWellRadius = const BorderRadius.vertical(top: Radius.circular(16));
+      itemRadius = const BorderRadius.vertical(top: Radius.circular(16));
     } else if (isLast) {
-      inkWellRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+      itemRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+    } else {
+      itemRadius = BorderRadius.zero;
     }
 
-    return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (c) => DetailPage(
-            habit: habit,
-            allHabits: widget.habits,
-            onSave: widget.onSave,
-          ),
-        ),
-      ),
-      onLongPress: () => _toggleCheckIn(habit),
-      borderRadius: inkWellRadius,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: Colors.grey[100]!)),
-        ),
-        child: Row(
-          children: [
-            // 完成图标
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                HabitIcons.getIcon(habit.iconIndex),
-                color: Colors.green,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // 习惯名称
-            Expanded(
-              child: Text(
-                habit.title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ),
-            // 打卡时间
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 14,
-                  color: Colors.green[400],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  checkInTime,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                  ),
-                ),
+    return ClipRRect(
+      borderRadius: itemRadius,
+      child: Dismissible(
+        key: Key('done_${habit.id}'),
+        direction: DismissDirection.endToStart,
+        confirmDismiss: (direction) async {
+          _showSwipeActions(habit, hasTodayRecord: true);
+          return false;
+        },
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                Colors.orange.withValues(alpha: 0.1),
+                Colors.orange.withValues(alpha: 0.2),
               ],
             ),
-            const SizedBox(width: 16),
-            // 连续天数
-            if (streak > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.local_fire_department,
-                      size: 12,
-                      color: Colors.orange[400],
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '$streak天',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.orange[600],
-                      ),
-                    ),
-                  ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Icon(Icons.undo, color: Colors.orange[400], size: 22),
+              const SizedBox(width: 16),
+              Icon(Icons.delete_outline, color: Colors.red[400], size: 22),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+        // ===== 移除内部的 Container 背景色，使用透明 =====
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (c) => DetailPage(
+                  habit: habit,
+                  allHabits: widget.habits,
+                  onSave: widget.onSave,
                 ),
               ),
-          ],
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: isLast
+                    ? null
+                    : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+              ),
+              child: Row(
+                children: [
+                  // 完成图标
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      HabitIcons.getIcon(habit.iconIndex),
+                      color: Colors.green,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // 习惯名称
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Text(
+                          habit.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        if (habit.dailyTarget > 1) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              "$todayCount/${habit.dailyTarget}",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.green[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  // 打卡时间
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: Colors.green[400],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        checkInTime,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  // 连续天数
+                  if (streak > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            size: 12,
+                            color: Colors.orange[400],
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$streak天',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.orange[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -2184,6 +2600,544 @@ class _CheckInPageState extends State<CheckInPage> {
 
     return streak;
   }
+
+  /// 显示左滑操作选项
+  void _showSwipeActions(Habit habit, {required bool hasTodayRecord}) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final todayRecords = habit.checkInRecords
+        .where((r) => r.time.startsWith(todayStr))
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖动指示条
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // 习惯信息
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        HabitIcons.getIcon(habit.iconIndex),
+                        color: themeColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            habit.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (hasTodayRecord) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.check_circle,
+                                    size: 14, color: Colors.green[400]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "今日已打卡 ${todayRecords.length}${habit.dailyTarget > 1 ? '/${habit.dailyTarget}' : ''} 次",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // 操作选项
+                if (hasTodayRecord) ...[
+                  // 取消打卡选项（显示今日所有打卡记录）
+                  _buildSwipeActionItem(
+                    icon: Icons.undo,
+                    title: "取消打卡",
+                    subtitle: habit.dailyTarget > 1
+                        ? "选择要取消的打卡记录"
+                        : "取消今日的打卡记录",
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      if (todayRecords.length == 1) {
+                        // 只有一条记录，直接确认取消
+                        _confirmCancelSingleCheckIn(habit, todayRecords.first);
+                      } else {
+                        // 多条记录，显示选择列表
+                        _showCancelCheckInList(habit, todayRecords);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // 删除习惯选项
+                _buildSwipeActionItem(
+                  icon: Icons.delete_outline,
+                  title: "删除习惯",
+                  subtitle: "删除后所有打卡记录将一并清除",
+                  color: Colors.red,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deleteHabit(habit);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建左滑操作项
+  Widget _buildSwipeActionItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: color.withValues(alpha: 0.5), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 确认取消单条打卡记录
+  void _confirmCancelSingleCheckIn(Habit habit, CheckInRecord record) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final checkInTime = DateTime.parse(record.time);
+    final timeStr = DateFormat('HH:mm').format(checkInTime);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.undo, color: Colors.orange, size: 30),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "确认取消打卡？",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "「${habit.title}」今日 $timeStr 的打卡记录",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+                if (record.note != null && record.note!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.format_quote, size: 16, color: Colors.grey[400]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            record.note!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text("保留", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await AchievementService.recordCancelledCheckIn();
+
+                          setState(() {
+                            habit.checkInRecords.remove(record);
+                          });
+                          widget.onSave();
+                          Navigator.pop(ctx);
+
+                          _showSnackBar(
+                            context,
+                            icon: Icons.undo,
+                            message: "已取消打卡",
+                            backgroundColor: Colors.orange,
+                          );
+
+                          await _checkAndShowAchievements();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                        child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示取消打卡列表（多条记录时）
+  void _showCancelCheckInList(Habit habit, List<CheckInRecord> records) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.undo, color: Colors.orange, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "选择要取消的打卡",
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "「${habit.title}」今日共 ${records.length} 次打卡",
+                                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 打卡记录列表
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final record = records[index];
+                    final checkInTime = DateTime.parse(record.time);
+                    final timeStr = DateFormat('HH:mm:ss').format(checkInTime);
+                    final isMakeUp = record.note?.contains("[补卡于") ?? false;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _confirmCancelSingleCheckIn(habit, record);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isMakeUp
+                                      ? Colors.orange.withValues(alpha: 0.1)
+                                      : themeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    "${index + 1}",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isMakeUp ? Colors.orange : themeColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        if (isMakeUp) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              "补卡",
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.orange,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (record.note != null && record.note!.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _extractDisplayNote(record.note!),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[500],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.remove_circle_outline,
+                                color: Colors.red[300],
+                                size: 22,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 提取显示用的备注（去除补卡标记）
+  String _extractDisplayNote(String note) {
+    final regex = RegExp(r'\[补卡于.+?\]\s*');
+    return note.replaceAll(regex, '').trim();
+  }
 }
 
 // ========== 统计页面 ==========
@@ -2217,26 +3171,80 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return maxStreak;
   }
 
-  // 计算累计打卡次数最多的习惯
-  int get maxTotalCheckIns {
+  // ===== 修改：计算历史最长总打卡天数 =====
+  int get maxTotalDays {
     if (widget.habits.isEmpty) return 0;
 
-    int maxTotal = 0;
+    int maxDays = 0;
     for (final habit in widget.habits) {
-      if (habit.checkInRecords.length > maxTotal) {
-        maxTotal = habit.checkInRecords.length;
+      final days = _calculateTotalDays(habit);
+      if (days > maxDays) {
+        maxDays = days;
       }
     }
-    return maxTotal;
+    return maxDays;
+  }
+
+// 计算总打卡天数（去重）
+  int _calculateTotalDays(Habit habit) {
+    final dates = <String>{};
+    for (final record in habit.checkInRecords) {
+      if (record.time.length >= 10) {
+        dates.add(record.time.substring(0, 10));
+      }
+    }
+    return dates.length;
+  }
+
+  // ===== 新增：计算某个习惯的历史最长连续天数 =====
+  int _calculateMaxStreakEver(Habit habit) {
+    if (habit.checkInRecords.isEmpty) return 0;
+
+    // 获取所有打卡日期（去重）
+    final dates = <String>{};
+    for (final record in habit.checkInRecords) {
+      if (record.time.length >= 10) {
+        dates.add(record.time.substring(0, 10));
+      }
+    }
+
+    if (dates.isEmpty) return 0;
+
+    // 将日期排序
+    final sortedDates = dates.toList()..sort();
+
+    int maxStreak = 1;
+    int currentStreak = 1;
+
+    for (int i = 1; i < sortedDates.length; i++) {
+      final prevDate = DateTime.parse(sortedDates[i - 1]);
+      final currDate = DateTime.parse(sortedDates[i]);
+      final difference = currDate.difference(prevDate).inDays;
+
+      if (difference == 1) {
+        // 连续
+        currentStreak++;
+        if (currentStreak > maxStreak) {
+          maxStreak = currentStreak;
+        }
+      } else if (difference > 1) {
+        // 中断
+        currentStreak = 1;
+      }
+      // difference == 0 表示同一天，忽略
+    }
+
+    return maxStreak;
   }
 
   // 计算今日完成率
   double get todayCompletionRate {
     if (widget.habits.isEmpty) return 0;
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     int completed = 0;
     for (final habit in widget.habits) {
-      if (habit.checkInTimes.any((t) => t.startsWith(today))) {
+      // ===== 修改：使用 isTodayCompleted 判断是否完成全部目标 =====
+      if (habit.isTodayCompleted) {
         completed++;
       }
     }
@@ -2290,9 +3298,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     for (final habit in widget.habits) {
       final streak = _calculateHabitStreak(habit);
+      final maxStreak = _calculateMaxStreakEver(habit);
+      // 计算总打卡天数（去重）
+      final totalDays = _calculateTotalDays(habit);
       ranking.add({
         'habit': habit,
         'streak': streak,
+        'maxStreak': maxStreak,
+        'totalDays': totalDays,
         'total': habit.checkInRecords.length,
       });
     }
@@ -2367,7 +3380,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     return Scaffold(
       backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
-      extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
+      extendBodyBehindAppBar: true,
 
       body: Stack(
         children: [
@@ -2379,7 +3392,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           if (useWallpaper)
             Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
-          // ===== 固定标题栏（居左对齐） =====
+          // ===== 固定标题栏 =====
           Positioned(
             top: 0,
             left: 0,
@@ -2405,7 +3418,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 color: useWallpaper ? Colors.transparent : backgroundColor,
               ),
               child: Row(
-                // 改为居左对齐，与打卡页面一致
                 children: [
                   Text(
                     "统计",
@@ -2432,7 +3444,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            top: MediaQuery.of(context).padding.top + 60,
             child: CustomScrollView(
               slivers: [
                 // 概览卡片
@@ -2441,13 +3453,38 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
                       children: [
-                        _buildStatCard("习惯数", "${widget.habits.length}", Icons.flag_outlined, themeColor, useWallpaper),
+                        _buildStatCard(
+                          "习惯数",
+                          "${widget.habits.length}",
+                          Icons.flag_outlined,
+                          themeColor,
+                          useWallpaper,
+                        ),
                         const SizedBox(width: 12),
-                        _buildStatCard("打卡数", "$totalCheckIns", Icons.check_circle_outline, themeColor, useWallpaper),
+                        _buildStatCard(
+                          "打卡数",
+                          "$totalCheckIns",
+                          Icons.check_circle_outline,
+                          themeColor,
+                          useWallpaper,
+                        ),
                         const SizedBox(width: 12),
-                        _buildStatCard("连续中", "$currentStreak天", Icons.local_fire_department_outlined, Colors.orange, useWallpaper),
+                        _buildStatCard(
+                          "连续中",
+                          "$currentStreak天",
+                          Icons.local_fire_department_outlined,
+                          Colors.orange,
+                          useWallpaper,
+                        ),
                         const SizedBox(width: 12),
-                        _buildStatCard("最长", "$maxTotalCheckIns次", Icons.emoji_events_outlined, Colors.amber, useWallpaper),
+                        // ===== 修改：最长连续天数 =====
+                        _buildStatCard(
+                          "最长",
+                          "$maxTotalDays天",
+                          Icons.emoji_events_outlined,
+                          Colors.amber,
+                          useWallpaper,
+                        ),
                       ],
                     ),
                   ),
@@ -2457,22 +3494,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                        boxShadow: useWallpaper
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                            : null,
-                      ),
+                    child: _buildCard(
+                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2480,7 +3503,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             children: [
                               Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
                               const SizedBox(width: 8),
-                              Text("完成率", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                              Text(
+                                "完成率",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 20),
@@ -2502,22 +3532,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                        boxShadow: useWallpaper
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                            : null,
-                      ),
+                    child: _buildCard(
+                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2525,7 +3541,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             children: [
                               Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
                               const SizedBox(width: 8),
-                              Text("最近30天", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                              Text(
+                                "最近30天",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -2536,15 +3559,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             children: [
                               Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
                               const SizedBox(width: 4),
-                              ...List.generate(5, (i) => Container(
-                                width: 12,
-                                height: 12,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                decoration: BoxDecoration(
-                                  color: themeColor.withValues(alpha: 0.2 + i * 0.2),
-                                  borderRadius: BorderRadius.circular(2),
+                              ...List.generate(
+                                5,
+                                    (i) => Container(
+                                  width: 12,
+                                  height: 12,
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  decoration: BoxDecoration(
+                                    color: themeColor.withValues(alpha: 0.2 + i * 0.2),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
-                              )),
+                              ),
                               const SizedBox(width: 4),
                               Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
                             ],
@@ -2559,22 +3585,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                        boxShadow: useWallpaper
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                            : null,
-                      ),
+                    child: _buildCard(
+                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2582,7 +3594,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             children: [
                               Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
                               const SizedBox(width: 8),
-                              Text("习惯排行", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                              Text(
+                                "习惯排行",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -2599,7 +3618,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               final item = entry.value;
                               final habit = item['habit'] as Habit;
                               final streak = item['streak'] as int;
-                              final total = item['total'] as int;
+                              final maxStreak = item['maxStreak'] as int;
+                              final totalDays = item['totalDays'] as int;
 
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2610,10 +3630,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                       width: 28,
                                       height: 28,
                                       decoration: BoxDecoration(
-                                        color: index == 0 ? Colors.amber[100] :
-                                        index == 1 ? Colors.grey[200] :
-                                        index == 2 ? Colors.orange[100] :
-                                        Colors.grey[100],
+                                        color: index == 0
+                                            ? Colors.amber[100]
+                                            : index == 1
+                                            ? Colors.grey[200]
+                                            : index == 2
+                                            ? Colors.orange[100]
+                                            : Colors.grey[100],
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Center(
@@ -2622,10 +3645,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: index == 0 ? Colors.amber[800] :
-                                            index == 1 ? Colors.grey[600] :
-                                            index == 2 ? Colors.orange[800] :
-                                            Colors.grey[500],
+                                            color: index == 0
+                                                ? Colors.amber[800]
+                                                : index == 1
+                                                ? Colors.grey[600]
+                                                : index == 2
+                                                ? Colors.orange[800]
+                                                : Colors.grey[500],
                                           ),
                                         ),
                                       ),
@@ -2646,27 +3672,57 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    // 名称
+                                    // 名称和统计
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             habit.title,
-                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
-                                          Text(
-                                            "共打卡 $total 次",
-                                            style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                "共 $totalDays 天",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[400],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                Icons.emoji_events,
+                                                size: 12,
+                                                color: Colors.amber[600],
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                "最长 $maxStreak 天",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.amber[700],
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
-                                    // 连续天数
+                                    // 当前连续天数
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: streak > 0 ? Colors.orange[50] : Colors.grey[100],
+                                        color: streak > 0
+                                            ? Colors.orange[50]
+                                            : Colors.grey[100],
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
@@ -2675,7 +3731,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                           Icon(
                                             Icons.local_fire_department,
                                             size: 14,
-                                            color: streak > 0 ? Colors.orange[600] : Colors.grey[400],
+                                            color: streak > 0
+                                                ? Colors.orange[600]
+                                                : Colors.grey[400],
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
@@ -2683,7 +3741,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500,
-                                              color: streak > 0 ? Colors.orange[700] : Colors.grey[400],
+                                              color: streak > 0
+                                                  ? Colors.orange[700]
+                                                  : Colors.grey[400],
                                             ),
                                           ),
                                         ],
@@ -2708,24 +3768,53 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
+  // ===== 新增：统一的卡片样式 =====
+  Widget _buildCard({
+    required bool useWallpaper,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: useWallpaper
+            ? Colors.white.withValues(alpha: 0.95)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   // 构建统计卡片
-  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool useWallpaper) {
+  Widget _buildStatCard(
+      String label,
+      String value,
+      IconData icon,
+      Color color,
+      bool useWallpaper,
+      ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
+          color: useWallpaper
+              ? Colors.white.withValues(alpha: 0.95)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-          boxShadow: useWallpaper
-              ? [
+          boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
-          ]
-              : null,
+          ],
         ),
         child: Column(
           children: [
@@ -2733,7 +3822,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -2800,7 +3893,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         final opacity = habitCount > 0 ? (count / habitCount).clamp(0.0, 1.0) : 0.0;
 
         return Tooltip(
-          message: "${DateFormat('M/d').format(date)}: $count/${habitCount}",
+          message: "${DateFormat('M/d').format(date)}: $count/$habitCount",
           child: Container(
             width: 28,
             height: 28,
@@ -2840,6 +3933,28 @@ class ProfilePage extends StatelessWidget {
     required this.onRestore,
   });
 
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 15,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(color: borderColor) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -2851,10 +3966,7 @@ class ProfilePage extends StatelessWidget {
     final wallpaperDecoration = appState?.wallpaperDecoration;
 
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
-    int todayCheckIns = habits
-        .where((h) => h.checkInTimes.any((t) =>
-        t.startsWith(DateFormat('yyyy-MM-dd').format(DateTime.now()))))
-        .length;
+    int todayCheckIns = habits.where((h) => h.isTodayCompleted).length;
 
     return Scaffold(
       backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
@@ -2896,7 +4008,6 @@ class ProfilePage extends StatelessWidget {
                 color: useWallpaper ? Colors.transparent : backgroundColor,
               ),
               child: Row(
-                // 居左对齐
                 children: [
                   Text(
                     "我的",
@@ -2923,7 +4034,7 @@ class ProfilePage extends StatelessWidget {
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            top: MediaQuery.of(context).padding.top + 60,
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -2934,20 +4045,7 @@ class ProfilePage extends StatelessWidget {
                         // 统计卡片
                         Container(
                           padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                            boxShadow: useWallpaper
-                                ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                                : null,
-                          ),
+                          decoration: _cardDecoration(useWallpaper: useWallpaper),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
@@ -2961,15 +4059,46 @@ class ProfilePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
                         // 菜单项
-                        _menuItem(context, Icons.emoji_events_outlined, "打卡成就",
-                            AchievementPage(habits: habits), useWallpaper, themeColor),
-                        _menuItem(context, Icons.notifications_none, "提醒设置",
-                            ReminderSettingsPage(habits: habits, onSave: onSave), useWallpaper, themeColor),
-                        _menuItem(context, Icons.color_lens_outlined, "主题设置",
-                            const ThemeSettingsPage(), useWallpaper, themeColor),
-                        _menuItem(context, Icons.cloud_outlined, "数据备份",
-                            BackupPage(habits: habits, onRestore: onRestore), useWallpaper, themeColor),
-                        _menuItem(context, Icons.info_outline, "关于", const AboutPage(), useWallpaper, themeColor),
+                        _menuItem(
+                          context,
+                          Icons.emoji_events_outlined,
+                          "打卡成就",
+                          AchievementPage(habits: habits),
+                          useWallpaper,
+                          themeColor,
+                        ),
+                        _menuItem(
+                          context,
+                          Icons.notifications_none,
+                          "提醒设置",
+                          ReminderSettingsPage(habits: habits, onSave: onSave),
+                          useWallpaper,
+                          themeColor,
+                        ),
+                        _menuItem(
+                          context,
+                          Icons.color_lens_outlined,
+                          "主题设置",
+                          const ThemeSettingsPage(),
+                          useWallpaper,
+                          themeColor,
+                        ),
+                        _menuItem(
+                          context,
+                          Icons.cloud_outlined,
+                          "数据备份",
+                          BackupPage(habits: habits, onRestore: onRestore),
+                          useWallpaper,
+                          themeColor,
+                        ),
+                        _menuItem(
+                          context,
+                          Icons.info_outline,
+                          "关于",
+                          const AboutPage(),
+                          useWallpaper,
+                          themeColor,
+                        ),
                       ],
                     ),
                   ),
@@ -2986,16 +4115,31 @@ class ProfilePage extends StatelessWidget {
   Widget _statItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value,
-            style: TextStyle(
-                fontSize: 24, fontWeight: FontWeight.w300, color: color)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w300,
+            color: color,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+        ),
       ],
     );
   }
 
-  Widget _menuItem(BuildContext context, IconData icon, String title, Widget? page, bool useWallpaper, Color themeColor) {
+  Widget _menuItem(
+      BuildContext context,
+      IconData icon,
+      String title,
+      Widget? page,
+      bool useWallpaper,
+      Color themeColor,
+      ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -3005,27 +4149,18 @@ class ProfilePage extends StatelessWidget {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text("$title 功能开发中..."),
-                  duration: const Duration(seconds: 1)),
+                content: Text("$title 功能开发中..."),
+                duration: const Duration(seconds: 1),
+              ),
             );
           }
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-            boxShadow: useWallpaper
-                ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ]
-                : null,
+          decoration: _cardDecoration(
+            useWallpaper: useWallpaper,
+            radius: 12,
           ),
           child: Row(
             children: [
@@ -3062,24 +4197,44 @@ class _BackupPageState extends State<BackupPage> {
   bool _isExporting = false;
   bool _isImporting = false;
 
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 12,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(color: borderColor) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   String _generateFileName() {
     final now = DateTime.now();
     final dateStr = DateFormat('yyyyMMdd_HHmmss').format(now);
     return 'habit_backup_$dateStr.json';
   }
 
-  // 修改为异步方法
   Future<Map<String, dynamic>> _generateBackupData() async {
-    // 获取成就状态
     final achievementStatus = await AchievementService.exportAchievementStatus();
 
     return {
-      'version': '1.8.5',  // 版本号升级，标识新格式
+      'version': '1.8.5',
       'appName': '雕刀',
       'backupTime': DateTime.now().toIso8601String(),
       'habitsCount': widget.habits.length,
       'habits': widget.habits.map((h) => h.toJson()).toList(),
-      'achievementStatus': achievementStatus,  // 新增：成就状态
+      'achievementStatus': achievementStatus,
     };
   }
 
@@ -3102,7 +4257,6 @@ class _BackupPageState extends State<BackupPage> {
         }
       }
 
-      // 改为 await
       final backupData = await _generateBackupData();
       final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
 
@@ -3136,7 +4290,6 @@ class _BackupPageState extends State<BackupPage> {
     }
   }
 
-// 新增：导出成功弹窗
   void _showExportSuccessDialog(String filePath) {
     final themeColor = Theme.of(context).colorScheme.primary;
 
@@ -3155,7 +4308,6 @@ class _BackupPageState extends State<BackupPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 拖动指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -3165,7 +4317,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 成功图标
                 Container(
                   width: 70,
                   height: 70,
@@ -3176,7 +4327,6 @@ class _BackupPageState extends State<BackupPage> {
                   child: const Icon(Icons.check_circle, color: Colors.green, size: 40),
                 ),
                 const SizedBox(height: 16),
-                // 标题
                 const Text(
                   "导出成功",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
@@ -3187,7 +4337,6 @@ class _BackupPageState extends State<BackupPage> {
                   style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
                 const SizedBox(height: 20),
-                // 文件路径
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -3205,7 +4354,11 @@ class _BackupPageState extends State<BackupPage> {
                           const SizedBox(width: 8),
                           Text(
                             "文件位置",
-                            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -3218,7 +4371,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 确认按钮
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -3247,7 +4399,6 @@ class _BackupPageState extends State<BackupPage> {
     setState(() => _isExporting = true);
 
     try {
-      // 改为 await
       final backupData = await _generateBackupData();
       final jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
 
@@ -3294,7 +4445,6 @@ class _BackupPageState extends State<BackupPage> {
       final habitsList = data['habits'] as List;
       final habits = habitsList.map((h) => Habit.fromJson(h)).toList();
 
-      // 提取成就状态（兼容旧版本备份，可能没有这个字段）
       final achievementStatus = data['achievementStatus'] as Map<String, dynamic>?;
 
       if (mounted) {
@@ -3315,11 +4465,10 @@ class _BackupPageState extends State<BackupPage> {
     }
   }
 
-// 新增：导入确认弹窗
   void _showImportConfirmDialog(
       List<Habit> habits,
       String backupTime,
-      Map<String, dynamic>? achievementStatus,  // 新增参数
+      Map<String, dynamic>? achievementStatus,
       ) {
     final themeColor = Theme.of(context).colorScheme.primary;
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
@@ -3339,7 +4488,6 @@ class _BackupPageState extends State<BackupPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 拖动指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -3349,7 +4497,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // 标题行
                 Row(
                   children: [
                     Container(
@@ -3378,7 +4525,6 @@ class _BackupPageState extends State<BackupPage> {
                         ],
                       ),
                     ),
-                    // 关闭按钮
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx),
                       child: Container(
@@ -3394,7 +4540,6 @@ class _BackupPageState extends State<BackupPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // 备份信息卡片
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -3413,7 +4558,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 警告提示
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -3436,7 +4580,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 按钮区域
                 Row(
                   children: [
                     Expanded(
@@ -3458,16 +4601,9 @@ class _BackupPageState extends State<BackupPage> {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.pop(ctx);
-
-                          // ===== 新增：恢复成就状态 =====
                           await AchievementService.importAchievementStatus(achievementStatus);
-
-                          // 恢复习惯数据
                           widget.onRestore(habits);
-
-                          // ===== 新增：重新同步成就（确保基于习惯数据的成就也被标记为已通知）=====
                           await AchievementService.resyncAfterImport(habits);
-
                           _showRestoreSuccessDialog(habits.length);
                         },
                         style: ElevatedButton.styleFrom(
@@ -3492,7 +4628,6 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
-// 新增：恢复成功弹窗
   void _showRestoreSuccessDialog(int count) {
     final themeColor = Theme.of(context).colorScheme.primary;
 
@@ -3513,7 +4648,6 @@ class _BackupPageState extends State<BackupPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 拖动指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -3523,7 +4657,6 @@ class _BackupPageState extends State<BackupPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // 成功图标
                 Container(
                   width: 70,
                   height: 70,
@@ -3534,7 +4667,6 @@ class _BackupPageState extends State<BackupPage> {
                   child: const Icon(Icons.check_circle, color: Colors.green, size: 40),
                 ),
                 const SizedBox(height: 16),
-                // 标题
                 const Text(
                   "恢复成功",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
@@ -3545,7 +4677,6 @@ class _BackupPageState extends State<BackupPage> {
                   style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
                 const SizedBox(height: 24),
-                // 确认按钮
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -3570,7 +4701,6 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
-// 辅助方法：构建弹窗统计项（重命名避免冲突）
   Widget _buildDialogStatItem(String label, String value, Color color) {
     return Column(
       children: [
@@ -3613,7 +4743,7 @@ class _BackupPageState extends State<BackupPage> {
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            top: MediaQuery.of(context).padding.top + 60,
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
@@ -3623,27 +4753,32 @@ class _BackupPageState extends State<BackupPage> {
                   decoration: BoxDecoration(
                     color: useWallpaper
                         ? themeColor.withValues(alpha: 0.15)
-                        : themeColor.withValues(alpha: 0.1),
+                        : themeColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: useWallpaper
-                        ? [
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
+                        color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
-                    ]
-                        : null,
+                    ],
                   ),
                   child: Column(
                     children: [
                       Icon(Icons.folder_outlined, size: 40, color: themeColor),
                       const SizedBox(height: 12),
-                      Text("当前数据", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                      Text(
+                        "当前数据",
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         "${widget.habits.length} 个习惯",
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: themeColor),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: themeColor,
+                        ),
                       ),
                       Text(
                         "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
@@ -3704,18 +4839,12 @@ class _BackupPageState extends State<BackupPage> {
                 // 备份说明卡片
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: useWallpaper ? Colors.white.withValues(alpha: 0.9) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: useWallpaper
-                        ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                        : null,
+                  decoration: _cardDecoration(
+                    useWallpaper: useWallpaper,
+                  ).copyWith(
+                    color: useWallpaper
+                        ? Colors.white.withValues(alpha: 0.9)
+                        : Colors.grey[50],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3724,7 +4853,14 @@ class _BackupPageState extends State<BackupPage> {
                         children: [
                           Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
                           const SizedBox(width: 8),
-                          Text("备份说明", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                          Text(
+                            "备份说明",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -3735,12 +4871,12 @@ class _BackupPageState extends State<BackupPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 100), // 底部留白
+                const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // ===== 固定标题栏（二级页面包含返回按钮） =====
+          // ===== 固定标题栏 =====
           Positioned(
             top: 0,
             left: 0,
@@ -3765,15 +4901,13 @@ class _BackupPageState extends State<BackupPage> {
                             ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
-                        ]
-                            : null,
+                        ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new,
@@ -3824,20 +4958,7 @@ class _BackupPageState extends State<BackupPage> {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-          boxShadow: useWallpaper
-              ? [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ]
-              : null,
-        ),
+        decoration: _cardDecoration(useWallpaper: useWallpaper),
         child: Row(
           children: [
             Container(
@@ -3859,9 +4980,15 @@ class _BackupPageState extends State<BackupPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
                 ],
               ),
             ),
@@ -3875,7 +5002,10 @@ class _BackupPageState extends State<BackupPage> {
   Widget _buildTip(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+      ),
     );
   }
 }
@@ -3891,7 +5021,36 @@ class ThemeSettingsPage extends StatefulWidget {
 class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   bool _isLoading = false;
 
-  /// ===== 统一的SnackBar显示方法 =====
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 16,
+    bool isSelected = false,
+    Color? selectedColor,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(
+        color: borderColor,
+        width: isSelected ? 2 : 1,
+      ) : null,
+      boxShadow: [
+        BoxShadow(
+          color: isSelected && selectedColor != null
+              ? selectedColor.withValues(alpha: 0.2)
+              : Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: isSelected ? 8 : 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
+  /// 统一的SnackBar显示方法
   void _showSnackBar(
       BuildContext context, {
         required IconData icon,
@@ -3952,7 +5111,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            top: MediaQuery.of(context).padding.top + 60,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -4038,13 +5197,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     );
                   }),
 
-                  const SizedBox(height: 80), // 底部留白
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
 
-          // ===== 固定标题栏（二级页面包含返回按钮） =====
+          // ===== 固定标题栏 =====
           Positioned(
             top: 0,
             left: 0,
@@ -4069,15 +5228,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
-                        ]
-                            : null,
+                        ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new,
@@ -4127,18 +5284,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       ) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        // 壁纸模式下卡片半透明
-        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.04),
-            blurRadius: useWallpaper ? 15 : 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: _cardDecoration(useWallpaper: useWallpaper),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -4319,7 +5465,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: useWallpaper ? 0.15 : 0.06),
+            color: Colors.black.withValues(alpha: useWallpaper ? 0.15 : 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -4465,23 +5611,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            // 壁纸模式下卡片半透明
-            color: useWallpaper ? Colors.white.withValues(alpha: 0.85) : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? option.color : Colors.grey[200]!,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isSelected
-                    ? option.color.withValues(alpha: 0.2)
-                    : Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.02),
-                blurRadius: isSelected ? 8 : 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+          decoration: _cardDecoration(
+            useWallpaper: useWallpaper,
+            radius: 14,
+            borderColor: isSelected ? option.color : Colors.grey[200]!,
+            isSelected: isSelected,
+            selectedColor: option.color,
+          ).copyWith(
+            color: useWallpaper
+                ? Colors.white.withValues(alpha: 0.85)
+                : Colors.white,
           ),
           child: Opacity(
             opacity: useWallpaper ? 0.6 : 1.0,
@@ -4632,7 +5771,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       final success = await appState.setWallpaper(context);
       if (success && mounted) {
         setState(() {});
-        // ===== 使用统一的SnackBar方法 =====
         _showSnackBar(
           context,
           icon: Icons.check_circle,
@@ -4642,7 +5780,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       }
     } catch (e) {
       if (mounted) {
-        // ===== 使用统一的SnackBar方法 =====
         _showSnackBar(
           context,
           icon: Icons.error,
@@ -4655,7 +5792,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     }
   }
 
-  /// ===== 移除壁纸确认弹窗（优化为底部弹窗） =====
+  /// 移除壁纸确认弹窗
   Future<void> _removeWallpaper(BuildContext context, HabitAppState? appState) async {
     final themeColor = Theme.of(context).colorScheme.primary;
 
@@ -4674,7 +5811,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 顶部拖拽指示条
                 Container(
                   width: 40,
                   height: 4,
@@ -4684,8 +5820,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // 标题区域
                 Row(
                   children: [
                     Container(
@@ -4711,8 +5845,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           const SizedBox(height: 2),
                           Text(
                             "确定要移除当前壁纸吗？",
-                            style:
-                            TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -4726,15 +5859,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child:
-                        Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // 警告信息（移除了预览部分，直接显示警告）
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -4759,8 +5889,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // 操作按钮
                 Row(
                   children: [
                     Expanded(
@@ -4781,12 +5909,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.pop(ctx); // 先关闭弹窗
+                          Navigator.pop(ctx);
                           setState(() => _isLoading = true);
                           await appState?.clearWallpaper();
                           if (mounted) setState(() => _isLoading = false);
 
-                          // ===== 优化后的SnackBar样式 =====
                           _showSnackBar(
                             context,
                             icon: Icons.check_circle,
@@ -4822,15 +5949,40 @@ class ReminderSettingsPage extends StatefulWidget {
   final List<Habit> habits;
   final VoidCallback onSave;
 
-  const ReminderSettingsPage(
-      {super.key, required this.habits, required this.onSave});
+  const ReminderSettingsPage({
+    super.key,
+    required this.habits,
+    required this.onSave,
+  });
 
   @override
   State<ReminderSettingsPage> createState() => _ReminderSettingsPageState();
 }
 
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
-  /// ===== 统一的SnackBar显示方法 =====
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 12,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(color: borderColor) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
+  /// 统一的SnackBar显示方法
   void _showSnackBar(
       BuildContext context, {
         required IconData icon,
@@ -4877,36 +6029,26 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
+            Positioned.fill(
+                child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+            top: MediaQuery.of(context).padding.top + 60,
             child: widget.habits.isEmpty
                 ? Center(
               child: Container(
                 padding: const EdgeInsets.all(32),
                 margin: const EdgeInsets.all(20),
-                decoration: useWallpaper
-                    ? BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                )
-                    : null,
+                decoration: _cardDecoration(useWallpaper: useWallpaper),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.notifications_off_outlined,
                         size: 48, color: Colors.grey[300]),
                     const SizedBox(height: 16),
-                    Text("暂无习惯", style: TextStyle(color: Colors.grey[400])),
+                    Text("暂无习惯",
+                        style: TextStyle(color: Colors.grey[400])),
                   ],
                 ),
               ),
@@ -4921,17 +6063,16 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   decoration: BoxDecoration(
                     color: useWallpaper
                         ? themeColor.withValues(alpha: 0.15)
-                        : themeColor.withValues(alpha: 0.1),
+                        : themeColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: useWallpaper
-                        ? [
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
+                        color: Colors.black.withValues(
+                            alpha: useWallpaper ? 0.08 : 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
-                    ]
-                        : null,
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -4947,14 +6088,14 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   ),
                 ),
                 // 习惯列表
-                ...widget.habits
-                    .map((habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
-                const SizedBox(height: 100), // 底部留白
+                ...widget.habits.map(
+                        (habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
+                const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // ===== 固定标题栏（二级页面包含返回按钮） =====
+          // ===== 固定标题栏 =====
           Positioned(
             top: 0,
             left: 0,
@@ -4979,15 +6120,14 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                             ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withValues(
+                                alpha: useWallpaper ? 0.1 : 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
-                        ]
-                            : null,
+                        ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new,
@@ -5029,25 +6169,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: useWallpaper
-            ? null
-            : Border.all(
-          color: hasReminder
-              ? themeColor.withValues(alpha: 0.3)
-              : Colors.grey[200]!,
-        ),
-        boxShadow: useWallpaper
-            ? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ]
-            : null,
+      decoration: _cardDecoration(
+        useWallpaper: useWallpaper,
+        borderColor: hasReminder ? themeColor.withValues(alpha: 0.3) : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -5105,7 +6229,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 // 右侧箭头或时间标签
                 if (hasReminder)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -5204,7 +6329,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           const SizedBox(height: 2),
                           Text(
                             hasReminder ? "修改提醒时间" : "设置打卡提醒",
-                            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                            style:
+                            TextStyle(fontSize: 14, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -5218,7 +6344,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child:
+                        Icon(Icons.close, size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
@@ -5258,10 +6385,12 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   // 确认并添加到日历
   void _confirmAndAddToCalendar(Habit habit, TimeOfDay time) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final timeStr = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
     final now = DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1, time.hour, time.minute);
+    final tomorrow =
+    DateTime(now.year, now.month, now.day + 1, time.hour, time.minute);
 
     showDialog(
       context: context,
@@ -5364,7 +6493,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     );
   }
 
-  // 删除提醒确认 - 优化后的样式
+  // 删除提醒确认
   void _showDeleteReminderDialog(Habit habit) {
     showModalBottomSheet(
       context: context,
@@ -5399,7 +6528,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.notifications_off_outlined, color: Colors.red[400], size: 36),
+                  child: Icon(Icons.notifications_off_outlined,
+                      color: Colors.red[400], size: 36),
                 ),
                 const SizedBox(height: 20),
                 // 标题
@@ -5421,16 +6551,19 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border:
+                    Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                      Icon(Icons.info_outline,
+                          color: Colors.orange[700], size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           "日历中的事件需要手动删除",
-                          style: TextStyle(color: Colors.orange[800], fontSize: 13),
+                          style:
+                          TextStyle(color: Colors.orange[800], fontSize: 13),
                         ),
                       ),
                     ],
@@ -5451,7 +6584,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: const Text("取消", style: TextStyle(fontSize: 15)),
+                        child:
+                        const Text("取消", style: TextStyle(fontSize: 15)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -5461,7 +6595,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           setState(() => habit.reminderTime = null);
                           widget.onSave();
                           Navigator.pop(ctx);
-                          // ===== 统一SnackBar样式：删除提醒成功 =====
                           _showSnackBar(
                             context,
                             icon: Icons.check_circle,
@@ -5478,7 +6611,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 0,
                         ),
-                        child: const Text("确认删除", style: TextStyle(fontSize: 15)),
+                        child: const Text("确认删除",
+                            style: TextStyle(fontSize: 15)),
                       ),
                     ),
                   ],
@@ -5509,7 +6643,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       try {
         await intent.launch();
         if (mounted) {
-          // ===== 统一SnackBar样式：打开日历成功 =====
           _showSnackBar(
             context,
             icon: Icons.check_circle,
@@ -5519,7 +6652,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
         }
       } catch (e) {
         if (mounted) {
-          // ===== 统一SnackBar样式：打开日历失败 =====
           _showSnackBar(
             context,
             icon: Icons.error,
@@ -5561,7 +6693,8 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
     _selectedHour = widget.initialTime.hour;
     _selectedMinute = widget.initialTime.minute;
     _hourController = FixedExtentScrollController(initialItem: _selectedHour);
-    _minuteController = FixedExtentScrollController(initialItem: _selectedMinute);
+    _minuteController =
+        FixedExtentScrollController(initialItem: _selectedMinute);
   }
 
   @override
@@ -5621,7 +6754,9 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
                               '${index.toString().padLeft(2, '0')} 时',
                               style: TextStyle(
                                 fontSize: isSelected ? 20 : 16,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                                 color: isSelected
                                     ? widget.themeColor
                                     : Colors.grey[400],
@@ -5661,7 +6796,9 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
                               '${index.toString().padLeft(2, '0')} 分',
                               style: TextStyle(
                                 fontSize: isSelected ? 20 : 16,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                                 color: isSelected
                                     ? widget.themeColor
                                     : Colors.grey[400],
@@ -5721,6 +6858,28 @@ class _AboutPageState extends State<AboutPage> {
     _loadCurrentVersion();
   }
 
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 12,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(color: borderColor) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   Future<void> _loadCurrentVersion() async {
     final version = await UpdateService.getCurrentVersion();
     if (mounted) {
@@ -5739,7 +6898,6 @@ class _AboutPageState extends State<AboutPage> {
       if (!mounted) return;
 
       if (result.error != null) {
-        // ===== 统一SnackBar样式：更新失败 =====
         _showSnackBar(
           context,
           icon: Icons.error,
@@ -5753,7 +6911,6 @@ class _AboutPageState extends State<AboutPage> {
           currentVersion: result.currentVersion ?? _currentVersion,
         );
       } else {
-        // ===== 统一SnackBar样式：已是最新版本 =====
         _showSnackBar(
           context,
           icon: Icons.check_circle,
@@ -5768,7 +6925,6 @@ class _AboutPageState extends State<AboutPage> {
     }
   }
 
-  /// ===== 统一的SnackBar显示方法 =====
   void _showSnackBar(
       BuildContext context, {
         required IconData icon,
@@ -5819,7 +6975,7 @@ class _AboutPageState extends State<AboutPage> {
 
           // ===== 内容层 =====
           Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 与打卡页面保持一致
+            top: MediaQuery.of(context).padding.top + 60,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -5828,21 +6984,12 @@ class _AboutPageState extends State<AboutPage> {
 
                   // Logo 卡片容器
                   Container(
-                    padding: useWallpaper ? const EdgeInsets.all(24) : EdgeInsets.zero,
-                    margin: useWallpaper ? const EdgeInsets.symmetric(horizontal: 40) : EdgeInsets.zero,
-                    decoration: useWallpaper
-                        ? BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    )
-                        : null,
+                    padding: const EdgeInsets.all(24),
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    decoration: _cardDecoration(
+                      useWallpaper: useWallpaper,
+                      radius: 20,
+                    ),
                     child: Column(
                       children: [
                         // Logo
@@ -5893,74 +7040,62 @@ class _AboutPageState extends State<AboutPage> {
                     ),
                   ),
                   const SizedBox(height: 30),
+
                   // 检查更新按钮
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: SizedBox(
                       width: double.infinity,
                       child: Container(
-                        decoration: useWallpaper
-                            ? BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                        decoration: _cardDecoration(
+                          useWallpaper: useWallpaper,
+                          radius: 12,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isChecking ? null : _checkUpdate,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _isChecking
+                                      ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: themeColor,
+                                    ),
+                                  )
+                                      : Icon(Icons.refresh, size: 18, color: themeColor),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _isChecking ? "正在检查..." : "检查更新",
+                                    style: TextStyle(
+                                      color: themeColor,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        )
-                            : null,
-                        child: OutlinedButton.icon(
-                          onPressed: _isChecking ? null : _checkUpdate,
-                          icon: _isChecking
-                              ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: themeColor,
-                            ),
-                          )
-                              : Icon(Icons.refresh, size: 18, color: themeColor),
-                          label: Text(
-                            _isChecking ? "正在检查..." : "检查更新",
-                            style: TextStyle(color: themeColor),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: useWallpaper
-                                  ? Colors.transparent
-                                  : themeColor.withValues(alpha: 0.5),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
+
                   // 信息卡片
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 40),
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                      boxShadow: useWallpaper
-                          ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                          : null,
+                    decoration: _cardDecoration(
+                      useWallpaper: useWallpaper,
+                      radius: 12,
                     ),
                     child: Column(
                       children: [
@@ -5976,7 +7111,7 @@ class _AboutPageState extends State<AboutPage> {
             ),
           ),
 
-          // ===== 固定标题栏（完全透明，与打卡页面一致） =====
+          // ===== 固定标题栏 =====
           Positioned(
             top: 0,
             left: 0,
@@ -6001,15 +7136,13 @@ class _AboutPageState extends State<AboutPage> {
                             ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
+                        boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
-                        ]
-                            : null,
+                        ],
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new,
@@ -6263,23 +7396,28 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Widget _buildInfoCard(Color themeColor, bool useWallpaper) {
+    // 获取选中日期的打卡次数
+    final selectedDateCount = _selectedDate != null
+        ? widget.habit.getCheckInCountForDate(_selectedDate!)
+        : widget.habit.todayCheckInCount;
+
+    // 判断选中日期是否已完成目标
+    final isSelectedDateCompleted = selectedDateCount >= widget.habit.dailyTarget;
+
+    // 格式化选中日期用于显示
+    final isToday = _selectedDate != null &&
+        DateFormat('yyyy-MM-dd').format(_selectedDate!) ==
+            DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final selectedDateStr = _selectedDate != null
+        ? (isToday ? "今日" : DateFormat('M月d日').format(_selectedDate!))
+        : "今日";
+
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        // 壁纸模式下半透明
-        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: themeColor.withValues(alpha: 0.3)),
-        // 壁纸模式下添加阴影
-        boxShadow: useWallpaper
-            ? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ]
-            : null,
+      // ===== 使用统一的卡片装饰 =====
+      decoration: _cardDecoration(
+        useWallpaper: useWallpaper,
+        borderColor: themeColor.withValues(alpha: 0.3),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -6354,14 +7492,69 @@ class _DetailPageState extends State<DetailPage> {
               color: themeColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Column(
               children: [
-                _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
-                _statItem("连续天数", "${_calculateStreak()}天", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
-                _statItem("本月打卡", "${_getMonthCheckIns()}天", themeColor),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
+                    Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                    _statItem("连续天数", "${_calculateStreak()}天", themeColor),
+                    Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
+                    _statItem("本月打卡", "${_getMonthCheckIns()}天", themeColor),
+                  ],
+                ),
+                // 如果每日目标大于1，显示选中日期的进度
+                if (widget.habit.dailyTarget > 1) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: themeColor.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: themeColor.withValues(alpha: 0.1)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.repeat, size: 18, color: themeColor),
+                            const SizedBox(width: 10),
+                            Text(
+                              "$selectedDateStr打卡",
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                            const Spacer(),
+                            Text(
+                              "$selectedDateCount/${widget.habit.dailyTarget} 次",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isSelectedDateCompleted ? Colors.green : themeColor,
+                              ),
+                            ),
+                            if (isSelectedDateCompleted) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (selectedDateCount / widget.habit.dailyTarget).clamp(0.0, 1.0),
+                            minHeight: 6,
+                            backgroundColor: Colors.grey[200],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isSelectedDateCompleted ? Colors.green : themeColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -6383,22 +7576,8 @@ class _DetailPageState extends State<DetailPage> {
     final rowCount = getRowCount(_currentMonth);
 
     return Container(
-      decoration: BoxDecoration(
-        // 壁纸模式下半透明
-        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey[200]!),
-        // 壁纸模式下添加阴影
-        boxShadow: useWallpaper
-            ? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ]
-            : null,
-      ),
+      // ===== 使用统一的卡片装饰 =====
+      decoration: _cardDecoration(useWallpaper: useWallpaper),
       child: Column(
         children: [
           Padding(
@@ -6678,6 +7857,12 @@ class _DetailPageState extends State<DetailPage> {
     final isMakeUp =
         hasRecord && records.any((r) => r.note != null && r.note!.contains("[补卡于"));
 
+    // 检查是否完成今日目标
+    final selectedDateCount = _selectedDate != null
+        ? widget.habit.getCheckInCountForDate(_selectedDate!)
+        : 0;
+    final isCompleted = selectedDateCount >= widget.habit.dailyTarget;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
@@ -6695,12 +7880,37 @@ class _DetailPageState extends State<DetailPage> {
                   : null,
             ),
           ),
+          // 显示次数（如果每日目标大于1）
+          if (widget.habit.dailyTarget > 1 && hasRecord) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? Colors.green.withValues(alpha: useWallpaper ? 0.9 : 0.1)
+                    : themeColor.withValues(alpha: useWallpaper ? 0.9 : 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "$selectedDateCount/${widget.habit.dailyTarget}",
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isCompleted
+                      ? (useWallpaper ? Colors.white : Colors.green)
+                      : (useWallpaper ? Colors.white : themeColor),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: hasRecord
-                  ? isMakeUp
+                  ? isCompleted
+                  ? Colors.green.withValues(alpha: useWallpaper ? 0.9 : 0.1)
+                  : isMakeUp
                   ? Colors.orange.withValues(alpha: useWallpaper ? 0.9 : 0.1)
                   : themeColor.withValues(alpha: useWallpaper ? 0.9 : 0.1)
                   : useWallpaper
@@ -6708,21 +7918,37 @@ class _DetailPageState extends State<DetailPage> {
                   : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              hasRecord
-                  ? isMakeUp
-                  ? "已补卡"
-                  : "已打卡"
-                  : "未打卡",
-              style: TextStyle(
-                fontSize: 12,
-                color: hasRecord
-                    ? isMakeUp
-                    ? useWallpaper ? Colors.white : Colors.orange
-                    : useWallpaper ? Colors.white : themeColor
-                    : Colors.grey[400],
-                fontWeight: FontWeight.w500,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasRecord && isCompleted)
+                  Icon(
+                    Icons.check_circle,
+                    size: 14,
+                    color: useWallpaper ? Colors.white : Colors.green,
+                  ),
+                if (hasRecord && isCompleted) const SizedBox(width: 4),
+                Text(
+                  hasRecord
+                      ? isCompleted
+                      ? "已完成"
+                      : isMakeUp
+                      ? "已补卡"
+                      : "已打卡"
+                      : "未打卡",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: hasRecord
+                        ? isCompleted
+                        ? (useWallpaper ? Colors.white : Colors.green)
+                        : isMakeUp
+                        ? (useWallpaper ? Colors.white : Colors.orange)
+                        : (useWallpaper ? Colors.white : themeColor)
+                        : Colors.grey[400],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -6745,24 +7971,17 @@ class _DetailPageState extends State<DetailPage> {
         DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day)
             .isBefore(today);
 
+    // 计算选中日期的打卡次数和是否可以继续补卡
+    final selectedDateCount = _selectedDate != null
+        ? widget.habit.getCheckInCountForDate(_selectedDate!)
+        : 0;
+    final canMakeUpMore = selectedDateCount < widget.habit.dailyTarget;
+
     if (records.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
-        decoration: BoxDecoration(
-          // 壁纸模式下半透明
-          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
-          boxShadow: useWallpaper
-              ? [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ]
-              : null,
-        ),
+        // ===== 使用统一的卡片装饰 =====
+        decoration: _cardDecoration(useWallpaper: useWallpaper),
         child: Column(
           children: [
             Icon(
@@ -6795,8 +8014,7 @@ class _DetailPageState extends State<DetailPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 ),
               ),
             ],
@@ -6805,119 +8023,188 @@ class _DetailPageState extends State<DetailPage> {
       );
     }
 
+    // 有打卡记录的情况
     return Column(
-      children: records.reversed.map((record) {
-        final dateTime = DateTime.parse(record.time);
-        final isMakeUp = record.note != null && record.note!.contains("[补卡于");
+      children: [
+        ...records.reversed.map((record) {
+          final dateTime = DateTime.parse(record.time);
+          final isMakeUp = record.note != null && record.note!.contains("[补卡于");
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            // 壁纸模式下半透明
-            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isMakeUp
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            // ===== 使用统一的卡片装饰 =====
+            decoration: _cardDecoration(
+              useWallpaper: useWallpaper,
+              borderColor: isMakeUp
                   ? Colors.orange.withValues(alpha: 0.3)
                   : themeColor.withValues(alpha: 0.3),
             ),
-            boxShadow: useWallpaper
-                ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ]
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isMakeUp
-                          ? Colors.orange.withValues(alpha: 0.1)
-                          : themeColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      isMakeUp ? Icons.history : Icons.check,
-                      color: isMakeUp ? Colors.orange : themeColor,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              isMakeUp ? "补卡成功" : "打卡成功",
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.grey[800],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (isMakeUp) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _extractMakeUpTime(record.note!),
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.orange),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          DateFormat('HH:mm:ss').format(dateTime),
-                          style:
-                          TextStyle(fontSize: 13, color: Colors.grey[400]),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _editNote(record),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(8),
+                        color: isMakeUp
+                            ? Colors.orange.withValues(alpha: 0.1)
+                            : themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        record.note != null && record.note!.isNotEmpty
-                            ? Icons.edit_note
-                            : Icons.add_comment_outlined,
-                        size: 18,
-                        color: Colors.grey[400],
+                        isMakeUp ? Icons.history : Icons.check,
+                        color: isMakeUp ? Colors.orange : themeColor,
+                        size: 20,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                isMakeUp ? "补卡成功" : "打卡成功",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.grey[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (isMakeUp) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    _extractMakeUpTime(record.note!),
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.orange),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat('HH:mm:ss').format(dateTime),
+                            style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _editNote(record),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          record.note != null && record.note!.isNotEmpty
+                              ? Icons.edit_note
+                              : Icons.add_comment_outlined,
+                          size: 18,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                _buildNoteSection(record, isMakeUp, themeColor),
+              ],
+            ),
+          );
+        }),
+
+        // 如果是过去的日期且还可以继续补卡，显示"继续补卡"按钮
+        if (isPast && canMakeUpMore) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: _cardDecoration(
+              useWallpaper: useWallpaper,
+              borderColor: themeColor.withValues(alpha: 0.2),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[400]),
+                    const SizedBox(width: 6),
+                    Text(
+                      "还可补卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _showMakeUpCheckInDialog(),
+                  icon: Icon(Icons.add_task, size: 18, color: themeColor),
+                  label: Text("继续补卡", style: TextStyle(color: themeColor)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                   ),
-                ],
-              ),
-              _buildNoteSection(record, isMakeUp, themeColor),
-            ],
+                ),
+              ],
+            ),
           ),
-        );
-      }).toList(),
+        ],
+
+        // 如果是今天且还可以继续打卡
+        if (isToday && canMakeUpMore) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: _cardDecoration(
+              useWallpaper: useWallpaper,
+              borderColor: themeColor.withValues(alpha: 0.2),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.schedule, size: 16, color: themeColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      "还需打卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
+                      style: TextStyle(fontSize: 13, color: themeColor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: selectedDateCount / widget.habit.dailyTarget,
+                    minHeight: 6,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -6995,6 +8282,7 @@ class _DetailPageState extends State<DetailPage> {
     final descController = TextEditingController(text: widget.habit.description);
     final themeColor = Theme.of(context).colorScheme.primary;
     int selectedIconIndex = widget.habit.iconIndex;
+    int dailyTarget = widget.habit.dailyTarget; // 新增
 
     showModalBottomSheet(
       context: context,
@@ -7085,7 +8373,7 @@ class _DetailPageState extends State<DetailPage> {
                         controller: titleController,
                         decoration: InputDecoration(
                           labelText: "习惯名称",
-                          hintText: "例如：早起",
+                          hintText: "例如：喝水",
                           labelStyle: TextStyle(color: Colors.grey[600]),
                           filled: true,
                           fillColor: Colors.grey[50],
@@ -7108,7 +8396,7 @@ class _DetailPageState extends State<DetailPage> {
                         maxLength: 100,
                         decoration: InputDecoration(
                           labelText: "描述（选填）",
-                          hintText: "例如：每天6点前起床",
+                          hintText: "例如：每天喝8杯水",
                           labelStyle: TextStyle(color: Colors.grey[600]),
                           filled: true,
                           fillColor: Colors.grey[50],
@@ -7125,6 +8413,100 @@ class _DetailPageState extends State<DetailPage> {
                           counterStyle: TextStyle(color: Colors.grey[400]),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      // ===== 新增：每日目标次数选择器 =====
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.repeat, size: 20, color: Colors.grey[600]),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "每日目标",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "每天需要完成的次数",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                if (dailyTarget > 1) {
+                                  setModalState(() => dailyTarget--);
+                                }
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: dailyTarget > 1
+                                      ? themeColor.withValues(alpha: 0.1)
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.remove,
+                                  size: 20,
+                                  color: dailyTarget > 1
+                                      ? themeColor
+                                      : Colors.grey[400],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 50,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '$dailyTarget',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: themeColor,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                if (dailyTarget < 99) {
+                                  setModalState(() => dailyTarget++);
+                                }
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: themeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.add,
+                                  size: 20,
+                                  color: themeColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
@@ -7136,11 +8518,11 @@ class _DetailPageState extends State<DetailPage> {
                                 widget.habit.description =
                                     descController.text.trim();
                                 widget.habit.iconIndex = selectedIconIndex;
+                                widget.habit.dailyTarget = dailyTarget; // 新增
                               });
                               widget.onSave();
                               Navigator.pop(ctx);
 
-                              // ===== 统一SnackBar样式：编辑习惯保存成功 =====
                               _showSnackBar(
                                 context,
                                 icon: Icons.check_circle,
@@ -7149,7 +8531,6 @@ class _DetailPageState extends State<DetailPage> {
                                 duration: const Duration(seconds: 1),
                               );
                             } else {
-                              // ===== 统一SnackBar样式：编辑习惯验证失败 =====
                               _showSnackBar(
                                 ctx,
                                 icon: Icons.error,
@@ -7626,6 +9007,29 @@ class _DetailPageState extends State<DetailPage> {
       ],
     );
   }
+
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      border: borderColor != null
+          ? Border.all(color: borderColor)
+          : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
 }
 
 // ========== 成就页面 ==========
@@ -7642,6 +9046,28 @@ class _AchievementPageState extends State<AchievementPage> {
   bool _isLoading = true;
   Set<String> _permanentlyUnlockedIds = {};
   List<Achievement> _allAchievements = [];
+
+  /// 统一的卡片装饰样式
+  BoxDecoration _cardDecoration({
+    required bool useWallpaper,
+    Color? borderColor,
+    double radius = 16,
+  }) {
+    return BoxDecoration(
+      color: useWallpaper
+          ? Colors.white.withValues(alpha: 0.95)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: borderColor != null ? Border.all(color: borderColor) : null,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -7933,20 +9359,7 @@ class _AchievementPageState extends State<AchievementPage> {
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-                boxShadow: useWallpaper
-                    ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-                    : null,
-              ),
+              decoration: _cardDecoration(useWallpaper: useWallpaper),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -7988,20 +9401,7 @@ class _AchievementPageState extends State<AchievementPage> {
         // 特殊成就
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
-            boxShadow: useWallpaper
-                ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ]
-                : null,
-          ),
+          decoration: _cardDecoration(useWallpaper: useWallpaper),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

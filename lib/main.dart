@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -5619,13 +5620,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           decoration: _cardDecoration(
             useWallpaper: useWallpaper,
             radius: 14,
-            borderColor: isSelected ? option.color : Colors.grey[200]!,
+            // ===== 修改：只有选中时才显示边框 =====
+            borderColor: isSelected ? option.color : null,
             isSelected: isSelected,
             selectedColor: option.color,
-          ).copyWith(
-            color: useWallpaper
-                ? Colors.white.withValues(alpha: 0.85)
-                : Colors.white,
           ),
           child: Opacity(
             opacity: useWallpaper ? 0.6 : 1.0,
@@ -7107,6 +7105,8 @@ class _AboutPageState extends State<AboutPage> {
                         _infoRow("开发者", "Vence的猫"),
                         const Divider(height: 20),
                         _infoRow("联系邮箱", "vence_cat@163.com"),
+                        const Divider(height: 20),
+                        _infoRowWithCopy("体验反馈群", "228484290"),
                       ],
                     ),
                   ),
@@ -7190,6 +7190,34 @@ class _AboutPageState extends State<AboutPage> {
       children: [
         Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
         Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+      ],
+    );
+  }
+
+  Widget _infoRowWithCopy(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+        GestureDetector(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: value));
+            _showSnackBar(
+              context,
+              icon: Icons.copy,
+              message: "群号已复制",
+              backgroundColor: Colors.green,
+            );
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+              const SizedBox(width: 6),
+              Icon(Icons.copy, size: 14, color: Colors.grey[400]),
+            ],
+          ),
+        ),
       ],
     );
   }

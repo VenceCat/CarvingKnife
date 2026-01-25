@@ -1564,124 +1564,8 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ),
 
-                  // ===== 习惯列表 =====
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        final habit = widget.habits[index];
-                        final isTodayDone = habit.checkInTimes.any((t) =>
-                            t.startsWith(DateFormat('yyyy-MM-dd')
-                                .format(DateTime.now())));
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 8),
-                          child: InkWell(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (c) => DetailPage(
-                                  habit: habit,
-                                  allHabits: widget.habits,
-                                  onSave: widget.onSave,
-                                ),
-                              ),
-                            ),
-                            onLongPress: () => _deleteHabit(habit),
-                            borderRadius: BorderRadius.circular(15),
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: useWallpaper
-                                    ? Colors.white.withValues(alpha: 0.95)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                  color: isTodayDone
-                                      ? themeColor.withValues(alpha: 0.4)
-                                      : Colors.grey[200]!,
-                                  width: isTodayDone ? 1.5 : 1,
-                                ),
-                                boxShadow: useWallpaper
-                                    ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                                    : null,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: isTodayDone
-                                          ? themeColor.withValues(alpha: 0.1)
-                                          : Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      HabitIcons.getIcon(habit.iconIndex),
-                                      color: isTodayDone
-                                          ? themeColor
-                                          : Colors.grey[500],
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          habit.title,
-                                          style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w400),
-                                        ),
-                                        if (habit.description.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            habit.description,
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[400]),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    isTodayDone
-                                        ? Icons.check_circle
-                                        : Icons.radio_button_off,
-                                    color: isTodayDone
-                                        ? themeColor
-                                        : Colors.grey[300],
-                                  ),
-                                  const SizedBox(width: 10),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.add_task,
-                                      size: 20,
-                                      color: themeColor,
-                                    ),
-                                    onPressed: () => _toggleCheckIn(habit),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: widget.habits.length,
-                    ),
-                  ),
+                  // ===== 习惯列表（分组式） =====
+                  ..._buildGroupedHabitList(themeColor, useWallpaper),
 
                   // ===== 底部空白占位 =====
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -1701,6 +1585,604 @@ class _CheckInPageState extends State<CheckInPage> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// 构建分组习惯列表
+  List<Widget> _buildGroupedHabitList(Color themeColor, bool useWallpaper) {
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+    // 分组：待办 vs 已完成
+    final todoHabits = widget.habits.where((h) =>
+    !h.checkInRecords.any((r) => r.time.startsWith(todayStr))
+    ).toList();
+
+    final doneHabits = widget.habits.where((h) =>
+        h.checkInRecords.any((r) => r.time.startsWith(todayStr))
+    ).toList();
+
+    return [
+      // ===== 今日待办 =====
+      if (todoHabits.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: _buildSectionHeader(
+              icon: Icons.radio_button_unchecked,
+              title: "今日待办",
+              count: todoHabits.length,
+              color: themeColor,
+              useWallpaper: useWallpaper,
+            ),
+          ),
+        ),
+
+      if (todoHabits.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: useWallpaper
+                    ? Colors.white.withValues(alpha: 0.95)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: useWallpaper
+                    ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+                    : [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: todoHabits.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final habit = entry.value;
+                  return _buildTodoHabitItem(
+                    habit,
+                    themeColor,
+                    isFirst: index == 0,
+                    isLast: index == todoHabits.length - 1,
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+
+      // ===== 今日已完成 =====
+      if (doneHabits.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            child: _buildSectionHeader(
+              icon: Icons.check_circle_outline,
+              title: "今日已完成",
+              count: doneHabits.length,
+              color: Colors.green,
+              useWallpaper: useWallpaper,
+            ),
+          ),
+        ),
+
+      if (doneHabits.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: useWallpaper
+                    ? Colors.white.withValues(alpha: 0.95)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: useWallpaper
+                    ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+                    : [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: doneHabits.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final habit = entry.value;
+                  return _buildDoneHabitItem(
+                    habit,
+                    themeColor,
+                    isFirst: index == 0,
+                    isLast: index == doneHabits.length - 1,
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+
+      // ===== 空状态 =====
+      if (widget.habits.isEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 64,
+                  color: useWallpaper ? Colors.white54 : Colors.grey[300],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "还没有习惯",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: useWallpaper ? Colors.white70 : Colors.grey[500],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "点击右下角 + 创建你的第一个习惯",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: useWallpaper ? Colors.white54 : Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+      // ===== 全部完成提示 =====
+      if (widget.habits.isNotEmpty && todoHabits.isEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeColor.withValues(alpha: 0.1),
+                    Colors.green.withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.green.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.celebration,
+                      color: Colors.green,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "太棒了！今日目标已全部完成 🎉",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "坚持就是胜利，明天继续加油！",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+    ];
+  }
+
+  /// 构建分组标题
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required int count,
+    required Color color,
+    required bool useWallpaper,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: useWallpaper ? Colors.white : Colors.grey[800],
+            shadows: useWallpaper
+                ? [
+              Shadow(
+                offset: const Offset(0, 1),
+                blurRadius: 3,
+                color: Colors.black.withValues(alpha: 0.5),
+              ),
+            ]
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 构建待办习惯项（大卡片样式）
+  Widget _buildTodoHabitItem(
+      Habit habit,
+      Color themeColor, {
+        bool isFirst = false,
+        bool isLast = false,
+      }) {
+    final streak = _calculateStreak(habit);
+
+    // 根据位置确定圆角
+    BorderRadius? inkWellRadius;
+    if (isFirst && isLast) {
+      inkWellRadius = BorderRadius.circular(16);
+    } else if (isFirst) {
+      inkWellRadius = const BorderRadius.vertical(top: Radius.circular(16));
+    } else if (isLast) {
+      inkWellRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+    }
+
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (c) => DetailPage(
+            habit: habit,
+            allHabits: widget.habits,
+            onSave: widget.onSave,
+          ),
+        ),
+      ),
+      onLongPress: () => _deleteHabit(habit),
+      borderRadius: inkWellRadius,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: Colors.grey[100]!)),
+        ),
+        child: Row(
+          children: [
+            // 图标
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                HabitIcons.getIcon(habit.iconIndex),
+                color: themeColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            // 内容
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    habit.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (streak > 0) ...[
+                        Icon(
+                          Icons.local_fire_department,
+                          size: 14,
+                          color: Colors.orange[400],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$streak天连续',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange[400],
+                          ),
+                        ),
+                      ] else if (habit.description.isNotEmpty) ...[
+                        Expanded(
+                          child: Text(
+                            habit.description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          '待完成',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // 打卡按钮
+            GestureDetector(
+              onTap: () => _toggleCheckIn(habit),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: themeColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColor.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check, size: 16, color: Colors.white),
+                    SizedBox(width: 4),
+                    Text(
+                      '打卡',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建已完成习惯项（紧凑样式）
+  Widget _buildDoneHabitItem(
+      Habit habit,
+      Color themeColor, {
+        bool isFirst = false,
+        bool isLast = false,
+      }) {
+    final streak = _calculateStreak(habit);
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // 获取今日打卡时间
+    final todayRecord = habit.checkInRecords.firstWhere(
+          (r) => r.time.startsWith(todayStr),
+    );
+    final checkInTime = DateFormat('HH:mm').format(DateTime.parse(todayRecord.time));
+
+    // 根据位置确定圆角
+    BorderRadius? inkWellRadius;
+    if (isFirst && isLast) {
+      inkWellRadius = BorderRadius.circular(16);
+    } else if (isFirst) {
+      inkWellRadius = const BorderRadius.vertical(top: Radius.circular(16));
+    } else if (isLast) {
+      inkWellRadius = const BorderRadius.vertical(bottom: Radius.circular(16));
+    }
+
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (c) => DetailPage(
+            habit: habit,
+            allHabits: widget.habits,
+            onSave: widget.onSave,
+          ),
+        ),
+      ),
+      onLongPress: () => _toggleCheckIn(habit),
+      borderRadius: inkWellRadius,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: Colors.grey[100]!)),
+        ),
+        child: Row(
+          children: [
+            // 完成图标
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                HabitIcons.getIcon(habit.iconIndex),
+                color: Colors.green,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 习惯名称
+            Expanded(
+              child: Text(
+                habit.title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ),
+            // 打卡时间
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  size: 14,
+                  color: Colors.green[400],
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  checkInTime,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            // 连续天数
+            if (streak > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      size: 12,
+                      color: Colors.orange[400],
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$streak天',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 计算连续打卡天数
+  int _calculateStreak(Habit habit) {
+    if (habit.checkInRecords.isEmpty) return 0;
+
+    final dates = habit.checkInRecords
+        .map((r) => DateFormat('yyyy-MM-dd').format(DateTime.parse(r.time)))
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    if (dates.isEmpty) return 0;
+
+    int streak = 0;
+    DateTime checkDate = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(checkDate);
+    final yesterdayStr = DateFormat('yyyy-MM-dd').format(
+      checkDate.subtract(const Duration(days: 1)),
+    );
+
+    if (!dates.contains(todayStr) && !dates.contains(yesterdayStr)) {
+      return 0;
+    }
+
+    if (!dates.contains(todayStr)) {
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+
+    for (int i = 0; i < 365; i++) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(
+        checkDate.subtract(Duration(days: i)),
+      );
+      if (dates.contains(dateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
   }
 }
 

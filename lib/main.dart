@@ -761,6 +761,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           widget.onSave();
                         }
                         Navigator.pop(ctx);
+                        await WidgetService.updateWidget(widget.habits);
                         await _checkAndShowAchievements();
                       },
                       icon: const Icon(Icons.check, size: 20),
@@ -1027,6 +1028,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           });
                           widget.onSave();
                           Navigator.pop(ctx);
+                          await WidgetService.updateWidget(widget.habits);
 
                           _showSnackBar(
                             context,
@@ -1461,6 +1463,7 @@ class _CheckInPageState extends State<CheckInPage> {
                                 dailyTarget: dailyTarget, // 新增
                               ));
                               Navigator.pop(ctx);
+                              await WidgetService.updateWidget(widget.habits);
 
                               _showSnackBar(
                                 context,
@@ -1664,6 +1667,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           final habitTitle = habit.title;
                           widget.onDelete(habit);
                           Navigator.pop(ctx);
+                          await WidgetService.updateWidget(widget.habits);
 
                           // ===== 统一SnackBar样式：删除习惯成功 =====
                           _showSnackBar(
@@ -2903,6 +2907,7 @@ class _CheckInPageState extends State<CheckInPage> {
                           });
                           widget.onSave();
                           Navigator.pop(ctx);
+                          await WidgetService.updateWidget(widget.habits);
 
                           _showSnackBar(
                             context,

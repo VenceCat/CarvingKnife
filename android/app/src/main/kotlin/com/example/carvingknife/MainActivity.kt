@@ -27,12 +27,22 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun updateWidget() {
-        val intent = Intent(this, HabitWidgetProvider::class.java).apply {
+        // ===== 更新大组件 =====
+        val largeIntent = Intent(this, HabitWidgetProvider::class.java).apply {
             action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
         }
-        val ids = AppWidgetManager.getInstance(application)
+        val largeIds = AppWidgetManager.getInstance(application)
             .getAppWidgetIds(ComponentName(application, HabitWidgetProvider::class.java))
-        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-        sendBroadcast(intent)
+        largeIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, largeIds)
+        sendBroadcast(largeIntent)
+
+        // ===== 新增：更新中组件 =====
+        val mediumIntent = Intent(this, HabitWidgetMediumProvider::class.java).apply {
+            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        }
+        val mediumIds = AppWidgetManager.getInstance(application)
+            .getAppWidgetIds(ComponentName(application, HabitWidgetMediumProvider::class.java))
+        mediumIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, mediumIds)
+        sendBroadcast(mediumIntent)
     }
 }

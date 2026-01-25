@@ -20,7 +20,9 @@ data class HabitItem(
     val title: String,
     val isDone: Boolean,
     val streak: Int,
-    val totalCheckIns: Int
+    val totalCheckIns: Int,
+    val todayCount: Int,      // ===== 新增：今日打卡次数 =====
+    val dailyTarget: Int      // ===== 新增：每日目标次数 =====
 )
 
 class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
@@ -51,7 +53,11 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                     val habit = habitsArray.getJSONObject(i)
                     val title = habit.optString("title", "")
 
-                    var isDone = false
+                    // ===== 获取每日目标次数，默认为1 =====
+                    val dailyTarget = habit.optInt("dailyTarget", 1)
+
+                    // ===== 统计今日打卡次数 =====
+                    var todayCheckInCount = 0
                     val checkInDates = mutableSetOf<String>()
 
                     val checkInRecords = habit.optJSONArray("checkInRecords")
@@ -62,17 +68,29 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                             if (time.length >= 10) {
                                 val dateStr = time.substring(0, 10)
                                 checkInDates.add(dateStr)
-                                if (time.startsWith(today)) {
-                                    isDone = true
+
+                                // ===== 统计今天的打卡次数 =====
+                                if (dateStr == today) {
+                                    todayCheckInCount++
                                 }
                             }
                         }
                     }
 
+                    // ===== 只有当今日打卡次数 >= 每日目标时才算完成 =====
+                    val isDone = todayCheckInCount >= dailyTarget
+
                     val streak = calculateStreak(checkInDates, dateFormat)
                     val totalCheckIns = checkInDates.size
 
-                    list.add(HabitItem(title, isDone, streak, totalCheckIns))
+                    list.add(HabitItem(
+                        title = title,
+                        isDone = isDone,
+                        streak = streak,
+                        totalCheckIns = totalCheckIns,
+                        todayCount = todayCheckInCount,
+                        dailyTarget = dailyTarget
+                    ))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -118,7 +136,13 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
         if (position < habits.size) {
             val habit = habits[position]
 
-            views.setTextViewText(R.id.item_title, habit.title)
+            // ===== 显示标题（多次打卡习惯显示进度） =====
+            val displayTitle = if (habit.dailyTarget > 1) {
+                "${habit.title} (${habit.todayCount}/${habit.dailyTarget})"
+            } else {
+                habit.title
+            }
+            views.setTextViewText(R.id.item_title, displayTitle)
 
             val streakText = if (habit.streak > 0) {
                 "连续${habit.streak}天"

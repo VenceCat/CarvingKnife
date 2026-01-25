@@ -70,8 +70,14 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
                 for (i in 0 until habitCount) {
                     val habit = habits.getJSONObject(i)
+
+                    // ===== 获取每日目标次数，默认为1 =====
+                    val dailyTarget = habit.optInt("dailyTarget", 1)
+
                     val checkInRecords = habit.optJSONArray("checkInRecords")
-                    var habitDoneToday = false
+
+                    // ===== 统计今日打卡次数 =====
+                    var todayCheckInCount = 0
 
                     if (checkInRecords != null) {
                         for (j in 0 until checkInRecords.length()) {
@@ -80,12 +86,18 @@ class HabitWidgetProvider : AppWidgetProvider() {
                             if (time.length >= 10) {
                                 val dateStr = time.substring(0, 10)
                                 allCheckInDates.add(dateStr)
-                                if (dateStr == today && !habitDoneToday) {
-                                    habitDoneToday = true
-                                    todayCompleted++
+
+                                // ===== 统计今天的打卡次数 =====
+                                if (dateStr == today) {
+                                    todayCheckInCount++
                                 }
                             }
                         }
+                    }
+
+                    // ===== 只有当今日打卡次数 >= 每日目标时才算完成 =====
+                    if (todayCheckInCount >= dailyTarget) {
+                        todayCompleted++
                     }
                 }
 

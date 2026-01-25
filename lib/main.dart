@@ -381,7 +381,7 @@ class HabitAppState extends State<HabitApp> {
         appBarTheme: AppBarTheme(
           // 壁纸模式下 AppBar 半透明
           backgroundColor: useWallpaper
-              ? Colors.white.withOpacity(0.9)
+              ? Colors.white.withValues(alpha: 0.9)
               : bgColor,
           foregroundColor: Colors.black87,
           elevation: useWallpaper ? 0.5 : 0,
@@ -473,7 +473,7 @@ class _MainPageState extends State<MainPage> {
           if (useWallpaper)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
               ),
             ),
 
@@ -503,12 +503,12 @@ class _MainPageState extends State<MainPage> {
         decoration: BoxDecoration(
           // 壁纸模式下使用半透明白色
           color: useWallpaper
-              ? Colors.white.withOpacity(0.95)
+              ? Colors.white.withValues(alpha: 0.95)
               : Colors.white,
           border: Border(
             top: BorderSide(
               color: useWallpaper
-                  ? Colors.grey[200]!.withOpacity(0.5)
+                  ? Colors.grey[200]!.withValues(alpha: 0.5)
                   : Colors.grey[100]!,
               width: 1,
             ),
@@ -517,7 +517,7 @@ class _MainPageState extends State<MainPage> {
           boxShadow: useWallpaper
               ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -684,7 +684,7 @@ class _CheckInPageState extends State<CheckInPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.undo, color: Colors.orange, size: 22),
@@ -725,9 +725,9 @@ class _CheckInPageState extends State<CheckInPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: themeColor.withOpacity(0.05),
+                    color: themeColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: themeColor.withOpacity(0.2)),
+                    border: Border.all(color: themeColor.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -735,7 +735,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -807,9 +807,9 @@ class _CheckInPageState extends State<CheckInPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.08),
+                    color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -935,7 +935,7 @@ class _CheckInPageState extends State<CheckInPage> {
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
+                      color: themeColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.celebration, color: themeColor, size: 36),
@@ -1049,7 +1049,7 @@ class _CheckInPageState extends State<CheckInPage> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: themeColor.withOpacity(0.1),
+                              color: themeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(HabitIcons.getIcon(selectedIconIndex),
@@ -1259,7 +1259,7 @@ class _CheckInPageState extends State<CheckInPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.delete_outline,
@@ -1314,7 +1314,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(HabitIcons.getIcon(habit.iconIndex),
@@ -1347,9 +1347,9 @@ class _CheckInPageState extends State<CheckInPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
+                    color: Colors.red.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -1451,7 +1451,7 @@ class _CheckInPageState extends State<CheckInPage> {
           if (useWallpaper)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
               ),
             ),
 
@@ -1473,7 +1473,7 @@ class _CheckInPageState extends State<CheckInPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withValues(alpha: 0.3),
                     Colors.transparent,
                   ],
                 )
@@ -1496,7 +1496,7 @@ class _CheckInPageState extends State<CheckInPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -1534,7 +1534,7 @@ class _CheckInPageState extends State<CheckInPage> {
                               vertical: 20, horizontal: 40),
                           decoration: BoxDecoration(
                             color: useWallpaper
-                                ? Colors.white.withOpacity(0.85)
+                                ? Colors.white.withValues(alpha: 0.85)
                                 : Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
                             border: useWallpaper
@@ -1543,7 +1543,7 @@ class _CheckInPageState extends State<CheckInPage> {
                             boxShadow: useWallpaper
                                 ? [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -1554,7 +1554,7 @@ class _CheckInPageState extends State<CheckInPage> {
                             currentQuote,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: themeColor.withOpacity(0.8),
+                              color: themeColor.withValues(alpha: 0.8),
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
                             ),
@@ -1593,19 +1593,19 @@ class _CheckInPageState extends State<CheckInPage> {
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: useWallpaper
-                                    ? Colors.white.withOpacity(0.95)
+                                    ? Colors.white.withValues(alpha: 0.95)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(15),
                                 border: Border.all(
                                   color: isTodayDone
-                                      ? themeColor.withOpacity(0.4)
+                                      ? themeColor.withValues(alpha: 0.4)
                                       : Colors.grey[200]!,
                                   width: isTodayDone ? 1.5 : 1,
                                 ),
                                 boxShadow: useWallpaper
                                     ? [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
+                                    color: Colors.black.withValues(alpha: 0.08),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
@@ -1619,7 +1619,7 @@ class _CheckInPageState extends State<CheckInPage> {
                                     height: 40,
                                     decoration: BoxDecoration(
                                       color: isTodayDone
-                                          ? themeColor.withOpacity(0.1)
+                                          ? themeColor.withValues(alpha: 0.1)
                                           : Colors.grey[100],
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -1895,7 +1895,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 固定标题栏（居左对齐） =====
           Positioned(
@@ -1915,7 +1915,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withValues(alpha: 0.3),
                     Colors.transparent,
                   ],
                 )
@@ -1937,7 +1937,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -1978,13 +1978,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -2023,13 +2023,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -2059,7 +2059,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                 height: 12,
                                 margin: const EdgeInsets.symmetric(horizontal: 2),
                                 decoration: BoxDecoration(
-                                  color: themeColor.withOpacity(0.2 + i * 0.2),
+                                  color: themeColor.withValues(alpha: 0.2 + i * 0.2),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               )),
@@ -2080,13 +2080,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -2154,7 +2154,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                       width: 36,
                                       height: 36,
                                       decoration: BoxDecoration(
-                                        color: themeColor.withOpacity(0.1),
+                                        color: themeColor.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Icon(
@@ -2232,13 +2232,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
           boxShadow: useWallpaper
               ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -2386,7 +2386,7 @@ class ProfilePage extends StatelessWidget {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 固定标题栏（居左对齐） =====
           Positioned(
@@ -2406,7 +2406,7 @@ class ProfilePage extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withValues(alpha: 0.3),
                     Colors.transparent,
                   ],
                 )
@@ -2428,7 +2428,7 @@ class ProfilePage extends StatelessWidget {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -2453,13 +2453,13 @@ class ProfilePage extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                             borderRadius: BorderRadius.circular(15),
                             border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                             boxShadow: useWallpaper
                                 ? [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -2532,13 +2532,13 @@ class ProfilePage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
             boxShadow: useWallpaper
                 ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -3127,7 +3127,7 @@ class _BackupPageState extends State<BackupPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 内容层 =====
           Positioned.fill(
@@ -3140,13 +3140,13 @@ class _BackupPageState extends State<BackupPage> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: useWallpaper
-                        ? themeColor.withOpacity(0.15)
-                        : themeColor.withOpacity(0.1),
+                        ? themeColor.withValues(alpha: 0.15)
+                        : themeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: useWallpaper
                         ? [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -3223,12 +3223,12 @@ class _BackupPageState extends State<BackupPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: useWallpaper ? Colors.white.withOpacity(0.9) : Colors.grey[100],
+                    color: useWallpaper ? Colors.white.withValues(alpha: 0.9) : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: useWallpaper
                         ? [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -3280,13 +3280,13 @@ class _BackupPageState extends State<BackupPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -3313,7 +3313,7 @@ class _BackupPageState extends State<BackupPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -3343,13 +3343,13 @@ class _BackupPageState extends State<BackupPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
           boxShadow: useWallpaper
               ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -3464,7 +3464,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           if (useWallpaper)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
               ),
             ),
 
@@ -3506,7 +3506,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           shadows: useWallpaper
                               ? [
                             Shadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               blurRadius: 2,
                             ),
                           ]
@@ -3521,7 +3521,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -3584,13 +3584,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -3617,7 +3617,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -3647,11 +3647,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         // 壁纸模式下卡片半透明
-        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(useWallpaper ? 0.1 : 0.04),
+            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.04),
             blurRadius: useWallpaper ? 15 : 10,
             offset: const Offset(0, 2),
           ),
@@ -3666,7 +3666,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: themeColor.withOpacity(0.1),
+                  color: themeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.wallpaper, color: themeColor, size: 20),
@@ -3787,7 +3787,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                             ),
                           ],
@@ -3837,7 +3837,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(useWallpaper ? 0.15 : 0.06),
+            color: Colors.black.withValues(alpha: useWallpaper ? 0.15 : 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -3865,8 +3865,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.05),
-                    Colors.black.withOpacity(0.15),
+                    Colors.black.withValues(alpha: 0.05),
+                    Colors.black.withValues(alpha: 0.15),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -3893,11 +3893,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(useWallpaper ? 0.95 : 1),
+                    color: Colors.white.withValues(alpha: useWallpaper ? 0.95 : 1),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 8,
                       ),
                     ],
@@ -3908,7 +3908,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -3985,7 +3985,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             // 壁纸模式下卡片半透明
-            color: useWallpaper ? Colors.white.withOpacity(0.85) : Colors.white,
+            color: useWallpaper ? Colors.white.withValues(alpha: 0.85) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? option.color : Colors.grey[200]!,
@@ -3994,8 +3994,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? option.color.withOpacity(0.2)
-                    : Colors.black.withOpacity(useWallpaper ? 0.08 : 0.02),
+                    ? option.color.withValues(alpha: 0.2)
+                    : Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.02),
                 blurRadius: isSelected ? 8 : 4,
                 offset: const Offset(0, 2),
               ),
@@ -4014,7 +4014,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: option.color.withOpacity(0.3),
+                        color: option.color.withValues(alpha: 0.3),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -4046,7 +4046,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             height: 8,
                             margin: const EdgeInsets.only(right: 4),
                             decoration: BoxDecoration(
-                              color: option.color.withOpacity(0.2 + i * 0.2),
+                              color: option.color.withValues(alpha: 0.2 + i * 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           );
@@ -4061,7 +4061,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: option.color.withOpacity(0.1),
+                      color: option.color.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -4210,7 +4210,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.delete_outline,
@@ -4257,9 +4257,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
+                    color: Colors.red.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -4395,7 +4395,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 内容层 =====
           Positioned.fill(
@@ -4407,11 +4407,11 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 margin: const EdgeInsets.all(20),
                 decoration: useWallpaper
                     ? BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -4438,13 +4438,13 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     color: useWallpaper
-                        ? themeColor.withOpacity(0.15)
-                        : themeColor.withOpacity(0.1),
+                        ? themeColor.withValues(alpha: 0.15)
+                        : themeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: useWallpaper
                         ? [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -4494,13 +4494,13 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -4527,7 +4527,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -4548,19 +4548,19 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: useWallpaper
             ? null
             : Border.all(
           color: hasReminder
-              ? themeColor.withOpacity(0.3)
+              ? themeColor.withValues(alpha: 0.3)
               : Colors.grey[200]!,
         ),
         boxShadow: useWallpaper
             ? [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -4582,7 +4582,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   height: 44,
                   decoration: BoxDecoration(
                     color: hasReminder
-                        ? themeColor.withOpacity(0.1)
+                        ? themeColor.withValues(alpha: 0.1)
                         : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -4625,7 +4625,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
+                      color: themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -4701,7 +4701,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: themeColor.withOpacity(0.1),
+                        color: themeColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.notifications_active,
@@ -4791,7 +4791,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: themeColor.withOpacity(0.1),
+                color: themeColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.calendar_month, color: themeColor, size: 28),
@@ -4914,7 +4914,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.notifications_off_outlined, color: Colors.red[400], size: 36),
@@ -4937,9 +4937,9 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.08),
+                    color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -5097,10 +5097,10 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: widget.themeColor.withOpacity(0.05),
+            color: widget.themeColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: widget.themeColor.withOpacity(0.2),
+              color: widget.themeColor.withValues(alpha: 0.2),
             ),
           ),
           child: Stack(
@@ -5111,7 +5111,7 @@ class _TimePickerButtonState extends State<_TimePickerButton> {
                   height: 44,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: widget.themeColor.withOpacity(0.1),
+                    color: widget.themeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -5333,7 +5333,7 @@ class _AboutPageState extends State<AboutPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 内容层 =====
           Positioned.fill(
@@ -5350,11 +5350,11 @@ class _AboutPageState extends State<AboutPage> {
                     margin: useWallpaper ? const EdgeInsets.symmetric(horizontal: 40) : EdgeInsets.zero,
                     decoration: useWallpaper
                         ? BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -5371,7 +5371,7 @@ class _AboutPageState extends State<AboutPage> {
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: themeColor.withOpacity(0.3),
+                                color: themeColor.withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 5),
                               ),
@@ -5419,11 +5419,11 @@ class _AboutPageState extends State<AboutPage> {
                       child: Container(
                         decoration: useWallpaper
                             ? BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
+                          color: Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),
@@ -5450,7 +5450,7 @@ class _AboutPageState extends State<AboutPage> {
                             side: BorderSide(
                               color: useWallpaper
                                   ? Colors.transparent
-                                  : themeColor.withOpacity(0.5),
+                                  : themeColor.withValues(alpha: 0.5),
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -5467,13 +5467,13 @@ class _AboutPageState extends State<AboutPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 40),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                      color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                       boxShadow: useWallpaper
                           ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -5516,13 +5516,13 @@ class _AboutPageState extends State<AboutPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -5549,7 +5549,7 @@ class _AboutPageState extends State<AboutPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -5688,7 +5688,7 @@ class _DetailPageState extends State<DetailPage> {
           if (useWallpaper)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
               ),
             ),
 
@@ -5732,13 +5732,13 @@ class _DetailPageState extends State<DetailPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -5765,7 +5765,7 @@ class _DetailPageState extends State<DetailPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -5785,14 +5785,14 @@ class _DetailPageState extends State<DetailPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         // 壁纸模式下半透明
-        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: themeColor.withOpacity(0.3)),
+        border: Border.all(color: themeColor.withValues(alpha: 0.3)),
         // 壁纸模式下添加阴影
         boxShadow: useWallpaper
             ? [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -5808,7 +5808,7 @@ class _DetailPageState extends State<DetailPage> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: themeColor.withOpacity(0.1),
+                  color: themeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -5829,7 +5829,7 @@ class _DetailPageState extends State<DetailPage> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: themeColor.withOpacity(0.1),
+                    color: themeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.edit_outlined, size: 18, color: themeColor),
@@ -5869,16 +5869,16 @@ class _DetailPageState extends State<DetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: themeColor.withOpacity(0.05),
+              color: themeColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withOpacity(0.2)),
+                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
                 _statItem("连续天数", "${_calculateStreak()}天", themeColor),
-                Container(width: 1, height: 30, color: themeColor.withOpacity(0.2)),
+                Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
                 _statItem("本月打卡", "${_getMonthCheckIns()}天", themeColor),
               ],
             ),
@@ -5903,14 +5903,14 @@ class _DetailPageState extends State<DetailPage> {
     return Container(
       decoration: BoxDecoration(
         // 壁纸模式下半透明
-        color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+        color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey[200]!),
         // 壁纸模式下添加阴影
         boxShadow: useWallpaper
             ? [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -5946,7 +5946,7 @@ class _DetailPageState extends State<DetailPage> {
                     padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: themeColor.withOpacity(0.1),
+                      color: themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text("今天",
@@ -6098,9 +6098,9 @@ class _DetailPageState extends State<DetailPage> {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? themeColor.withOpacity(0.3)
+                  ? themeColor.withValues(alpha: 0.3)
                   : isCheckedIn
-                  ? themeColor.withOpacity(0.15)
+                  ? themeColor.withValues(alpha: 0.15)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: isToday && !isSelected
@@ -6154,7 +6154,7 @@ class _DetailPageState extends State<DetailPage> {
           width: 14,
           height: 14,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Center(
@@ -6179,7 +6179,7 @@ class _DetailPageState extends State<DetailPage> {
           width: 14,
           height: 14,
           decoration: BoxDecoration(
-            color: themeColor.withOpacity(0.3),
+            color: themeColor.withValues(alpha: 0.3),
             border: Border.all(color: themeColor, width: 1.5),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -6209,7 +6209,7 @@ class _DetailPageState extends State<DetailPage> {
               fontWeight: FontWeight.w500,
               color: useWallpaper ? Colors.white : Colors.grey[700],
               shadows: useWallpaper
-                  ? [Shadow(color: Colors.black.withOpacity(0.3), blurRadius: 2)]
+                  ? [Shadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 2)]
                   : null,
             ),
           ),
@@ -6219,10 +6219,10 @@ class _DetailPageState extends State<DetailPage> {
             decoration: BoxDecoration(
               color: hasRecord
                   ? isMakeUp
-                  ? Colors.orange.withOpacity(useWallpaper ? 0.9 : 0.1)
-                  : themeColor.withOpacity(useWallpaper ? 0.9 : 0.1)
+                  ? Colors.orange.withValues(alpha: useWallpaper ? 0.9 : 0.1)
+                  : themeColor.withValues(alpha: useWallpaper ? 0.9 : 0.1)
                   : useWallpaper
-                  ? Colors.white.withOpacity(0.9)
+                  ? Colors.white.withValues(alpha: 0.9)
                   : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
@@ -6268,13 +6268,13 @@ class _DetailPageState extends State<DetailPage> {
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
           // 壁纸模式下半透明
-          color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+          color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey[200]!),
           boxShadow: useWallpaper
               ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -6309,7 +6309,7 @@ class _DetailPageState extends State<DetailPage> {
                 icon: Icon(Icons.add_task, size: 18, color: themeColor),
                 label: Text("补卡", style: TextStyle(color: themeColor)),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: themeColor.withOpacity(0.5)),
+                  side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -6333,17 +6333,17 @@ class _DetailPageState extends State<DetailPage> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             // 壁纸模式下半透明
-            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isMakeUp
-                  ? Colors.orange.withOpacity(0.3)
-                  : themeColor.withOpacity(0.3),
+                  ? Colors.orange.withValues(alpha: 0.3)
+                  : themeColor.withValues(alpha: 0.3),
             ),
             boxShadow: useWallpaper
                 ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -6360,8 +6360,8 @@ class _DetailPageState extends State<DetailPage> {
                     height: 36,
                     decoration: BoxDecoration(
                       color: isMakeUp
-                          ? Colors.orange.withOpacity(0.1)
-                          : themeColor.withOpacity(0.1),
+                          ? Colors.orange.withValues(alpha: 0.1)
+                          : themeColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -6391,7 +6391,7 @@ class _DetailPageState extends State<DetailPage> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
+                                  color: Colors.orange.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -6470,13 +6470,13 @@ class _DetailPageState extends State<DetailPage> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isMakeUp
-                ? Colors.orange.withOpacity(0.05)
-                : themeColor.withOpacity(0.05),
+                ? Colors.orange.withValues(alpha: 0.05)
+                : themeColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isMakeUp
-                  ? Colors.orange.withOpacity(0.1)
-                  : themeColor.withOpacity(0.1),
+                  ? Colors.orange.withValues(alpha: 0.1)
+                  : themeColor.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -6486,8 +6486,8 @@ class _DetailPageState extends State<DetailPage> {
                 Icons.format_quote,
                 size: 16,
                 color: isMakeUp
-                    ? Colors.orange.withOpacity(0.5)
-                    : themeColor.withOpacity(0.5),
+                    ? Colors.orange.withValues(alpha: 0.5)
+                    : themeColor.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -6550,7 +6550,7 @@ class _DetailPageState extends State<DetailPage> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: themeColor.withOpacity(0.1),
+                              color: themeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(HabitIcons.getIcon(selectedIconIndex),
@@ -6740,7 +6740,7 @@ class _DetailPageState extends State<DetailPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.history,
@@ -6934,7 +6934,7 @@ class _DetailPageState extends State<DetailPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: themeColor.withOpacity(0.1),
+                          color: themeColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child:
@@ -7258,7 +7258,7 @@ class _AchievementPageState extends State<AchievementPage> {
 
           // 遮罩层
           if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withOpacity(0.03))),
+            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
 
           // ===== 内容层 =====
           Positioned.fill(
@@ -7290,13 +7290,13 @@ class _AchievementPageState extends State<AchievementPage> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: useWallpaper
-                            ? Colors.white.withOpacity(0.85)
+                            ? Colors.white.withValues(alpha: 0.85)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: useWallpaper
                             ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -7323,7 +7323,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                         ),
                       ]
                           : null,
@@ -7352,7 +7352,7 @@ class _AchievementPageState extends State<AchievementPage> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                themeColor.withOpacity(0.8),
+                themeColor.withValues(alpha: 0.8),
                 themeColor,
               ],
               begin: Alignment.topLeft,
@@ -7361,7 +7361,7 @@ class _AchievementPageState extends State<AchievementPage> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: themeColor.withOpacity(0.3),
+                color: themeColor.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -7373,12 +7373,12 @@ class _AchievementPageState extends State<AchievementPage> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.emoji_events,
-                  color: Colors.white,
+                  color: Color(0xFFFFD700),
                   size: 32,
                 ),
               ),
@@ -7418,7 +7418,7 @@ class _AchievementPageState extends State<AchievementPage> {
                         child: CircularProgressIndicator(
                           value: totalAchievements > 0 ? unlockedCount / totalAchievements : 0,
                           strokeWidth: 5,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
                           valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
@@ -7452,13 +7452,13 @@ class _AchievementPageState extends State<AchievementPage> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+                color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
                 boxShadow: useWallpaper
                     ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -7507,13 +7507,13 @@ class _AchievementPageState extends State<AchievementPage> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: useWallpaper ? Colors.white.withOpacity(0.95) : Colors.white,
+            color: useWallpaper ? Colors.white.withValues(alpha: 0.95) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: useWallpaper ? null : Border.all(color: Colors.grey[200]!),
             boxShadow: useWallpaper
                 ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),

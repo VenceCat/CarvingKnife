@@ -9,6 +9,8 @@ class Habit {
   String createdAt;
   int iconIndex;
   int dailyTarget; // 新增：每日目标次数
+  int sortOrder;
+  bool isPinned;
 
   Habit({
     required this.id,
@@ -18,7 +20,9 @@ class Habit {
     this.reminderTime,
     String? createdAt,
     this.iconIndex = 0,
-    this.dailyTarget = 1, // 默认每日1次
+    this.dailyTarget = 1,
+    this.sortOrder = 0,
+    this.isPinned = false,
   })  : checkInRecords = checkInRecords ?? [],
         createdAt = createdAt ?? DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
@@ -47,7 +51,9 @@ class Habit {
     'reminderTime': reminderTime,
     'createdAt': createdAt,
     'iconIndex': iconIndex,
-    'dailyTarget': dailyTarget, // 新增
+    'dailyTarget': dailyTarget,
+    'sortOrder': sortOrder,
+    'isPinned': isPinned,
   };
 
   factory Habit.fromJson(Map<String, dynamic> json) {
@@ -70,7 +76,9 @@ class Habit {
       reminderTime: json['reminderTime'] as String?,
       createdAt: json['createdAt'] as String?,
       iconIndex: (json['iconIndex'] as int?) ?? 0,
-      dailyTarget: (json['dailyTarget'] as int?) ?? 1, // 新增，兼容旧数据
+      dailyTarget: (json['dailyTarget'] as int?) ?? 1,
+      sortOrder: (json['sortOrder'] as int?) ?? 0,
+      isPinned: (json['isPinned'] as bool?) ?? false,
     );
   }
 }

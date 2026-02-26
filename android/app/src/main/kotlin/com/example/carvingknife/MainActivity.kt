@@ -44,5 +44,14 @@ class MainActivity : FlutterActivity() {
             .getAppWidgetIds(ComponentName(application, HabitWidgetMediumProvider::class.java))
         mediumIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, mediumIds)
         sendBroadcast(mediumIntent)
+
+        // ===== 新增：更新4×1打卡组件 =====
+        val checkInIntent = Intent(this, HabitCheckInWidgetProvider::class.java).apply {
+            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        }
+        val checkInIds = AppWidgetManager.getInstance(application)
+            .getAppWidgetIds(ComponentName(application, HabitCheckInWidgetProvider::class.java))
+        checkInIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, checkInIds)
+        sendBroadcast(checkInIntent)
     }
 }

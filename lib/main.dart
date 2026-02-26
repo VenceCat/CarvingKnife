@@ -4,12 +4,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'models/habit.dart';
 import 'services/achievement_service.dart';
+import 'services/update_service.dart';
 import 'services/widget_service.dart';
 import 'services/wallpaper_service.dart';
 import 'app.dart';
 import 'pages/check_in_page.dart';
 import 'pages/statistics_page.dart';
 import 'pages/profile_page.dart';
+import 'widgets/update_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +37,26 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     _loadData();
+    _checkUpdateSilently();
+  }
+
+  Future<void> _checkUpdateSilently() async {
+    // 等界面渲染完成后再检测，避免 context 未就绪
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    try {
+      final result = await UpdateService.checkUpdate();
+      if (!mounted) return;
+      if (result.hasUpdate && result.updateInfo != null) {
+        await UpdateDialog.show(
+          context,
+          updateInfo: result.updateInfo!,
+          currentVersion: result.currentVersion ?? '',
+        );
+      }
+    } catch (_) {
+      // 静默失败，不打扰用户
+    }
   }
 
   Future<void> _loadData() async {

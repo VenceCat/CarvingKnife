@@ -77,6 +77,27 @@
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
 
+        <!-- 4×1 打卡小组件 -->
+        <receiver
+            android:name=".HabitCheckInWidgetProvider"
+            android:exported="true"
+            android:label="雕刀打卡">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.carvingknife.CHECKIN_PREV" />
+                <action android:name="com.example.carvingknife.CHECKIN_NEXT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habit_checkin_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".HabitCheckInActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Dialog.Alert"
+            android:excludeFromRecents="true" />
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -29,15 +29,39 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   List<Habit> habits = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
     _checkUpdateSilently();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _reloadFromDisk();
+    }
+  }
+
+  Future<void> _reloadFromDisk() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final String? data = prefs.getString('simple_habits');
+    if (data != null && mounted) {
+      setState(() => habits =
+          (jsonDecode(data) as List).map((e) => Habit.fromJson(e)).toList());
+    }
   }
 
   Future<void> _checkUpdateSilently() async {

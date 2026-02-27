@@ -21,8 +21,9 @@ data class HabitItem(
     val isDone: Boolean,
     val streak: Int,
     val totalCheckIns: Int,
-    val todayCount: Int,      // ===== 新增：今日打卡次数 =====
-    val dailyTarget: Int      // ===== 新增：每日目标次数 =====
+    val todayCount: Int,
+    val dailyTarget: Int,
+    val iconIndex: Int
 )
 
 class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
@@ -83,13 +84,16 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                     val streak = calculateStreak(checkInDates, dateFormat)
                     val totalCheckIns = checkInDates.size
 
+                    val iconIndex = habit.optInt("iconIndex", 0)
+
                     list.add(HabitItem(
                         title = title,
                         isDone = isDone,
                         streak = streak,
                         totalCheckIns = totalCheckIns,
                         todayCount = todayCheckInCount,
-                        dailyTarget = dailyTarget
+                        dailyTarget = dailyTarget,
+                        iconIndex = iconIndex
                     ))
                 }
             } catch (e: Exception) {
@@ -136,7 +140,6 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
         if (position < habits.size) {
             val habit = habits[position]
 
-            // ===== 显示标题（多次打卡习惯显示进度） =====
             val displayTitle = if (habit.dailyTarget > 1) {
                 "${habit.title} (${habit.todayCount}/${habit.dailyTarget})"
             } else {
@@ -152,14 +155,15 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
             views.setTextViewText(R.id.item_streak, streakText)
 
             if (habit.isDone) {
-                views.setImageViewResource(R.id.item_icon, R.drawable.ic_done)
                 views.setInt(R.id.item_title, "setTextColor", 0xFF9E9E9E.toInt())
                 views.setInt(R.id.item_streak, "setTextColor", 0xFF4CAF50.toInt())
             } else {
-                views.setImageViewResource(R.id.item_icon, R.drawable.ic_undone)
                 views.setInt(R.id.item_title, "setTextColor", 0xFF424242.toInt())
                 views.setInt(R.id.item_streak, "setTextColor", 0xFF999999.toInt())
             }
+
+            val iconColor = if (habit.isDone) 0xFF9E9E9E.toInt() else 0xFF555555.toInt()
+            views.setImageViewBitmap(R.id.item_icon, HabitIconUtils.createIconBitmap(context, habit.iconIndex, iconColor))
 
             val fillIntent = Intent()
             views.setOnClickFillInIntent(R.id.item_container, fillIntent)

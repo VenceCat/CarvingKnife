@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/habit_icons.dart';
 
 class Habit {
   String id;
@@ -51,6 +53,7 @@ class Habit {
     'reminderTime': reminderTime,
     'createdAt': createdAt,
     'iconIndex': iconIndex,
+    'iconCodePoint': HabitIcons.getIcon(iconIndex).codePoint,
     'dailyTarget': dailyTarget,
     'sortOrder': sortOrder,
     'isPinned': isPinned,

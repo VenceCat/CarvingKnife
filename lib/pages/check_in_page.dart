@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'dart:math';
+import 'dart:ui' as ui;
 import '../models/habit.dart';
-import '../models/achievement.dart';
 import '../services/achievement_service.dart';
 import '../widgets/achievement_dialog.dart';
 import '../services/habit_icons.dart';
 import '../services/widget_service.dart';
-import '../services/wallpaper_service.dart';
 import '../widgets/icon_selector.dart';
 import 'detail_page.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_tokens.dart';
+import '../ui/app_visuals.dart';
 
 class CheckInPage extends StatefulWidget {
   final List<Habit> habits;
@@ -86,6 +84,246 @@ class _CheckInPageState extends State<CheckInPage> {
     currentQuote = quotes[Random().nextInt(quotes.length)];
   }
 
+  Widget _buildFloatingAddButton(
+    Color themeColor,
+    bool useWallpaper,
+    bool useGlassEffect,
+  ) {
+    final backgroundColor = useGlassEffect
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.76)
+        : (useWallpaper ? Colors.white.withValues(alpha: 0.92) : themeColor);
+    final borderColor = useGlassEffect
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.56 : 0.85)
+        : (useWallpaper
+            ? Colors.white.withValues(alpha: 0.58)
+            : themeColor.withValues(alpha: 0.2));
+    final iconColor = useGlassEffect
+        ? themeColor
+        : useWallpaper
+            ? themeColor
+            : Colors.white;
+
+    final buttonCore = Material(
+      color: backgroundColor,
+      child: InkWell(
+        onTap: _showAddDialog,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: useGlassEffect
+                      ? (useWallpaper ? 0.12 : 0.08)
+                      : (useWallpaper ? 0.12 : 0.2),
+                ),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(Icons.add_rounded, size: 30, color: iconColor),
+        ),
+      ),
+    );
+
+    if (!useGlassEffect) {
+      return SizedBox(
+        width: 58,
+        height: 58,
+        child: ClipOval(child: buttonCore),
+      );
+    }
+
+    return SizedBox(
+      width: 58,
+      height: 58,
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
+          child: buttonCore,
+        ),
+      ),
+    );
+  }
+
+  int _todayCompletedHabits() {
+    return widget.habits.where((h) => h.isTodayCompleted).length;
+  }
+
+  int _todayTargetTotal() {
+    return widget.habits.fold(0, (sum, h) => sum + h.dailyTarget);
+  }
+
+  int _todayDoneTotal() {
+    return widget.habits.fold(0, (sum, h) {
+      final done = h.todayCheckInCount > h.dailyTarget ? h.dailyTarget : h.todayCheckInCount;
+      return sum + done;
+    });
+  }
+
+  int _todayCheckInTotal() {
+    return widget.habits.fold(0, (sum, h) => sum + h.todayCheckInCount);
+  }
+
+  int _activeStreakHabitCount() {
+    return widget.habits.where((h) => _calculateStreak(h) > 0).length;
+  }
+
+  Widget _buildOverviewChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required bool useWallpaper,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: useWallpaper
+              ? Colors.white.withValues(alpha: 0.18)
+              : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          border: Border.all(
+            color: useWallpaper
+                ? Colors.white.withValues(alpha: 0.35)
+                : color.withValues(alpha: 0.16),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 15, color: useWallpaper ? Colors.white : color),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: useWallpaper ? Colors.white : color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: useWallpaper ? Colors.white70 : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodayOverviewCard(Color themeColor, bool useWallpaper) {
+    final completedHabits = _todayCompletedHabits();
+    final habitCount = widget.habits.length;
+    final targetTotal = _todayTargetTotal();
+    final doneTotal = _todayDoneTotal();
+    final progress = targetTotal == 0 ? 0.0 : (doneTotal / targetTotal).clamp(0.0, 1.0);
+    final progressText = '${(progress * 100).toInt()}%';
+
+    return AppGlassCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      radius: AppRadii.lg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.insights_outlined, color: themeColor, size: 18),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '\u4eca\u65e5\u603b\u89c8',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: useWallpaper ? Colors.grey[900] : Colors.grey[850],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$doneTotal / $targetTotal \u5df2\u5b8c\u6210',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  progressText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: themeColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              _buildOverviewChip(
+                icon: Icons.task_alt,
+                label: '\u4e60\u60ef',
+                value: '$completedHabits/$habitCount',
+                color: themeColor,
+                useWallpaper: useWallpaper,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _buildOverviewChip(
+                icon: Icons.check_circle_outline,
+                label: '\u6253\u5361',
+                value: '${_todayCheckInTotal()}',
+                color: Colors.green,
+                useWallpaper: useWallpaper,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _buildOverviewChip(
+                icon: Icons.local_fire_department_outlined,
+                label: '\u8fde\u51fb',
+                value: '${_activeStreakHabitCount()}',
+                color: Colors.orange,
+                useWallpaper: useWallpaper,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   void _toggleCheckIn(Habit habit) {
     final now = DateTime.now();
 
@@ -124,11 +362,7 @@ class _CheckInPageState extends State<CheckInPage> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        child: AppBottomSheetSurface(
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -264,11 +498,7 @@ class _CheckInPageState extends State<CheckInPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -544,11 +774,7 @@ class _CheckInPageState extends State<CheckInPage> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        child: AppBottomSheetSurface(
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -657,11 +883,7 @@ class _CheckInPageState extends State<CheckInPage> {
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
+            child: AppBottomSheetSurface(
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -982,11 +1204,7 @@ class _CheckInPageState extends State<CheckInPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -1178,170 +1396,124 @@ class _CheckInPageState extends State<CheckInPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // ===== 获取壁纸状态 =====
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
+    final useWallpaper = visuals.useWallpaper;
+    final navOverlayHeight = MediaQuery.of(context).padding.bottom + 64 + 12;
+    final floatingButtonBottomOffset = navOverlayHeight + 16;
+    final listBottomSafeSpace = floatingButtonBottomOffset + 58 + 24;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
-
-      body: Stack(
-        children: [
-          // ===== 壁纸背景层 =====
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(
-              child: Container(decoration: wallpaperDecoration),
-            ),
-
-          // ===== 半透明遮罩层 =====
-          if (useWallpaper)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.03),
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '雕刀',
+                visuals: visuals,
               ),
             ),
-
-          // ===== 固定标题栏 =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
-                left: 20,
-                right: 20,
-              ),
-              decoration: BoxDecoration(
-                gradient: useWallpaper
-                    ? LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.3),
-                    Colors.transparent,
-                  ],
-                )
-                    : null,
-                color: useWallpaper ? Colors.transparent : backgroundColor,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // 应用名称
-                  Text(
-                    "雕刀",
-                    style: TextStyle(
-                      letterSpacing: 4,
-                      fontWeight: FontWeight.w300,
-                      fontSize: 24,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
+            Positioned.fill(
+              top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (scrollNotification) {
+                  return false;
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    // ===== 名言区域 =====
+                    SliverToBoxAdapter(
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          top: 8,
+                          left: 20,
+                          right: 20,
+                          bottom: 12,
                         ),
-                      ]
-                          : null,
-                    ),
-                  ),
-                  // 可以在这里添加其他标题栏按钮
-                ],
-              ),
-            ),
-          ),
-
-          // ===== 内容层 =====
-          Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (scrollNotification) {
-                return false;
-              },
-              child: CustomScrollView(
-                slivers: [
-                  // ===== 名言区域 =====
-                  SliverToBoxAdapter(
-                    child: Container(
-                      margin: const EdgeInsets.only(
-                        top: 8,
-                        left: 20,
-                        right: 20,
-                        bottom: 16,
-                      ),
-                      child: GestureDetector(
-                        onTap: () => setState(() =>
-                        currentQuote = quotes[Random().nextInt(quotes.length)]),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 40),
-                          decoration: BoxDecoration(
-                            color: useWallpaper
-                                ? Colors.white.withValues(alpha: 0.85)
-                                : Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: useWallpaper
-                                ? null
-                                : Border.all(color: Colors.grey[200]!),
-                            boxShadow: useWallpaper
-                                ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                                : null,
-                          ),
-                          child: Text(
-                            currentQuote,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: themeColor.withValues(alpha: 0.8),
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
+                        child: GestureDetector(
+                          onTap: () => setState(() =>
+                              currentQuote = quotes[Random().nextInt(quotes.length)]),
+                          child: AppGlassCard(
+                            radius: AppRadii.lg,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 18,
+                              horizontal: 20,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: themeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.auto_awesome,
+                                    size: 18,
+                                    color: themeColor,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    currentQuote,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                      color: themeColor.withValues(alpha: 0.9),
+                                      fontSize: 14,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // ===== 习惯列表（分组式） =====
-                  ..._buildGroupedHabitList(themeColor, useWallpaper),
+                    // ===== 习惯列表（分组式） =====
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                        child: _buildTodayOverviewCard(themeColor, useWallpaper),
+                      ),
+                    ),
+                    ..._buildGroupedHabitList(themeColor, useWallpaper),
 
-                  // ===== 底部空白占位 =====
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
+                    // ===== 底部空白占位 =====
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: listBottomSafeSpace),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
 
       // ===== 浮动按钮 =====
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        elevation: useWallpaper ? 4 : 2,
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: floatingButtonBottomOffset),
+        child: _buildFloatingAddButton(
+          themeColor,
+          useWallpaper,
+          visuals.useGlassEffect,
+        ),
       ),
     );
   }
 
   /// 构建分组习惯列表
   List<Widget> _buildGroupedHabitList(Color themeColor, bool useWallpaper) {
-    final now = DateTime.now();
-    final todayStr = DateFormat('yyyy-MM-dd').format(now);
-
     // 分组：待办 vs 已完成（使用新的判断逻辑）
     final todoHabits = widget.habits.where((h) => !h.isTodayCompleted).toList()
       ..sort((a, b) {
@@ -1370,28 +1542,11 @@ class _CheckInPageState extends State<CheckInPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: useWallpaper
-                    ? Colors.white.withValues(alpha: 0.95)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: useWallpaper
-                    ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-                    : [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: AppGlassCard(
+              radius: 20,
+              borderColor: useWallpaper
+                  ? Colors.white.withValues(alpha: 0.45)
+                  : Colors.grey[100],
               child: ReorderableListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1437,28 +1592,11 @@ class _CheckInPageState extends State<CheckInPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: useWallpaper
-                    ? Colors.white.withValues(alpha: 0.95)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: useWallpaper
-                    ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-                    : [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: AppGlassCard(
+              radius: 20,
+              borderColor: useWallpaper
+                  ? Colors.white.withValues(alpha: 0.45)
+                  : Colors.grey[100],
               child: Column(
                 children: doneHabits.asMap().entries.map((entry) {
                   final index = entry.key;
@@ -1480,30 +1618,34 @@ class _CheckInPageState extends State<CheckInPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(40),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.inbox_outlined,
-                  size: 64,
-                  color: useWallpaper ? Colors.white54 : Colors.grey[300],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "还没有习惯",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: useWallpaper ? Colors.white70 : Colors.grey[500],
+            child: AppGlassCard(
+              radius: AppRadii.lg,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: useWallpaper ? Colors.white54 : Colors.grey[300],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "点击右下角 + 创建你的第一个习惯",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: useWallpaper ? Colors.white54 : Colors.grey[400],
+                  const SizedBox(height: 16),
+                  Text(
+                    "还没有习惯",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: useWallpaper ? Colors.white70 : Colors.grey[500],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    "点击右下角圆形 + 按钮创建第一个习惯",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: useWallpaper ? Colors.white54 : Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1513,22 +1655,10 @@ class _CheckInPageState extends State<CheckInPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Container(
+            child: AppGlassCard(
+              radius: 16,
+              borderColor: Colors.green.withValues(alpha: 0.3),
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeColor.withValues(alpha: 0.1),
-                    Colors.green.withValues(alpha: 0.1),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.green.withValues(alpha: 0.3),
-                ),
-              ),
               child: Row(
                 children: [
                   Container(
@@ -1583,6 +1713,7 @@ class _CheckInPageState extends State<CheckInPage> {
     required int count,
     required Color color,
     required bool useWallpaper,
+    Widget? trailing,
   }) {
     return Row(
       children: [
@@ -1621,6 +1752,10 @@ class _CheckInPageState extends State<CheckInPage> {
             ),
           ),
         ),
+        if (trailing != null) ...[
+          const Spacer(),
+          trailing,
+        ],
       ],
     );
   }
@@ -2108,11 +2243,7 @@ class _CheckInPageState extends State<CheckInPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -2315,11 +2446,7 @@ class _CheckInPageState extends State<CheckInPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -2452,13 +2579,9 @@ class _CheckInPageState extends State<CheckInPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Container(
+      builder: (ctx) => AppBottomSheetSurface(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
           child: Column(

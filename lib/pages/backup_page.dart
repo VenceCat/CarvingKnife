@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
@@ -8,10 +7,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/habit.dart';
-import '../models/achievement.dart';
 import '../services/achievement_service.dart';
-import '../services/widget_service.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_visuals.dart';
 
 class BackupPage extends StatefulWidget {
   final List<Habit> habits;
@@ -30,28 +28,6 @@ class BackupPage extends StatefulWidget {
 class _BackupPageState extends State<BackupPage> {
   bool _isExporting = false;
   bool _isImporting = false;
-
-  /// 统一的卡片装饰样式
-  BoxDecoration _cardDecoration({
-    required bool useWallpaper,
-    Color? borderColor,
-    double radius = 12,
-  }) {
-    return BoxDecoration(
-      color: useWallpaper
-          ? Colors.white.withValues(alpha: 0.95)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(radius),
-      border: borderColor != null ? Border.all(color: borderColor) : null,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    );
-  }
 
   String _generateFileName() {
     final now = DateTime.now();
@@ -131,11 +107,7 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -311,11 +283,7 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -471,11 +439,7 @@ class _BackupPageState extends State<BackupPage> {
       backgroundColor: Colors.transparent,
       isDismissible: false,
       enableDrag: false,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -554,33 +518,21 @@ class _BackupPageState extends State<BackupPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // 获取壁纸状态
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
+    final useWallpaper = visuals.useWallpaper;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
-
-      body: Stack(
-        children: [
-          // 壁纸背景
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
-
-          // 遮罩层
-          if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
-
-          // ===== 内容层 =====
-          Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              top: MediaQuery.of(context).padding.top + 60,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
                 // 当前数据卡片
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -638,7 +590,6 @@ class _BackupPageState extends State<BackupPage> {
                   color: themeColor,
                   isLoading: _isExporting,
                   onTap: _exportToLocal,
-                  useWallpaper: useWallpaper,
                 ),
                 const SizedBox(height: 12),
                 _buildActionCard(
@@ -648,7 +599,6 @@ class _BackupPageState extends State<BackupPage> {
                   color: themeColor,
                   isLoading: _isExporting,
                   onTap: _shareBackup,
-                  useWallpaper: useWallpaper,
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -667,19 +617,11 @@ class _BackupPageState extends State<BackupPage> {
                   color: Colors.orange,
                   isLoading: _isImporting,
                   onTap: _importBackup,
-                  useWallpaper: useWallpaper,
                 ),
                 const SizedBox(height: 24),
                 // 备份说明卡片
-                Container(
+                AppGlassCard(
                   padding: const EdgeInsets.all(16),
-                  decoration: _cardDecoration(
-                    useWallpaper: useWallpaper,
-                  ).copyWith(
-                    color: useWallpaper
-                        ? Colors.white.withValues(alpha: 0.9)
-                        : Colors.grey[50],
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -705,75 +647,52 @@ class _BackupPageState extends State<BackupPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 100),
-              ],
-            ),
-          ),
-
-          // ===== 固定标题栏 =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
-                left: 16,
-                right: 20,
-              ),
-              child: Row(
-                children: [
-                  // 返回按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: useWallpaper
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: useWallpaper ? Colors.black87 : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 页面标题
-                  Text(
-                    "数据备份",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w300,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                      ]
-                          : null,
-                    ),
-                  ),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '数据备份',
+                visuals: visuals,
+                left: 16,
+                leading: _buildBackButton(visuals),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(AppVisuals visuals) {
+    return InkWell(
+      onTap: () => Navigator.pop(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: visuals.useWallpaper
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: 18,
+          color: visuals.useWallpaper ? Colors.black87 : Colors.grey[600],
+        ),
       ),
     );
   }
@@ -785,14 +704,12 @@ class _BackupPageState extends State<BackupPage> {
     required Color color,
     required bool isLoading,
     required VoidCallback onTap,
-    required bool useWallpaper,
   }) {
     return InkWell(
       onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12),
-      child: Container(
+      child: AppGlassCard(
         padding: const EdgeInsets.all(16),
-        decoration: _cardDecoration(useWallpaper: useWallpaper),
         child: Row(
           children: [
             Container(

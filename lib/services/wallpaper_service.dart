@@ -410,18 +410,29 @@ class _CustomImageCropperPageState extends State<CustomImageCropperPage> {
 
   void _initializeCropArea() {
     final screenSize = MediaQuery.of(context).size;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     // 裁切区域：全屏减去顶部和底部工具栏
     const topBarHeight = 100.0;
     const bottomBarHeight = 120.0;
+    final availableHeight = screenSize.height - topBarHeight - bottomBarHeight;
+    final targetAspectRatio = screenSize.width / screenSize.height;
+
+    // 在可用区域内按屏幕比例生成最大裁切框，保证导出后可无黑边铺满屏幕
+    double cropWidth = screenSize.width;
+    double cropHeight = cropWidth / targetAspectRatio;
+    if (cropHeight > availableHeight) {
+      cropHeight = availableHeight;
+      cropWidth = cropHeight * targetAspectRatio;
+    }
+
+    final cropLeft = (screenSize.width - cropWidth) / 2;
+    final cropTop = topBarHeight + (availableHeight - cropHeight) / 2;
 
     _cropRect = Rect.fromLTWH(
-      0,
-      topBarHeight,
-      screenSize.width,
-      screenSize.height - topBarHeight - bottomBarHeight,
+      cropLeft,
+      cropTop,
+      cropWidth,
+      cropHeight,
     );
 
     // 计算初始缩放：让图片完全覆盖裁切区域
@@ -429,7 +440,10 @@ class _CustomImageCropperPageState extends State<CustomImageCropperPage> {
     final scaleY = _cropRect.height / _imageSize.height;
     _minScale = scaleX > scaleY ? scaleX : scaleY;
     _scale = _minScale;
-    _maxScale = _minScale * 4;
+    _maxScale = _minScale * 6;
+    if (_maxScale < 4.0) {
+      _maxScale = 4.0;
+    }
 
     // 居中显示
     _offset = Offset(
@@ -507,18 +521,73 @@ class _CustomImageCropperPageState extends State<CustomImageCropperPage> {
     setState(() => _isProcessing = true);
 
     try {
+      // 按裁切框和当前变换参数从原图导出，避免黑边
+      final autoSrcLeft = ((_cropRect.left - _offset.dx) / _scale)
+          .clamp(0.0, _imageSize.width - 1);
+      final autoSrcTop = ((_cropRect.top - _offset.dy) / _scale)
+          .clamp(0.0, _imageSize.height - 1);
+      final autoSrcWidth = (_cropRect.width / _scale)
+          .clamp(1.0, _imageSize.width - autoSrcLeft);
+      final autoSrcHeight = (_cropRect.height / _scale)
+          .clamp(1.0, _imageSize.height - autoSrcTop);
+
+      final autoSrcRect = Rect.fromLTWH(
+        autoSrcLeft,
+        autoSrcTop,
+        autoSrcWidth,
+        autoSrcHeight,
+      );
+      final autoOutputWidth = autoSrcWidth.round().clamp(1, 4096);
+      final autoOutputHeight = autoSrcHeight.round().clamp(1, 4096);
+      final autoDstRect = Rect.fromLTWH(
+        0,
+        0,
+        autoOutputWidth.toDouble(),
+        autoOutputHeight.toDouble(),
+      );
+
+      final autoRecorder = ui.PictureRecorder();
+      final autoCanvas = Canvas(autoRecorder);
+      autoCanvas.drawImageRect(
+        _originalImage!,
+        autoSrcRect,
+        autoDstRect,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+
+      final autoPicture = autoRecorder.endRecording();
+      final autoCroppedImage = await autoPicture.toImage(
+        autoOutputWidth,
+        autoOutputHeight,
+      );
+      final autoByteData = await autoCroppedImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (autoByteData == null) throw Exception('Failed to encode image');
+
+      final exportDir = await getTemporaryDirectory();
+      final exportFile = File(
+        '${exportDir.path}/cropped_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await exportFile.writeAsBytes(autoByteData.buffer.asUint8List());
+
+      if (mounted) {
+        Navigator.pop(context, exportFile);
+      }
+      return;
+      /*
       // 计算裁切区域对应原图的位置
       // 屏幕上的裁切区域 -> 原图坐标
-      final srcLeft = (_cropRect.left - _offset.dx) / _scale;
-      final srcTop = (_cropRect.top - _offset.dy) / _scale;
-      final srcWidth = _cropRect.width / _scale;
-      final srcHeight = _cropRect.height / _scale;
+      final srcLeft = 0.0;
+      final srcTop = 0.0;
+      final srcWidth = _imageSize.width;
+      final srcHeight = _imageSize.height;
 
       // 确保在原图范围内
-      final clampedLeft = srcLeft.clamp(0.0, _imageSize.width);
-      final clampedTop = srcTop.clamp(0.0, _imageSize.height);
-      final clampedWidth = srcWidth.clamp(0.0, _imageSize.width - clampedLeft);
-      final clampedHeight = srcHeight.clamp(0.0, _imageSize.height - clampedTop);
+      final clampedLeft = srcLeft;
+      final clampedTop = srcTop;
+      final clampedWidth = srcWidth;
+      final clampedHeight = srcHeight;
 
       final srcRect = Rect.fromLTWH(
         clampedLeft,
@@ -532,10 +601,10 @@ class _CustomImageCropperPageState extends State<CustomImageCropperPage> {
       final outputHeight = _cropRect.height.toInt();
 
       final dstRect = Rect.fromLTWH(
-        0,
-        0,
-        outputWidth.toDouble(),
-        outputHeight.toDouble(),
+        _offset.dx - _cropRect.left,
+        _offset.dy - _cropRect.top,
+        _imageSize.width * _scale,
+        _imageSize.height * _scale,
       );
 
       // 创建裁切后的图片
@@ -567,6 +636,7 @@ class _CustomImageCropperPageState extends State<CustomImageCropperPage> {
       if (mounted) {
         Navigator.pop(context, tempFile);
       }
+      */
     } catch (e) {
       debugPrint('裁切失败: $e');
       if (mounted) {

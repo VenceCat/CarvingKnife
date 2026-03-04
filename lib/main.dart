@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:ui' as ui;
 import 'models/habit.dart';
 import 'services/achievement_service.dart';
 import 'services/update_service.dart';
 import 'services/widget_service.dart';
-import 'services/wallpaper_service.dart';
 import 'app.dart';
 import 'pages/check_in_page.dart';
 import 'pages/statistics_page.dart';
 import 'pages/profile_page.dart';
+import 'ui/app_surfaces.dart';
+import 'ui/app_visuals.dart';
 import 'widgets/update_dialog.dart';
 
 void main() async {
@@ -21,7 +22,7 @@ void main() async {
   runApp(HabitApp(initialColorIndex: colorIndex, home: const MainPage()));
 }
 
-// ========== 主页面 ==========
+
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
@@ -123,93 +124,99 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : null,
-      body: Stack(
-        children: [
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(
-              child: Container(decoration: wallpaperDecoration),
+      backgroundColor: visuals.pageBackgroundColor,
+      extendBody: true,
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        overlayOpacity: 0.05,
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            CheckInPage(
+              habits: habits,
+              onSave: _refreshAndSave,
+              onAdd: _addHabit,
+              onDelete: _removeHabit,
             ),
-          if (useWallpaper)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.05),
-              ),
-            ),
-          IndexedStack(
-            index: _currentIndex,
-            children: [
-              CheckInPage(
-                habits: habits,
-                onSave: _refreshAndSave,
-                onAdd: _addHabit,
-                onDelete: _removeHabit,
-              ),
-              StatisticsPage(habits: habits),
-              ProfilePage(
-                habits: habits,
-                onSave: _refreshAndSave,
-                onRestore: _restoreHabits,
-              ),
-            ],
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: useWallpaper
-              ? Colors.white.withValues(alpha: 0.95)
-              : Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: useWallpaper
-                  ? Colors.grey[200]!.withValues(alpha: 0.5)
-                  : Colors.grey[100]!,
-              width: 1,
-            ),
-          ),
-          boxShadow: useWallpaper
-              ? [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ]
-              : null,
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          selectedItemColor: themeColor,
-          unselectedItemColor: Colors.grey[400],
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.check_circle_outline),
-              activeIcon: Icon(Icons.check_circle),
-              label: '打卡',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart),
-              label: '统计',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: '我的',
+            StatisticsPage(habits: habits),
+            ProfilePage(
+              habits: habits,
+              onSave: _refreshAndSave,
+              onRestore: _restoreHabits,
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: visuals.useGlassEffect
+                    ? ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)
+                    : ui.ImageFilter.blur(sigmaX: 0.01, sigmaY: 0.01),
+              child: Container(
+                decoration: AppSurfaceDecoration.bottomBar(context).copyWith(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: visuals.useWallpaper
+                        ? Colors.white.withValues(alpha: 0.45)
+                        : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    backgroundColor: Colors.transparent,
+                    indicatorColor: themeColor.withValues(
+                      alpha: visuals.useWallpaper ? 0.24 : 0.14,
+                    ),
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    height: 64,
+                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                      final isSelected = states.contains(WidgetState.selected);
+                      return TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? themeColor : Colors.grey[600],
+                      );
+                    }),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: (index) =>
+                        setState(() => _currentIndex = index),
+                    backgroundColor: Colors.transparent,
+                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.check_circle_outline),
+                        selectedIcon: Icon(Icons.check_circle),
+                        label: '\u6253\u5361',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.bar_chart_outlined),
+                        selectedIcon: Icon(Icons.bar_chart),
+                        label: '\u7edf\u8ba1',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person_outline),
+                        selectedIcon: Icon(Icons.person),
+                        label: '\u6211\u7684',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

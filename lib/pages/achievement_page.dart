@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/habit.dart';
 import '../models/achievement.dart';
 import '../services/achievement_service.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_visuals.dart';
 
 class AchievementPage extends StatefulWidget {
   final List<Habit> habits;
@@ -18,28 +18,6 @@ class _AchievementPageState extends State<AchievementPage> {
   bool _isLoading = true;
   Set<String> _permanentlyUnlockedIds = {};
   List<Achievement> _allAchievements = [];
-
-  /// 统一的卡片装饰样式
-  BoxDecoration _cardDecoration({
-    required bool useWallpaper,
-    Color? borderColor,
-    double radius = 16,
-  }) {
-    return BoxDecoration(
-      color: useWallpaper
-          ? Colors.white.withValues(alpha: 0.95)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(radius),
-      border: borderColor != null ? Border.all(color: borderColor) : null,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    );
-  }
 
   @override
   void initState() {
@@ -119,107 +97,71 @@ class _AchievementPageState extends State<AchievementPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // 获取壁纸状态
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
-
-      body: Stack(
-        children: [
-          // 壁纸背景
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
-
-          // 遮罩层
-          if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
-
-          // ===== 内容层 =====
-          Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildAchievementContent(themeColor, useWallpaper),
-          ),
-
-          // ===== 固定标题栏（二级页面包含返回按钮） =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildAchievementContent(themeColor),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '打卡成就',
+                visuals: visuals,
                 left: 16,
-                right: 20,
-              ),
-              child: Row(
-                children: [
-                  // 返回按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: useWallpaper
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                            : null,
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: useWallpaper ? Colors.black87 : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 页面标题
-                  Text(
-                    "打卡成就",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w300,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                      ]
-                          : null,
-                    ),
-                  ),
-                ],
+                leading: _buildBackButton(visuals),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(AppVisuals visuals) {
+    return InkWell(
+      onTap: () => Navigator.pop(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: visuals.useWallpaper
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: visuals.useWallpaper
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: 18,
+          color: visuals.useWallpaper ? Colors.black87 : Colors.grey[600],
+        ),
       ),
     );
   }
 
   /// 构建成就内容（提取出来的方法，保持原逻辑）
-  Widget _buildAchievementContent(Color themeColor, bool useWallpaper) {
+  Widget _buildAchievementContent(Color themeColor) {
     final grouped = groupedRegularAchievements;
     final unlockedSpecial = specialAchievements;
 
@@ -329,9 +271,8 @@ class _AchievementPageState extends State<AchievementPage> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
+            child: AppGlassCard(
               padding: const EdgeInsets.all(16),
-              decoration: _cardDecoration(useWallpaper: useWallpaper),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -371,9 +312,8 @@ class _AchievementPageState extends State<AchievementPage> {
         }),
 
         // 特殊成就
-        Container(
+        AppGlassCard(
           padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration(useWallpaper: useWallpaper),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -582,11 +522,7 @@ class _AchievementPageState extends State<AchievementPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),

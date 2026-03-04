@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import '../config/theme_config.dart';
 import '../services/wallpaper_service.dart';
 import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_visuals.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
@@ -14,35 +15,6 @@ class ThemeSettingsPage extends StatefulWidget {
 
 class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   bool _isLoading = false;
-
-  /// 统一的卡片装饰样式
-  BoxDecoration _cardDecoration({
-    required bool useWallpaper,
-    Color? borderColor,
-    double radius = 16,
-    bool isSelected = false,
-    Color? selectedColor,
-  }) {
-    return BoxDecoration(
-      color: useWallpaper
-          ? Colors.white.withValues(alpha: 0.95)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(radius),
-      border: borderColor != null ? Border.all(
-        color: borderColor,
-        width: isSelected ? 2 : 1,
-      ) : null,
-      boxShadow: [
-        BoxShadow(
-          color: isSelected && selectedColor != null
-              ? selectedColor.withValues(alpha: 0.2)
-              : Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-          blurRadius: isSelected ? 8 : 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    );
-  }
 
   /// 统一的SnackBar显示方法
   void _showSnackBar(
@@ -74,37 +46,23 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final visuals = AppVisuals.resolve(context);
 
     // 获取壁纸状态
     final appState = HabitApp.of(context);
     final currentTheme = appState?.currentTheme;
     final wallpaperData = appState?.wallpaperData;
     final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final glassEffectEnabled = appState?.glassEffectEnabled ?? false;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
-
-      body: Stack(
-        children: [
-          // ===== 壁纸背景层 =====
-          if (useWallpaper && wallpaperDecoration != null)
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
             Positioned.fill(
-              child: Container(decoration: wallpaperDecoration),
-            ),
-
-          // ===== 半透明遮罩 =====
-          if (useWallpaper)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.03),
-              ),
-            ),
-
-          // ===== 内容层 =====
-          Positioned.fill(
             top: MediaQuery.of(context).padding.top + 60,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -117,6 +75,15 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     wallpaperData,
                     useWallpaper,
                     themeColor,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  _buildGlassEffectCard(
+                    appState,
+                    glassEffectEnabled,
+                    themeColor,
+                    useWallpaper,
                   ),
 
                   const SizedBox(height: 24),
@@ -136,16 +103,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         "选择主题颜色",
                         style: TextStyle(
                           fontSize: 14,
-                          color: useWallpaper ? Colors.white70 : Colors.grey[500],
+                          color: visuals.softTextColor,
                           fontWeight: FontWeight.w500,
-                          shadows: useWallpaper
-                              ? [
-                            Shadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 2,
-                            ),
-                          ]
-                              : null,
+                          shadows: visuals.titleShadows,
                         ),
                       ),
                       if (useWallpaper) ...[
@@ -195,75 +155,50 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 ],
               ),
             ),
-          ),
-
-          // ===== 固定标题栏 =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '主题设置',
+                visuals: visuals,
                 left: 16,
-                right: 20,
-              ),
-              child: Row(
-                children: [
-                  // 返回按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: useWallpaper
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: useWallpaper ? 0.1 : 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: useWallpaper ? Colors.black87 : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 页面标题
-                  Text(
-                    "主题设置",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w300,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                      ]
-                          : null,
-                    ),
-                  ),
-                ],
+                leading: _buildBackButton(visuals),
               ),
             ),
-          ),
+            if (_isLoading) _buildLoadingOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // 加载遮罩
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
+  Widget _buildBackButton(AppVisuals visuals) {
+    return InkWell(
+      onTap: () => Navigator.pop(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: visuals.useWallpaper
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: 18,
+          color: visuals.useWallpaper ? Colors.black87 : Colors.grey[600],
+        ),
       ),
     );
   }
@@ -276,9 +211,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       bool useWallpaper,
       Color themeColor,
       ) {
-    return Container(
+    return AppGlassCard(
       padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(useWallpaper: useWallpaper),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -448,6 +382,92 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   }
 
   /// 预览卡片
+  Widget _buildGlassEffectCard(
+    HabitAppState? appState,
+    bool enabled,
+    Color themeColor,
+    bool useWallpaper,
+  ) {
+    return AppGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: themeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.blur_on, color: themeColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      '\u6bdb\u73bb\u7483\u6548\u679c',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'BETA',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  '\u5f00\u542f\u540e\u5361\u7247\u4e0e\u5bfc\u822a\u6761\u4f7f\u7528\u6a21\u7cca\u900f\u660e\u6837\u5f0f',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: enabled,
+            activeColor: themeColor,
+            onChanged: (value) async {
+              await appState?.setGlassEffectEnabled(value);
+              if (!mounted) return;
+              setState(() {});
+              _showSnackBar(
+                context,
+                icon: value ? Icons.auto_awesome : Icons.toggle_off_outlined,
+                message: value
+                    ? '\u5df2\u5f00\u542f\u6bdb\u73bb\u7483\u6548\u679c'
+                    : '\u5df2\u5173\u95ed\u6bdb\u73bb\u7483\u6548\u679c',
+                backgroundColor: value
+                    ? (useWallpaper ? Colors.blueGrey : themeColor)
+                    : Colors.grey,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPreviewCard(
       WallpaperData? wallpaperData,
       bool useWallpaper,
@@ -507,7 +527,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     fontSize: 12,
                     color: useWallpaper ? Colors.white70 : Colors.grey[500],
                     shadows: useWallpaper
-                        ? [Shadow(color: Colors.black38, blurRadius: 2)]
+                        ? [const Shadow(color: Colors.black38, blurRadius: 2)]
                         : null,
                   ),
                 ),
@@ -602,17 +622,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           if (mounted) setState(() {});
         },
         borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        child: AppGlassCard(
+          radius: 14,
+          borderColor: isSelected ? option.color : null,
+          isSelected: isSelected,
+          selectedColor: option.color,
           padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration(
-            useWallpaper: useWallpaper,
-            radius: 14,
-            // ===== 修改：只有选中时才显示边框 =====
-            borderColor: isSelected ? option.color : null,
-            isSelected: isSelected,
-            selectedColor: option.color,
-          ),
           child: Opacity(
             opacity: useWallpaper ? 0.6 : 1.0,
             child: Row(
@@ -763,7 +778,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       if (success && mounted) {
         setState(() {});
         _showSnackBar(
-          context,
+          this.context,
           icon: Icons.check_circle,
           message: "壁纸设置成功",
           backgroundColor: Colors.green,
@@ -772,7 +787,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     } catch (e) {
       if (mounted) {
         _showSnackBar(
-          context,
+          this.context,
           icon: Icons.error,
           message: "设置失败: $e",
           backgroundColor: Colors.red,
@@ -785,17 +800,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
   /// 移除壁纸确认弹窗
   Future<void> _removeWallpaper(BuildContext context, HabitAppState? appState) async {
-    final themeColor = Theme.of(context).colorScheme.primary;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -903,10 +912,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           Navigator.pop(ctx);
                           setState(() => _isLoading = true);
                           await appState?.clearWallpaper();
-                          if (mounted) setState(() => _isLoading = false);
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
 
                           _showSnackBar(
-                            context,
+                            this.context,
                             icon: Icons.check_circle,
                             message: "壁纸已移除",
                             backgroundColor: Colors.green,

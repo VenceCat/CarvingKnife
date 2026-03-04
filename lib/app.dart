@@ -4,6 +4,19 @@ import 'dart:io';
 import 'services/wallpaper_service.dart';
 import 'config/theme_config.dart';
 
+class _NoStretchScrollBehavior extends MaterialScrollBehavior {
+  const _NoStretchScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+}
+
 class HabitApp extends StatefulWidget {
   final int initialColorIndex;
   final Widget home;
@@ -18,11 +31,13 @@ class HabitApp extends StatefulWidget {
 }
 
 class HabitAppState extends State<HabitApp> {
+  static const String _glassEffectKey = 'glass_effect_enabled';
   late int _currentColorIndex;
 
   // ===== 新增：壁纸相关状态 =====
   WallpaperData? _wallpaperData;
   bool _useWallpaper = false;
+  bool _glassEffectEnabled = false;
   bool _isInitialized = false;
 
   @override
@@ -34,8 +49,10 @@ class HabitAppState extends State<HabitApp> {
 
   // ===== 新增：加载壁纸 =====
   Future<void> _loadWallpaper() async {
+    final prefs = await SharedPreferences.getInstance();
     _wallpaperData = await WallpaperService.getSavedWallpaper();
     _useWallpaper = _wallpaperData != null;
+    _glassEffectEnabled = prefs.getBool(_glassEffectKey) ?? false;
     setState(() {
       _isInitialized = true;
     });
@@ -58,6 +75,7 @@ class HabitAppState extends State<HabitApp> {
   // ===== 新增：壁纸相关 Getters =====
   WallpaperData? get wallpaperData => _wallpaperData;
   bool get useWallpaper => _useWallpaper && _wallpaperData != null;
+  bool get glassEffectEnabled => _glassEffectEnabled;
 
   /// 当前使用的主题色（优先壁纸提取色）
   Color get currentColor {
@@ -83,6 +101,7 @@ class HabitAppState extends State<HabitApp> {
       image: DecorationImage(
         image: FileImage(File(_wallpaperData!.path)),
         fit: BoxFit.cover,
+        alignment: Alignment.center,
       ),
     );
   }
@@ -118,6 +137,14 @@ class HabitAppState extends State<HabitApp> {
     });
   }
 
+  Future<void> setGlassEffectEnabled(bool enabled) async {
+    setState(() {
+      _glassEffectEnabled = enabled;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_glassEffectKey, enabled);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = currentColor;
@@ -126,6 +153,7 @@ class HabitAppState extends State<HabitApp> {
     return MaterialApp(
       title: '雕刀',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const _NoStretchScrollBehavior(),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

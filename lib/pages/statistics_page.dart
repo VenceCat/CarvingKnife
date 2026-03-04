@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:math';
 import '../models/habit.dart';
 import '../services/habit_icons.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_tokens.dart';
+import '../ui/app_visuals.dart';
 
 class StatisticsPage extends StatefulWidget {
   final List<Habit> habits;
@@ -235,79 +236,25 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // 获取壁纸状态
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
-
-      body: Stack(
-        children: [
-          // 壁纸背景
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
-
-          // 遮罩层
-          if (useWallpaper)
-            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: 0.03))),
-
-          // ===== 固定标题栏 =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
-                left: 20,
-                right: 20,
-              ),
-              decoration: BoxDecoration(
-                gradient: useWallpaper
-                    ? LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.3),
-                    Colors.transparent,
-                  ],
-                )
-                    : null,
-                color: useWallpaper ? Colors.transparent : backgroundColor,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    "统计",
-                    style: TextStyle(
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.w300,
-                      fontSize: 24,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                      ]
-                          : null,
-                    ),
-                  ),
-                ],
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '统计',
+                visuals: visuals,
               ),
             ),
-          ),
-
-          // ===== 内容层 =====
-          Positioned.fill(
+            Positioned.fill(
             top: MediaQuery.of(context).padding.top + 60,
             child: CustomScrollView(
               slivers: [
@@ -322,7 +269,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           "${widget.habits.length}",
                           Icons.flag_outlined,
                           themeColor,
-                          useWallpaper,
                         ),
                         const SizedBox(width: 12),
                         _buildStatCard(
@@ -330,7 +276,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           "$totalCheckIns",
                           Icons.check_circle_outline,
                           themeColor,
-                          useWallpaper,
                         ),
                         const SizedBox(width: 12),
                         _buildStatCard(
@@ -338,7 +283,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           "$currentStreak天",
                           Icons.local_fire_department_outlined,
                           Colors.orange,
-                          useWallpaper,
                         ),
                         const SizedBox(width: 12),
                         // ===== 修改：最长连续天数 =====
@@ -347,7 +291,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           "$maxTotalDays天",
                           Icons.emoji_events_outlined,
                           Colors.amber,
-                          useWallpaper,
                         ),
                       ],
                     ),
@@ -359,7 +302,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: _buildCard(
-                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -397,7 +339,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: _buildCard(
-                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -450,7 +391,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: _buildCard(
-                      useWallpaper: useWallpaper,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -627,31 +567,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // ===== 新增：统一的卡片样式 =====
   Widget _buildCard({
-    required bool useWallpaper,
     required Widget child,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: useWallpaper
-            ? Colors.white.withValues(alpha: 0.95)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return AppGlassCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: child,
     );
   }
@@ -662,24 +589,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
       String value,
       IconData icon,
       Color color,
-      bool useWallpaper,
       ) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: useWallpaper
-              ? Colors.white.withValues(alpha: 0.95)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: AppGlassCard(
+        radius: AppRadii.md,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         child: Column(
           children: [
             Icon(icon, color: color, size: 22),

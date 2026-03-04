@@ -3,7 +3,8 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'dart:io';
 import '../models/habit.dart';
 import '../services/habit_icons.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_visuals.dart';
 
 class ReminderSettingsPage extends StatefulWidget {
   final List<Habit> habits;
@@ -20,28 +21,6 @@ class ReminderSettingsPage extends StatefulWidget {
 }
 
 class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
-  /// 统一的卡片装饰样式
-  BoxDecoration _cardDecoration({
-    required bool useWallpaper,
-    Color? borderColor,
-    double radius = 12,
-  }) {
-    return BoxDecoration(
-      color: useWallpaper
-          ? Colors.white.withValues(alpha: 0.95)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(radius),
-      border: borderColor != null ? Border.all(color: borderColor) : null,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    );
-  }
-
   /// 统一的SnackBar显示方法
   void _showSnackBar(
       BuildContext context, {
@@ -70,250 +49,216 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // 获取壁纸状态
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
+    final useWallpaper = visuals.useWallpaper;
 
     return Scaffold(
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
-
-      body: Stack(
-        children: [
-          // 壁纸背景
-          if (useWallpaper && wallpaperDecoration != null)
-            Positioned.fill(child: Container(decoration: wallpaperDecoration)),
-
-          // 遮罩层
-          if (useWallpaper)
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
             Positioned.fill(
-                child: Container(color: Colors.black.withValues(alpha: 0.03))),
-
-          // ===== 内容层 =====
-          Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60,
-            child: widget.habits.isEmpty
-                ? Center(
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                margin: const EdgeInsets.all(20),
-                decoration: _cardDecoration(useWallpaper: useWallpaper),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.notifications_off_outlined,
-                        size: 48, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    Text("暂无习惯",
-                        style: TextStyle(color: Colors.grey[400])),
-                  ],
-                ),
-              ),
-            )
-                : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                // 顶部说明
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: useWallpaper
-                        ? themeColor.withValues(alpha: 0.15)
-                        : themeColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                            alpha: useWallpaper ? 0.08 : 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: themeColor, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "设置提醒后将添加到系统日历，每天定时提醒你打卡",
-                          style: TextStyle(fontSize: 13, color: themeColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 习惯列表
-                ...widget.habits.map(
-                        (habit) => _buildHabitCard(habit, themeColor, useWallpaper)),
-                const SizedBox(height: 100),
-              ],
-            ),
-          ),
-
-          // ===== 固定标题栏 =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
-                left: 16,
-                right: 20,
-              ),
-              child: Row(
-                children: [
-                  // 返回按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: useWallpaper
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                                alpha: useWallpaper ? 0.1 : 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+              top: MediaQuery.of(context).padding.top + 60,
+              child: widget.habits.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: AppGlassCard(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.notifications_off_outlined,
+                                  size: 48, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text("暂无习惯",
+                                  style: TextStyle(color: Colors.grey[400])),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: useWallpaper ? Colors.black87 : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 页面标题
-                  Text(
-                    "提醒设置",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w300,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
                         ),
-                      ]
-                          : null,
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        // 顶部说明
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: useWallpaper
+                                ? themeColor.withValues(alpha: 0.15)
+                                : themeColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                    alpha: useWallpaper ? 0.08 : 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: themeColor, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  "设置提醒后将添加到系统日历，每天定时提醒你打卡",
+                                  style: TextStyle(fontSize: 13, color: themeColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 习惯列表
+                        ...widget.habits.map(
+                          (habit) => _buildHabitCard(habit, themeColor),
+                        ),
+                        const SizedBox(height: 100),
+                      ],
                     ),
-                  ),
-                ],
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '提醒设置',
+                visuals: visuals,
+                left: 16,
+                leading: _buildBackButton(visuals),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHabitCard(Habit habit, Color themeColor, bool useWallpaper) {
+  Widget _buildBackButton(AppVisuals visuals) {
+    return InkWell(
+      onTap: () => Navigator.pop(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: visuals.useWallpaper
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: visuals.useWallpaper ? 0.1 : 0.05,
+              ),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: 18,
+          color: visuals.useWallpaper ? Colors.black87 : Colors.grey[600],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHabitCard(Habit habit, Color themeColor) {
     final hasReminder = habit.reminderTime != null;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: _cardDecoration(
-        useWallpaper: useWallpaper,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppGlassCard(
         borderColor: hasReminder ? themeColor.withValues(alpha: 0.3) : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showSetReminderFlow(habit),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // 左侧图标
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: hasReminder
-                        ? themeColor.withValues(alpha: 0.1)
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    hasReminder
-                        ? Icons.notifications_active
-                        : Icons.notifications_none,
-                    color: hasReminder ? themeColor : Colors.grey[400],
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                // 中间内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        habit.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        hasReminder
-                            ? "每天 ${habit.reminderTime} 提醒"
-                            : "点击设置打卡提醒",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: hasReminder ? themeColor : Colors.grey[400],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 右侧箭头或时间标签
-                if (hasReminder)
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _showSetReminderFlow(habit),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // 左侧图标
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: themeColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: hasReminder
+                          ? themeColor.withValues(alpha: 0.1)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Icon(
+                      hasReminder
+                          ? Icons.notifications_active
+                          : Icons.notifications_none,
+                      color: hasReminder ? themeColor : Colors.grey[400],
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // 中间内容
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.access_time, size: 14, color: themeColor),
-                        const SizedBox(width: 4),
                         Text(
-                          habit.reminderTime!,
+                          habit.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          hasReminder
+                              ? "每天 ${habit.reminderTime} 提醒"
+                              : "点击设置打卡提醒",
                           style: TextStyle(
                             fontSize: 13,
-                            color: themeColor,
-                            fontWeight: FontWeight.w600,
+                            color: hasReminder ? themeColor : Colors.grey[400],
                           ),
                         ),
                       ],
                     ),
-                  )
-                else
-                  Icon(Icons.chevron_right, color: Colors.grey[300], size: 22),
-              ],
+                  ),
+                  // 右侧箭头或时间标签
+                  if (hasReminder)
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time, size: 14, color: themeColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            habit.reminderTime!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: themeColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Icon(Icons.chevron_right, color: Colors.grey[300], size: 22),
+                ],
+              ),
             ),
           ),
         ),
@@ -340,11 +285,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -454,101 +395,98 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: AppDialogSurface(
+          radius: 16,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.calendar_month, color: themeColor, size: 28),
               ),
-              child: Icon(Icons.calendar_month, color: themeColor, size: 28),
-            ),
-            const SizedBox(height: 12),
-            const Text("添加到日历", style: TextStyle(fontSize: 17)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "将「${habit.title}」的每日提醒添加到系统日历？",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 12),
+              const Text("添加到日历", style: TextStyle(fontSize: 17)),
+              const SizedBox(height: 14),
+              Text(
+                "将「${habit.title}」的每日提醒添加到系统日历？",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.access_time, color: themeColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      "每天 $timeStr",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: themeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
                 children: [
-                  Icon(Icons.access_time, color: themeColor, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    "每天 $timeStr",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: themeColor,
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        side: BorderSide(color: Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text("取消"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() => habit.reminderTime = timeStr);
+                        widget.onSave();
+                        _openCalendarIntent(habit, tomorrow);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: const Text("确认添加"),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-        actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey[600],
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text("取消"),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    // 保存提醒时间
-                    setState(() => habit.reminderTime = timeStr);
-                    widget.onSave();
-                    // 打开日历
-                    _openCalendarIntent(habit, tomorrow);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
-                  ),
-                  child: const Text("确认添加"),
-                ),
-              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -559,11 +497,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (ctx) => AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),

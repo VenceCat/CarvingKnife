@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/update_service.dart';
+import '../ui/app_surfaces.dart';
 
 class UpdateDialog extends StatelessWidget {
   final UpdateInfo updateInfo;
@@ -40,11 +41,7 @@ class UpdateDialog extends StatelessWidget {
 
     return PopScope(
       canPop: !forceUpdate,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      child: AppBottomSheetSurface(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),

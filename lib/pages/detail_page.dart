@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:math';
 import '../models/habit.dart';
 import '../models/achievement.dart';
 import '../services/achievement_service.dart';
 import '../widgets/achievement_dialog.dart';
 import '../services/habit_icons.dart';
 import '../widgets/icon_selector.dart';
-import '../app.dart';
+import '../ui/app_surfaces.dart';
+import '../ui/app_visuals.dart';
 
 class DetailPage extends StatefulWidget {
   final Habit habit;
@@ -96,118 +96,76 @@ class _DetailPageState extends State<DetailPage> {
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
-    // ===== 获取壁纸状态 =====
-    final appState = HabitApp.of(context);
-    final useWallpaper = appState?.useWallpaper ?? false;
-    final wallpaperDecoration = appState?.wallpaperDecoration;
+    final visuals = AppVisuals.resolve(context);
+    final useWallpaper = visuals.useWallpaper;
 
     return Scaffold(
-      // 壁纸模式下背景透明
-      backgroundColor: useWallpaper ? Colors.transparent : backgroundColor,
+      backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
-
-      body: Stack(
-        children: [
-          // ===== 壁纸背景层 =====
-          if (useWallpaper && wallpaperDecoration != null)
+      body: AppWallpaperBackground(
+        visuals: visuals,
+        child: Stack(
+          children: [
             Positioned.fill(
-              child: Container(decoration: wallpaperDecoration),
-            ),
-
-          // ===== 半透明遮罩 =====
-          if (useWallpaper)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.03),
-              ),
-            ),
-
-          // ===== 内容层 =====
-          Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _buildInfoCard(themeColor, useWallpaper),
-                const SizedBox(height: 24),
-                _buildCalendarCard(themeColor, useWallpaper),
-                const SizedBox(height: 24),
-                _buildRecordHeader(themeColor, useWallpaper),
-                const SizedBox(height: 12),
-                _buildRecordList(themeColor, useWallpaper),
-                const SizedBox(height: 100), // 底部留白
-              ],
-            ),
-          ),
-
-          // ===== 固定标题栏（二级页面包含返回按钮） =====
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top,
-                bottom: 16,
-                left: 16,
-                right: 20,
-              ),
-              child: Row(
+              top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+              child: ListView(
+                padding: const EdgeInsets.all(20),
                 children: [
-                  // 返回按钮
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: useWallpaper
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: useWallpaper
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                            : null,
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 18,
-                        color: useWallpaper ? Colors.black87 : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 页面标题
-                  Text(
-                    "习惯详情",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w300,
-                      color: useWallpaper ? Colors.white : null,
-                      shadows: useWallpaper
-                          ? [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black.withValues(alpha: 0.6),
-                        ),
-                      ]
-                          : null,
-                    ),
-                  ),
+                  _buildInfoCard(themeColor, useWallpaper),
+                  const SizedBox(height: 24),
+                  _buildCalendarCard(themeColor, useWallpaper),
+                  const SizedBox(height: 24),
+                  _buildRecordHeader(themeColor, useWallpaper),
+                  const SizedBox(height: 12),
+                  _buildRecordList(themeColor, useWallpaper),
+                  const SizedBox(height: 100), // 底部留白
                 ],
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '习惯详情',
+                visuals: visuals,
+                left: 16,
+                leading: _buildBackButton(visuals),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(AppVisuals visuals) {
+    return InkWell(
+      onTap: () => Navigator.pop(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: visuals.useWallpaper
+              ? Colors.white.withValues(alpha: 0.85)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: visuals.useWallpaper
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: 18,
+          color: visuals.useWallpaper ? Colors.black87 : Colors.grey[600],
+        ),
       ),
     );
   }
@@ -229,13 +187,9 @@ class _DetailPageState extends State<DetailPage> {
         ? (isToday ? "今日" : DateFormat('M月d日').format(_selectedDate!))
         : "今日";
 
-    return Container(
+    return AppGlassCard(
       padding: const EdgeInsets.all(20),
-      // ===== 使用统一的卡片装饰 =====
-      decoration: _cardDecoration(
-        useWallpaper: useWallpaper,
-        borderColor: themeColor.withValues(alpha: 0.3),
-      ),
+      borderColor: themeColor.withValues(alpha: 0.3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -392,9 +346,7 @@ class _DetailPageState extends State<DetailPage> {
 
     final rowCount = getRowCount(_currentMonth);
 
-    return Container(
-      // ===== 使用统一的卡片装饰 =====
-      decoration: _cardDecoration(useWallpaper: useWallpaper),
+    return AppGlassCard(
       child: Column(
         children: [
           Padding(
@@ -795,10 +747,8 @@ class _DetailPageState extends State<DetailPage> {
     final canMakeUpMore = selectedDateCount < widget.habit.dailyTarget;
 
     if (records.isEmpty) {
-      return Container(
+      return AppGlassCard(
         padding: const EdgeInsets.all(40),
-        // ===== 使用统一的卡片装饰 =====
-        decoration: _cardDecoration(useWallpaper: useWallpaper),
         child: Column(
           children: [
             Icon(
@@ -847,98 +797,98 @@ class _DetailPageState extends State<DetailPage> {
           final dateTime = DateTime.parse(record.time);
           final isMakeUp = record.note != null && record.note!.contains("[补卡于");
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(16),
-            // ===== 使用统一的卡片装饰 =====
-            decoration: _cardDecoration(
-              useWallpaper: useWallpaper,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: AppGlassCard(
+              padding: const EdgeInsets.all(16),
               borderColor: isMakeUp
                   ? Colors.orange.withValues(alpha: 0.3)
                   : themeColor.withValues(alpha: 0.3),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: isMakeUp
-                            ? Colors.orange.withValues(alpha: 0.1)
-                            : themeColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        isMakeUp ? Icons.history : Icons.check,
-                        color: isMakeUp ? Colors.orange : themeColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                isMakeUp ? "补卡成功" : "打卡成功",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.grey[800],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              if (isMakeUp) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    _extractMakeUpTime(record.note!),
-                                    style: const TextStyle(
-                                        fontSize: 10, color: Colors.orange),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            DateFormat('HH:mm:ss').format(dateTime),
-                            style: TextStyle(fontSize: 13, color: Colors.grey[400]),
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _editNote(record),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(8),
+                          color: isMakeUp
+                              ? Colors.orange.withValues(alpha: 0.1)
+                              : themeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          record.note != null && record.note!.isNotEmpty
-                              ? Icons.edit_note
-                              : Icons.add_comment_outlined,
-                          size: 18,
-                          color: Colors.grey[400],
+                          isMakeUp ? Icons.history : Icons.check,
+                          color: isMakeUp ? Colors.orange : themeColor,
+                          size: 20,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                _buildNoteSection(record, isMakeUp, themeColor),
-              ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  isMakeUp ? "补卡成功" : "打卡成功",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.grey[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (isMakeUp) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _extractMakeUpTime(record.note!),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              DateFormat('HH:mm:ss').format(dateTime),
+                              style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _editNote(record),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            record.note != null && record.note!.isNotEmpty
+                                ? Icons.edit_note
+                                : Icons.add_comment_outlined,
+                            size: 18,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _buildNoteSection(record, isMakeUp, themeColor),
+                ],
+              ),
             ),
           );
         }),
@@ -946,40 +896,39 @@ class _DetailPageState extends State<DetailPage> {
         // 如果是过去的日期且还可以继续补卡，显示"继续补卡"按钮
         if (isPast && canMakeUpMore) ...[
           const SizedBox(height: 10),
-          Container(
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(
-              useWallpaper: useWallpaper,
+            child: AppGlassCard(
+              padding: const EdgeInsets.all(16),
               borderColor: themeColor.withValues(alpha: 0.2),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: Colors.grey[400]),
-                    const SizedBox(width: 6),
-                    Text(
-                      "还可补卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => _showMakeUpCheckInDialog(),
-                  icon: Icon(Icons.add_task, size: 18, color: themeColor),
-                  label: Text("继续补卡", style: TextStyle(color: themeColor)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
+                      Text(
+                        "还可补卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
+                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _showMakeUpCheckInDialog(),
+                    icon: Icon(Icons.add_task, size: 18, color: themeColor),
+                    label: Text("继续补卡", style: TextStyle(color: themeColor)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -987,37 +936,36 @@ class _DetailPageState extends State<DetailPage> {
         // 如果是今天且还可以继续打卡
         if (isToday && canMakeUpMore) ...[
           const SizedBox(height: 10),
-          Container(
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(
-              useWallpaper: useWallpaper,
+            child: AppGlassCard(
+              padding: const EdgeInsets.all(16),
               borderColor: themeColor.withValues(alpha: 0.2),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.schedule, size: 16, color: themeColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      "还需打卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
-                      style: TextStyle(fontSize: 13, color: themeColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: selectedDateCount / widget.habit.dailyTarget,
-                    minHeight: 6,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.schedule, size: 16, color: themeColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        "还需打卡 ${widget.habit.dailyTarget - selectedDateCount} 次",
+                        style: TextStyle(fontSize: 13, color: themeColor),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: selectedDateCount / widget.habit.dailyTarget,
+                      minHeight: 6,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1111,11 +1059,7 @@ class _DetailPageState extends State<DetailPage> {
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
+            child: AppBottomSheetSurface(
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -1394,11 +1338,7 @@ class _DetailPageState extends State<DetailPage> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        child: AppBottomSheetSurface(
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -1588,11 +1528,7 @@ class _DetailPageState extends State<DetailPage> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        child: AppBottomSheetSurface(
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -1825,27 +1761,4 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  /// 统一的卡片装饰样式
-  BoxDecoration _cardDecoration({
-    required bool useWallpaper,
-    Color? borderColor,
-  }) {
-    return BoxDecoration(
-      color: useWallpaper
-          ? Colors.white.withValues(alpha: 0.95)
-          : Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      border: borderColor != null
-          ? Border.all(color: borderColor)
-          : null,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    );
-  }
 }
-

@@ -102,6 +102,7 @@ class HabitAppState extends State<HabitApp> {
         image: FileImage(File(_wallpaperData!.path)),
         fit: BoxFit.cover,
         alignment: Alignment.center,
+        filterQuality: FilterQuality.high,
       ),
     );
   }

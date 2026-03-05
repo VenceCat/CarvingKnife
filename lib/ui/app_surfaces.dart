@@ -99,6 +99,84 @@ class AppGlassCard extends StatelessWidget {
   }
 }
 
+class AppFloatingAddButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final Color themeColor;
+  final bool useWallpaper;
+  final bool useGlassEffect;
+  final double size;
+
+  const AppFloatingAddButton({
+    super.key,
+    required this.onTap,
+    required this.themeColor,
+    required this.useWallpaper,
+    required this.useGlassEffect,
+    this.size = 58,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = useGlassEffect
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.76)
+        : (useWallpaper ? Colors.white.withValues(alpha: 0.92) : themeColor);
+    final borderColor = useGlassEffect
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.56 : 0.85)
+        : (useWallpaper
+            ? Colors.white.withValues(alpha: 0.58)
+            : themeColor.withValues(alpha: 0.2));
+    final iconColor = useGlassEffect
+        ? themeColor
+        : useWallpaper
+            ? themeColor
+            : Colors.white;
+
+    final buttonCore = Material(
+      color: backgroundColor,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: useGlassEffect
+                      ? (useWallpaper ? 0.12 : 0.08)
+                      : (useWallpaper ? 0.12 : 0.2),
+                ),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(Icons.add_rounded, size: 30, color: iconColor),
+        ),
+      ),
+    );
+
+    if (!useGlassEffect) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: ClipOval(child: buttonCore),
+      );
+    }
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
+          child: buttonCore,
+        ),
+      ),
+    );
+  }
+}
+
 class AppSurfaceDecoration {
   static BoxDecoration card(
     BuildContext context, {

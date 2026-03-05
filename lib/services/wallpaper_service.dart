@@ -41,9 +41,8 @@ class WallpaperService {
     // 选择图片
     final XFile? pickedFile = await picker.pickImage(
       source: source,
-      maxWidth: 2048,
-      maxHeight: 2048,
-      imageQuality: 90,
+      imageQuality: 100,
+      requestFullMetadata: true,
     );
 
     if (pickedFile == null) return null;

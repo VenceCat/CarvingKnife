@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
-import 'dart:ui' as ui;
 import '../models/habit.dart';
 import '../services/achievement_service.dart';
 import '../widgets/achievement_dialog.dart';
@@ -13,11 +12,31 @@ import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
 
+class CheckInPageController {
+  VoidCallback? _openAddDialog;
+
+  void _attach(VoidCallback callback) {
+    _openAddDialog = callback;
+  }
+
+  void _detach(VoidCallback callback) {
+    if (_openAddDialog == callback) {
+      _openAddDialog = null;
+    }
+  }
+
+  void openAddHabitDialog() {
+    _openAddDialog?.call();
+  }
+}
+
 class CheckInPage extends StatefulWidget {
   final List<Habit> habits;
   final VoidCallback onSave;
   final Function(Habit) onAdd;
   final Function(Habit) onDelete;
+  final CheckInPageController? controller;
+  final double floatingButtonBottomOffset;
 
   const CheckInPage({
     super.key,
@@ -25,6 +44,8 @@ class CheckInPage extends StatefulWidget {
     required this.onSave,
     required this.onAdd,
     required this.onDelete,
+    required this.floatingButtonBottomOffset,
+    this.controller,
   });
 
   @override
@@ -82,70 +103,22 @@ class _CheckInPageState extends State<CheckInPage> {
   void initState() {
     super.initState();
     currentQuote = quotes[Random().nextInt(quotes.length)];
+    widget.controller?._attach(_showAddDialog);
   }
 
-  Widget _buildFloatingAddButton(
-    Color themeColor,
-    bool useWallpaper,
-    bool useGlassEffect,
-  ) {
-    final backgroundColor = useGlassEffect
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.76)
-        : (useWallpaper ? Colors.white.withValues(alpha: 0.92) : themeColor);
-    final borderColor = useGlassEffect
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.56 : 0.85)
-        : (useWallpaper
-            ? Colors.white.withValues(alpha: 0.58)
-            : themeColor.withValues(alpha: 0.2));
-    final iconColor = useGlassEffect
-        ? themeColor
-        : useWallpaper
-            ? themeColor
-            : Colors.white;
-
-    final buttonCore = Material(
-      color: backgroundColor,
-      child: InkWell(
-        onTap: _showAddDialog,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: useGlassEffect
-                      ? (useWallpaper ? 0.12 : 0.08)
-                      : (useWallpaper ? 0.12 : 0.2),
-                ),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Icon(Icons.add_rounded, size: 30, color: iconColor),
-        ),
-      ),
-    );
-
-    if (!useGlassEffect) {
-      return SizedBox(
-        width: 58,
-        height: 58,
-        child: ClipOval(child: buttonCore),
-      );
+  @override
+  void didUpdateWidget(covariant CheckInPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(_showAddDialog);
+      widget.controller?._attach(_showAddDialog);
     }
+  }
 
-    return SizedBox(
-      width: 58,
-      height: 58,
-      child: ClipOval(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
-          child: buttonCore,
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    widget.controller?._detach(_showAddDialog);
+    super.dispose();
   }
 
   int _todayCompletedHabits() {
@@ -1398,8 +1371,7 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
-    final navOverlayHeight = MediaQuery.of(context).padding.bottom + 64 + 12;
-    final floatingButtonBottomOffset = navOverlayHeight + 16;
+    final floatingButtonBottomOffset = widget.floatingButtonBottomOffset;
     final listBottomSafeSpace = floatingButtonBottomOffset + 58 + 24;
 
     return Scaffold(
@@ -1499,16 +1471,6 @@ class _CheckInPageState extends State<CheckInPage> {
         ),
       ),
 
-      // ===== 浮动按钮 =====
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: floatingButtonBottomOffset),
-        child: _buildFloatingAddButton(
-          themeColor,
-          useWallpaper,
-          visuals.useGlassEffect,
-        ),
-      ),
     );
   }
 

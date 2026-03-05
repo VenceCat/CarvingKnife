@@ -33,6 +33,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   List<Habit> habits = [];
+  final CheckInPageController _checkInPageController = CheckInPageController();
 
   @override
   void initState() {
@@ -125,6 +126,12 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
+    final bottomSafeInset = MediaQuery.of(context).padding.bottom;
+    const navBarHeight = 64.0;
+    const navOuterBottomPadding = 12.0;
+    const fabGapAboveNav = 10.0;
+    final navOverlayHeight = bottomSafeInset + navBarHeight + navOuterBottomPadding;
+    final fabBottomOffset = navOverlayHeight + fabGapAboveNav;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -132,21 +139,38 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
       body: AppWallpaperBackground(
         visuals: visuals,
         overlayOpacity: 0.05,
-        child: IndexedStack(
-          index: _currentIndex,
+        child: Stack(
           children: [
-            CheckInPage(
-              habits: habits,
-              onSave: _refreshAndSave,
-              onAdd: _addHabit,
-              onDelete: _removeHabit,
+            IndexedStack(
+              index: _currentIndex,
+              children: [
+                CheckInPage(
+                  habits: habits,
+                  onSave: _refreshAndSave,
+                  onAdd: _addHabit,
+                  onDelete: _removeHabit,
+                  floatingButtonBottomOffset: fabBottomOffset,
+                  controller: _checkInPageController,
+                ),
+                StatisticsPage(habits: habits),
+                ProfilePage(
+                  habits: habits,
+                  onSave: _refreshAndSave,
+                  onRestore: _restoreHabits,
+                ),
+              ],
             ),
-            StatisticsPage(habits: habits),
-            ProfilePage(
-              habits: habits,
-              onSave: _refreshAndSave,
-              onRestore: _restoreHabits,
-            ),
+            if (_currentIndex == 0)
+              Positioned(
+                right: 22,
+                bottom: fabBottomOffset,
+                child: AppFloatingAddButton(
+                  onTap: _checkInPageController.openAddHabitDialog,
+                  themeColor: themeColor,
+                  useWallpaper: visuals.useWallpaper,
+                  useGlassEffect: visuals.useGlassEffect,
+                ),
+              ),
           ],
         ),
       ),
@@ -156,10 +180,10 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: visuals.useGlassEffect
-                    ? ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)
-                    : ui.ImageFilter.blur(sigmaX: 0.01, sigmaY: 0.01),
+            child: BackdropFilter(
+              filter: visuals.useGlassEffect
+                  ? ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)
+                  : ui.ImageFilter.blur(sigmaX: 0.01, sigmaY: 0.01),
               child: Container(
                 decoration: AppSurfaceDecoration.bottomBar(context).copyWith(
                   borderRadius: BorderRadius.circular(24),

@@ -874,8 +874,22 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? Colors.orange.withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.74
+                                      : 0.9,
+                                )
+                              : Colors.orange,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? Colors.orange.withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.42
+                                      : 0.56,
+                                )
+                              : Colors.orange.withValues(alpha: 0.6),
+                          disabledForegroundColor: Colors.white,
                         ),
                         child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),
@@ -1667,8 +1681,22 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[400],
+                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? const Color(0xFFD32F2F).withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.74
+                                      : 0.9,
+                                )
+                              : const Color(0xFFD32F2F),
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? const Color(0xFFD32F2F).withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.42
+                                      : 0.56,
+                                )
+                              : const Color(0xFFD32F2F).withValues(alpha: 0.6),
+                          disabledForegroundColor: Colors.white,
                         ),
                         child: const Text("删除", style: TextStyle(fontSize: 15)),
                       ),
@@ -2689,15 +2717,22 @@ class _CheckInPageState extends State<CheckInPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final visuals = AppVisuals.resolve(context);
+    final backgroundColor = visuals.useGlassEffect
+        ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.2 : 0.72)
+        : Colors.grey[50];
+    final iconBackgroundColor = visuals.useGlassEffect
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.18 : 0.12)
+        : color.withValues(alpha: 0.1);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
@@ -2705,7 +2740,7 @@ class _CheckInPageState extends State<CheckInPage> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
+                color: iconBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -2734,7 +2769,11 @@ class _CheckInPageState extends State<CheckInPage> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: color.withValues(alpha: 0.5), size: 20),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -2850,8 +2889,22 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? Colors.orange.withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.74
+                                      : 0.9,
+                                )
+                              : Colors.orange,
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                              ? Colors.orange.withValues(
+                                  alpha: AppVisuals.resolve(context).useWallpaper
+                                      ? 0.42
+                                      : 0.56,
+                                )
+                              : Colors.orange.withValues(alpha: 0.6),
+                          disabledForegroundColor: Colors.white,
                         ),
                         child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),

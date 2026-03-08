@@ -157,11 +157,11 @@ class HabitAppState extends State<HabitApp> {
         ? themeColor.withValues(alpha: useWallpaper ? 0.42 : 0.56)
         : themeColor.withValues(alpha: 0.6);
     final outlinedBackgroundColor = glassEffectEnabled
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.12 : 0.42)
-        : Colors.transparent;
-    final outlinedBorderColor = glassEffectEnabled
-        ? themeColor.withValues(alpha: useWallpaper ? 0.22 : 0.18)
-        : Colors.grey.shade300;
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.22 : 0.78)
+        : Colors.grey.shade50;
+    final outlinedDisabledBackgroundColor = glassEffectEnabled
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.12 : 0.46)
+        : Colors.grey.shade100;
     final textButtonBackgroundColor = glassEffectEnabled
         ? themeColor.withValues(alpha: useWallpaper ? 0.14 : 0.08)
         : Colors.transparent;
@@ -210,12 +210,14 @@ class HabitAppState extends State<HabitApp> {
           style: OutlinedButton.styleFrom(
             foregroundColor: themeColor,
             backgroundColor: outlinedBackgroundColor,
+            disabledBackgroundColor: outlinedDisabledBackgroundColor,
             disabledForegroundColor: themeColor.withValues(alpha: 0.42),
-            side: BorderSide(color: outlinedBorderColor),
+            side: const BorderSide(color: Colors.transparent),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
             padding: const EdgeInsets.symmetric(vertical: 14),
+            elevation: 0,
             shadowColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
             textStyle: const TextStyle(

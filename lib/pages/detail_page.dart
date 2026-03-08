@@ -1835,8 +1835,13 @@ class _DetailPageState extends State<DetailPage> {
                               );
                             },
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red[400],
-                              side: BorderSide(color: Colors.red[300]!),
+                              foregroundColor: Colors.red[600],
+                              backgroundColor: Colors.red.withValues(
+                                alpha: AppVisuals.resolve(context).useGlassEffect
+                                    ? (AppVisuals.resolve(context).useWallpaper ? 0.16 : 0.08)
+                                    : 0.06,
+                              ),
+                              side: const BorderSide(color: Colors.transparent),
                             ),
                             child: const Text("删除备注",
                                 style: TextStyle(fontSize: 15)),
@@ -1938,16 +1943,13 @@ class _DetailPageState extends State<DetailPage> {
   ButtonStyle _buildGlassCapsuleButtonStyle(Color color) {
     final visuals = AppVisuals.resolve(context);
     final backgroundColor = visuals.useGlassEffect
-        ? color.withValues(alpha: visuals.useWallpaper ? 0.16 : 0.08)
-        : color.withValues(alpha: 0.04);
-    final borderColor = visuals.useGlassEffect
-        ? color.withValues(alpha: visuals.useWallpaper ? 0.3 : 0.22)
-        : color.withValues(alpha: 0.24);
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.2 : 0.1)
+        : color.withValues(alpha: 0.08);
 
     return OutlinedButton.styleFrom(
       foregroundColor: color,
       backgroundColor: backgroundColor,
-      side: BorderSide(color: borderColor),
+      side: const BorderSide(color: Colors.transparent),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),

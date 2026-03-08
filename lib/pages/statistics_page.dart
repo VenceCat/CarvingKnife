@@ -19,7 +19,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 计算总打卡次数
   int get totalCheckIns {
-    return widget.habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
+    return widget.habits.fold(0, (sum, h) => sum + h.completedCheckInCount);
   }
 
   // 计算当前连续天数最长的习惯
@@ -53,9 +53,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 // 计算总打卡天数（去重）
   int _calculateTotalDays(Habit habit) {
     final dates = <String>{};
-    for (final record in habit.checkInRecords) {
-      if (record.time.length >= 10) {
-        dates.add(record.time.substring(0, 10));
+    for (final time in habit.checkInTimes) {
+      if (time.length >= 10) {
+        dates.add(time.substring(0, 10));
       }
     }
     return dates.length;
@@ -63,13 +63,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // ===== 新增：计算某个习惯的历史最长连续天数 =====
   int _calculateMaxStreakEver(Habit habit) {
-    if (habit.checkInRecords.isEmpty) return 0;
+    if (habit.completedCheckInCount == 0) return 0;
 
     // 获取所有打卡日期（去重）
     final dates = <String>{};
-    for (final record in habit.checkInRecords) {
-      if (record.time.length >= 10) {
-        dates.add(record.time.substring(0, 10));
+    for (final time in habit.checkInTimes) {
+      if (time.length >= 10) {
+        dates.add(time.substring(0, 10));
       }
     }
 
@@ -171,7 +171,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         'streak': streak,
         'maxStreak': maxStreak,
         'totalDays': totalDays,
-        'total': habit.checkInRecords.length,
+        'total': habit.completedCheckInCount,
       });
     }
 
@@ -180,12 +180,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   int _calculateHabitStreak(Habit habit) {
-    if (habit.checkInRecords.isEmpty) return 0;
+    if (habit.completedCheckInCount == 0) return 0;
 
     final dates = <String>{};
-    for (final record in habit.checkInRecords) {
-      if (record.time.length >= 10) {
-        dates.add(record.time.substring(0, 10));
+    for (final time in habit.checkInTimes) {
+      if (time.length >= 10) {
+        dates.add(time.substring(0, 10));
       }
     }
 

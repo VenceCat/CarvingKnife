@@ -39,6 +39,11 @@ android {
     }
 }
 
+dependencies {
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("com.oplus.pantanal.card:seedling-support-external:3.0.7")
+}
+
 flutter {
     source = "../.."
 }

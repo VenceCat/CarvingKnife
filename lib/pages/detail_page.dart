@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/habit.dart';
 import '../models/achievement.dart';
@@ -268,7 +269,7 @@ class _DetailPageState extends State<DetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _statItem("累计打卡", "${widget.habit.checkInRecords.length}次", themeColor),
+                    _statItem("累计打卡", "${widget.habit.completedCheckInCount}次", themeColor),
                     Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
                     _statItem("连续天数", "${_calculateStreak()}天", themeColor),
                     Container(width: 1, height: 30, color: themeColor.withValues(alpha: 0.2)),
@@ -796,6 +797,28 @@ class _DetailPageState extends State<DetailPage> {
         ...records.reversed.map((record) {
           final dateTime = DateTime.parse(record.time);
           final isMakeUp = record.note != null && record.note!.contains("[补卡于");
+          final isTimedRecord = record.isTimedRecord;
+          final isTimedInterrupted = record.isTimedInterrupted;
+          final timedSummary = record.timedSummary;
+          final accentColor = isMakeUp
+              ? Colors.orange
+              : isTimedInterrupted
+                  ? Colors.deepOrange
+                  : themeColor;
+          final statusIcon = isMakeUp
+              ? Icons.history
+              : isTimedInterrupted
+                  ? Icons.timer_off_outlined
+                  : isTimedRecord
+                      ? Icons.timer_outlined
+                      : Icons.check;
+          final statusText = isMakeUp
+              ? "补卡成功"
+              : isTimedInterrupted
+                  ? "计时已停止"
+                  : isTimedRecord
+                      ? "计时完成"
+                      : "打卡成功";
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -803,6 +826,8 @@ class _DetailPageState extends State<DetailPage> {
               padding: const EdgeInsets.all(16),
               borderColor: isMakeUp
                   ? Colors.orange.withValues(alpha: 0.3)
+                  : isTimedInterrupted
+                      ? Colors.deepOrange.withValues(alpha: 0.25)
                   : themeColor.withValues(alpha: 0.3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -813,14 +838,12 @@ class _DetailPageState extends State<DetailPage> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: isMakeUp
-                              ? Colors.orange.withValues(alpha: 0.1)
-                              : themeColor.withValues(alpha: 0.1),
+                          color: accentColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          isMakeUp ? Icons.history : Icons.check,
-                          color: isMakeUp ? Colors.orange : themeColor,
+                          statusIcon,
+                          color: accentColor,
                           size: 20,
                         ),
                       ),
@@ -832,7 +855,7 @@ class _DetailPageState extends State<DetailPage> {
                             Row(
                               children: [
                                 Text(
-                                  isMakeUp ? "补卡成功" : "打卡成功",
+                                  statusText,
                                   style: TextStyle(
                                     fontSize: 15,
                                     color: Colors.grey[800],
@@ -864,6 +887,27 @@ class _DetailPageState extends State<DetailPage> {
                               DateFormat('HH:mm:ss').format(dateTime),
                               style: TextStyle(fontSize: 13, color: Colors.grey[400]),
                             ),
+                            if (timedSummary != null) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  timedSummary,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: accentColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1046,8 +1090,28 @@ class _DetailPageState extends State<DetailPage> {
     final titleController = TextEditingController(text: widget.habit.title);
     final descController = TextEditingController(text: widget.habit.description);
     final themeColor = Theme.of(context).colorScheme.primary;
+    final durationController = TextEditingController(
+      text: widget.habit.checkInDurationMinutes.toString(),
+    );
     int selectedIconIndex = widget.habit.iconIndex;
     int dailyTarget = widget.habit.dailyTarget; // 新增
+    bool isTimedCheckIn = widget.habit.isTimedCheckIn;
+    int checkInDurationMinutes = widget.habit.checkInDurationMinutes;
+
+    void syncDurationInput(
+      int value,
+      void Function(void Function()) setModalState,
+    ) {
+      final clamped = value.clamp(1, 180);
+      setModalState(() => checkInDurationMinutes = clamped);
+      final text = clamped.toString();
+      if (durationController.text != text) {
+        durationController.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1061,11 +1125,19 @@ class _DetailPageState extends State<DetailPage> {
             ),
             child: AppBottomSheetSurface(
               child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxHeight = MediaQuery.of(ctx).size.height * 0.82;
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxHeight),
+                      child: SingleChildScrollView(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                       Container(
                         width: 40,
                         height: 4,
@@ -1268,6 +1340,145 @@ class _DetailPageState extends State<DetailPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.timer_outlined, size: 20, color: Colors.grey[600]),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "计时打卡",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey[800],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "适用于锻炼、专注等按时长完成的习惯",
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: isTimedCheckIn,
+                                  activeThumbColor: themeColor,
+                                  onChanged: (value) {
+                                    setModalState(() => isTimedCheckIn = value);
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (isTimedCheckIn) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Text(
+                                    "每次时长",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  SizedBox(
+                                    width: 84,
+                                    child: TextField(
+                                      controller: durationController,
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.center,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      onChanged: (value) {
+                                        if (value.isEmpty) return;
+                                        final parsed = int.tryParse(value);
+                                        if (parsed != null) {
+                                          syncDurationInput(parsed, setModalState);
+                                        }
+                                      },
+                                      onEditingComplete: () {
+                                        syncDurationInput(
+                                          int.tryParse(durationController.text) ??
+                                              checkInDurationMinutes,
+                                          setModalState,
+                                        );
+                                        FocusScope.of(context).unfocus();
+                                      },
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        suffixText: '分',
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 10,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide: BorderSide(
+                                            color: Colors.grey[300]!,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          borderSide:
+                                              BorderSide(color: themeColor),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline),
+                                    color: checkInDurationMinutes > 1
+                                        ? themeColor
+                                        : Colors.grey[400],
+                                    onPressed: checkInDurationMinutes > 1
+                                        ? () {
+                                            syncDurationInput(
+                                              checkInDurationMinutes - 1,
+                                              setModalState,
+                                            );
+                                          }
+                                        : null,
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline),
+                                    color: checkInDurationMinutes < 180
+                                        ? themeColor
+                                        : Colors.grey[400],
+                                    onPressed: checkInDurationMinutes < 180
+                                        ? () {
+                                            syncDurationInput(
+                                              checkInDurationMinutes + 1,
+                                              setModalState,
+                                            );
+                                          }
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
@@ -1279,7 +1490,9 @@ class _DetailPageState extends State<DetailPage> {
                                 widget.habit.description =
                                     descController.text.trim();
                                 widget.habit.iconIndex = selectedIconIndex;
-                                widget.habit.dailyTarget = dailyTarget; // 新增
+                                widget.habit.dailyTarget = dailyTarget;
+                                widget.habit.isTimedCheckIn = isTimedCheckIn;
+                                widget.habit.checkInDurationMinutes = checkInDurationMinutes;
                               });
                               widget.onSave();
                               Navigator.pop(ctx);
@@ -1314,8 +1527,12 @@ class _DetailPageState extends State<DetailPage> {
                               style: TextStyle(fontSize: 16)),
                         ),
                       ),
-                    ],
-                  ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -1714,7 +1931,7 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   int _calculateStreak() {
-    if (widget.habit.checkInRecords.isEmpty) return 0;
+    if (widget.habit.completedCheckInCount == 0) return 0;
 
     int streak = 0;
     DateTime currentDate = DateTime.now();
@@ -1741,9 +1958,9 @@ class _DetailPageState extends State<DetailPage> {
     final now = DateTime.now();
     final monthStr = DateFormat('yyyy-MM').format(now);
 
-    final Set<String> monthDates = widget.habit.checkInRecords
-        .where((r) => r.time.startsWith(monthStr))
-        .map((r) => DateFormat('yyyy-MM-dd').format(DateTime.parse(r.time)))
+    final Set<String> monthDates = widget.habit.checkInTimes
+        .where((time) => time.startsWith(monthStr))
+        .map((time) => DateFormat('yyyy-MM-dd').format(DateTime.parse(time)))
         .toSet();
 
     return monthDates.length;

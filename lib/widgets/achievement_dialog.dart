@@ -217,11 +217,6 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: highlightColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
                     ),
                     child: const Text(
                       "太棒了！",

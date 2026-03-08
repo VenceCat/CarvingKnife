@@ -137,19 +137,19 @@ class _AchievementPageState extends State<AchievementPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
-          boxShadow: visuals.useWallpaper
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Icon(
           Icons.arrow_back_ios_new,

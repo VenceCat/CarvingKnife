@@ -328,8 +328,6 @@ class _CheckInPageState extends State<CheckInPage> {
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.grey[700],
-                                side: BorderSide(color: Colors.grey[300]!),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
                               child: const Text(
                                 '停止并记录',
@@ -616,11 +614,6 @@ class _CheckInPageState extends State<CheckInPage> {
                                 ? Colors.green
                                 : themeColor,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
                       ),
                     ),
                   ),
@@ -850,11 +843,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         onPressed: () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: const Text("保留打卡", style: TextStyle(fontSize: 15)),
                       ),
@@ -888,11 +876,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
                         ),
                         child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),
@@ -1007,11 +990,6 @@ class _CheckInPageState extends State<CheckInPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: themeColor,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
                       ),
                     ),
                   ),
@@ -1482,11 +1460,6 @@ class _CheckInPageState extends State<CheckInPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
                           ),
                         ),
                       ),
@@ -1668,11 +1641,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         onPressed: () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: const Text("保留", style: TextStyle(fontSize: 15)),
                       ),
@@ -1701,11 +1669,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red[400],
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
                         ),
                         child: const Text("删除", style: TextStyle(fontSize: 15)),
                       ),
@@ -1855,7 +1818,7 @@ class _CheckInPageState extends State<CheckInPage> {
             child: AppGlassCard(
               radius: 20,
               borderColor: useWallpaper
-                  ? Colors.white.withValues(alpha: 0.45)
+                  ? themeColor.withValues(alpha: 0.14)
                   : Colors.grey[100],
               child: ReorderableListView(
                 shrinkWrap: true,
@@ -1905,7 +1868,7 @@ class _CheckInPageState extends State<CheckInPage> {
             child: AppGlassCard(
               radius: 20,
               borderColor: useWallpaper
-                  ? Colors.white.withValues(alpha: 0.45)
+                  ? themeColor.withValues(alpha: 0.14)
                   : Colors.grey[100],
               child: Column(
                 children: doneHabits.asMap().entries.map((entry) {
@@ -2860,11 +2823,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         onPressed: () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: const Text("保留", style: TextStyle(fontSize: 15)),
                       ),
@@ -2894,11 +2852,6 @@ class _CheckInPageState extends State<CheckInPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
                         ),
                         child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),

@@ -287,14 +287,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],

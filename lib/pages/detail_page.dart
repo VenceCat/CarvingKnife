@@ -148,19 +148,19 @@ class _DetailPageState extends State<DetailPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
-          boxShadow: visuals.useWallpaper
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Icon(
           Icons.arrow_back_ios_new,
@@ -777,13 +777,7 @@ class _DetailPageState extends State<DetailPage> {
                 onPressed: () => _showMakeUpCheckInDialog(),
                 icon: Icon(Icons.add_task, size: 18, color: themeColor),
                 label: Text("补卡", style: TextStyle(color: themeColor)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                ),
+                style: _buildGlassCapsuleButtonStyle(themeColor),
               ),
             ],
           ],
@@ -963,13 +957,7 @@ class _DetailPageState extends State<DetailPage> {
                     onPressed: () => _showMakeUpCheckInDialog(),
                     icon: Icon(Icons.add_task, size: 18, color: themeColor),
                     label: Text("继续补卡", style: TextStyle(color: themeColor)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: themeColor.withValues(alpha: 0.5)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    ),
+                    style: _buildGlassCapsuleButtonStyle(themeColor),
                   ),
                 ],
               ),
@@ -1517,11 +1505,6 @@ class _DetailPageState extends State<DetailPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
                           ),
                           child: const Text("保存修改",
                               style: TextStyle(fontSize: 16)),
@@ -1648,11 +1631,6 @@ class _DetailPageState extends State<DetailPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: themeColor,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
                       ),
                       child:
                       const Text("确认补卡", style: TextStyle(fontSize: 16)),
@@ -1859,10 +1837,6 @@ class _DetailPageState extends State<DetailPage> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red[400],
                               side: BorderSide(color: Colors.red[300]!),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: const Text("删除备注",
                                 style: TextStyle(fontSize: 15)),
@@ -1900,11 +1874,6 @@ class _DetailPageState extends State<DetailPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeColor,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
                           ),
                           child: const Text("保存备注",
                               style: TextStyle(fontSize: 15)),
@@ -1964,6 +1933,32 @@ class _DetailPageState extends State<DetailPage> {
         .toSet();
 
     return monthDates.length;
+  }
+
+  ButtonStyle _buildGlassCapsuleButtonStyle(Color color) {
+    final visuals = AppVisuals.resolve(context);
+    final backgroundColor = visuals.useGlassEffect
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.16 : 0.08)
+        : color.withValues(alpha: 0.04);
+    final borderColor = visuals.useGlassEffect
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.3 : 0.22)
+        : color.withValues(alpha: 0.24);
+
+    return OutlinedButton.styleFrom(
+      foregroundColor: color,
+      backgroundColor: backgroundColor,
+      side: BorderSide(color: borderColor),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      textStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+    );
   }
 
   Widget _statItem(String label, String value, Color color) {

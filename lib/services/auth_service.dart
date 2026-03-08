@@ -36,6 +36,12 @@ abstract final class AuthService {
           : {'display_name': trimmedDisplayName},
     );
 
+    // When email confirmation is enabled, Supabase can obfuscate duplicate
+    // registrations by returning a user-shaped response instead of an error.
+    if (_isObfuscatedDuplicateSignUp(response)) {
+      throw const AuthException('User already registered');
+    }
+
     if (response.session == null) {
       await AuthFlowService.markEmailConfirmationPending();
     } else {
@@ -182,5 +188,12 @@ abstract final class AuthService {
     if (!SupabaseService.isReady) {
       throw StateError('Supabase is not configured yet.');
     }
+  }
+
+  static bool _isObfuscatedDuplicateSignUp(AuthResponse response) {
+    if (response.session != null) return false;
+
+    final identities = response.user?.identities;
+    return identities != null && identities.isEmpty;
   }
 }

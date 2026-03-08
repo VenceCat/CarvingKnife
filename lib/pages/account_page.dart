@@ -348,11 +348,6 @@ class _AccountPageState extends State<AccountPage> {
                               onPressed: isSaving ? null : () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.grey[700],
-                                side: BorderSide(color: Colors.grey[300]!),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
                               child: const Text('\u53d6\u6d88'),
                             ),
@@ -374,11 +369,6 @@ class _AccountPageState extends State<AccountPage> {
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor: themeColor.withValues(alpha: 0.6),
                                 disabledForegroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                elevation: 0,
                               ),
                             ),
                           ),
@@ -867,14 +857,6 @@ class _AccountPageState extends State<AccountPage> {
                     style: TextButton.styleFrom(
                       foregroundColor: themeColor,
                       backgroundColor: themeColor.withValues(alpha: 0.1),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ),
                 ),
@@ -1219,17 +1201,6 @@ class _AccountPageState extends State<AccountPage> {
       foregroundColor: Colors.white,
       disabledBackgroundColor: disabledBackgroundColor,
       disabledForegroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      elevation: 0,
-      shadowColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      textStyle: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-      ),
     );
   }
 
@@ -1256,14 +1227,16 @@ class _AccountPageState extends State<AccountPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],

@@ -150,6 +150,21 @@ class HabitAppState extends State<HabitApp> {
   Widget build(BuildContext context) {
     final themeColor = currentColor;
     final bgColor = currentBackgroundColor;
+    final elevatedBackgroundColor = glassEffectEnabled
+        ? themeColor.withValues(alpha: useWallpaper ? 0.74 : 0.9)
+        : themeColor;
+    final elevatedDisabledBackgroundColor = glassEffectEnabled
+        ? themeColor.withValues(alpha: useWallpaper ? 0.42 : 0.56)
+        : themeColor.withValues(alpha: 0.6);
+    final outlinedBackgroundColor = glassEffectEnabled
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.12 : 0.42)
+        : Colors.transparent;
+    final outlinedBorderColor = glassEffectEnabled
+        ? themeColor.withValues(alpha: useWallpaper ? 0.22 : 0.18)
+        : Colors.grey.shade300;
+    final textButtonBackgroundColor = glassEffectEnabled
+        ? themeColor.withValues(alpha: useWallpaper ? 0.14 : 0.08)
+        : Colors.transparent;
 
     return MaterialApp(
       title: '雕刀',
@@ -171,6 +186,58 @@ class HabitAppState extends State<HabitApp> {
               : bgColor,
           foregroundColor: Colors.black87,
           elevation: useWallpaper ? 0.5 : 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: elevatedBackgroundColor,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: elevatedDisabledBackgroundColor,
+            disabledForegroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: themeColor,
+            backgroundColor: outlinedBackgroundColor,
+            disabledForegroundColor: themeColor.withValues(alpha: 0.42),
+            side: BorderSide(color: outlinedBorderColor),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: themeColor,
+            backgroundColor: textButtonBackgroundColor,
+            disabledForegroundColor: themeColor.withValues(alpha: 0.42),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
       home: widget.home,

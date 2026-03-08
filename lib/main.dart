@@ -249,11 +249,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: color,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
                     ),
                     child: const Text(
                       '\u6211\u77e5\u9053\u4e86',
@@ -337,12 +332,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               child: Container(
                 decoration: AppSurfaceDecoration.bottomBar(context).copyWith(
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: visuals.useWallpaper
-                        ? Colors.white.withValues(alpha: 0.45)
-                        : Colors.grey.shade200,
-                    width: 1,
-                  ),
                 ),
                 child: NavigationBarTheme(
                   data: NavigationBarThemeData(

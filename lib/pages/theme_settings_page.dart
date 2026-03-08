@@ -182,14 +182,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
@@ -204,6 +206,25 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   }
 
   /// 壁纸设置卡片
+  ButtonStyle _buildPrimaryButtonStyle({
+    required Color color,
+  }) {
+    final visuals = AppVisuals.resolve(context);
+    final backgroundColor = visuals.useGlassEffect
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.74 : 0.9)
+        : color;
+    final disabledBackgroundColor = visuals.useGlassEffect
+        ? color.withValues(alpha: visuals.useWallpaper ? 0.42 : 0.56)
+        : color.withValues(alpha: 0.6);
+
+    return ElevatedButton.styleFrom(
+      backgroundColor: backgroundColor,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: disabledBackgroundColor,
+      disabledForegroundColor: Colors.white,
+    );
+  }
+
   Widget _buildWallpaperCard(
       BuildContext context,
       HabitAppState? appState,
@@ -309,8 +330,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   child: _buildButton(
                     icon: Icons.delete_outline,
                     label: "移除壁纸",
-                    color: Colors.red[400]!,
-                    isOutlined: true,
+                    color: const Color(0xFFD32F2F),
                     onTap: () => _removeWallpaper(context, appState),
                   ),
                 ),
@@ -711,37 +731,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     required String label,
     required Color color,
     required VoidCallback onTap,
-    bool isOutlined = false,
   }) {
-    return Material(
-      color: isOutlined ? Colors.transparent : color,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: isOutlined
-              ? BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color),
-          )
-              : null,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: isOutlined ? color : Colors.white),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isOutlined ? color : Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: _buildPrimaryButtonStyle(color: color),
       ),
     );
   }
@@ -896,11 +893,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         onPressed: () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: const Text("保留壁纸", style: TextStyle(fontSize: 15)),
                       ),
@@ -922,14 +914,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                             backgroundColor: Colors.green,
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[400],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
+                        style: _buildPrimaryButtonStyle(
+                          color: const Color(0xFFD32F2F),
                         ),
                         child: const Text("移除", style: TextStyle(fontSize: 15)),
                       ),

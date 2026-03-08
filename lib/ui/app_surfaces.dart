@@ -121,7 +121,7 @@ class AppFloatingAddButton extends StatelessWidget {
         ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.76)
         : (useWallpaper ? Colors.white.withValues(alpha: 0.92) : themeColor);
     final borderColor = useGlassEffect
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.56 : 0.85)
+        ? themeColor.withValues(alpha: useWallpaper ? 0.22 : 0.16)
         : (useWallpaper
             ? Colors.white.withValues(alpha: 0.58)
             : themeColor.withValues(alpha: 0.2));
@@ -215,16 +215,6 @@ class AppSurfaceDecoration {
           : visuals.useWallpaper
               ? Colors.white.withValues(alpha: 0.92)
               : Colors.white,
-      border: Border(
-        top: BorderSide(
-          color: visuals.useGlassEffect
-              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.56 : 0.82)
-              : visuals.useWallpaper
-                  ? Colors.grey.shade200.withValues(alpha: 0.55)
-                  : Colors.grey.shade100,
-          width: 1,
-        ),
-      ),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(
@@ -339,13 +329,6 @@ class AppBottomSheetSurface extends StatelessWidget {
             ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.36 : 0.86)
             : Colors.white,
         borderRadius: borderRadius,
-        border: visuals.useGlassEffect
-            ? Border.all(
-                color: Colors.white.withValues(
-                  alpha: visuals.useWallpaper ? 0.56 : 0.85,
-                ),
-              )
-            : null,
       ),
       child: child,
     );
@@ -384,13 +367,6 @@ class AppDialogSurface extends StatelessWidget {
             ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.38 : 0.9)
             : Colors.white,
         borderRadius: BorderRadius.circular(radius),
-        border: visuals.useGlassEffect
-            ? Border.all(
-                color: Colors.white.withValues(
-                  alpha: visuals.useWallpaper ? 0.56 : 0.86,
-                ),
-              )
-            : null,
       ),
       child: child,
     );

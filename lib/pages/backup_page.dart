@@ -184,11 +184,6 @@ class _BackupPageState extends State<BackupPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: themeColor,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
                     ),
                     child: const Text("我知道了", style: TextStyle(fontSize: 16)),
                   ),
@@ -389,11 +384,6 @@ class _BackupPageState extends State<BackupPage> {
                         onPressed: () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: const Text("取消", style: TextStyle(fontSize: 15)),
                       ),
@@ -411,11 +401,6 @@ class _BackupPageState extends State<BackupPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
                         ),
                         child: const Text("确认恢复", style: TextStyle(fontSize: 15)),
                       ),
@@ -482,11 +467,6 @@ class _BackupPageState extends State<BackupPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: themeColor,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
                     ),
                     child: const Text("我知道了", style: TextStyle(fontSize: 16)),
                   ),
@@ -676,14 +656,16 @@ class _BackupPageState extends State<BackupPage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: visuals.useWallpaper
-              ? Colors.white.withValues(alpha: 0.85)
-              : Colors.grey[100],
+          color: visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.34 : 0.62)
+              : visuals.useWallpaper
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.1 : 0.05),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.04),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],

@@ -4,10 +4,13 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'models/habit.dart';
 import 'services/achievement_service.dart';
+import 'services/auth_flow_service.dart';
+import 'services/supabase_service.dart';
 import 'services/update_service.dart';
 import 'services/widget_service.dart';
 import 'app.dart';
 import 'pages/check_in_page.dart';
+import 'pages/reset_password_page.dart';
 import 'pages/statistics_page.dart';
 import 'pages/profile_page.dart';
 import 'ui/app_surfaces.dart';
@@ -17,6 +20,8 @@ import 'widgets/update_dialog.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WidgetService.initialize();
+  await SupabaseService.initialize();
+  AuthFlowService.initialize();
   final prefs = await SharedPreferences.getInstance();
   final colorIndex = prefs.getInt('theme_color_index') ?? 0;
   runApp(HabitApp(initialColorIndex: colorIndex, home: const MainPage()));
@@ -34,17 +39,29 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   List<Habit> habits = [];
   final CheckInPageController _checkInPageController = CheckInPageController();
+  bool _isShowingResetPasswordPage = false;
+  bool _isShowingAuthNotice = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AuthFlowService.passwordRecoveryPending
+        .addListener(_handlePasswordRecoveryPending);
+    AuthFlowService.notice.addListener(_handleAuthNotice);
     _loadData();
     _checkUpdateSilently();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlePasswordRecoveryPending();
+      _handleAuthNotice();
+    });
   }
 
   @override
   void dispose() {
+    AuthFlowService.passwordRecoveryPending
+        .removeListener(_handlePasswordRecoveryPending);
+    AuthFlowService.notice.removeListener(_handleAuthNotice);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -120,6 +137,139 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   void _restoreHabits(List<Habit> newHabits) {
     setState(() => habits = newHabits);
     _saveData();
+  }
+
+  void _handlePasswordRecoveryPending() {
+    if (!mounted ||
+        _isShowingResetPasswordPage ||
+        !AuthFlowService.passwordRecoveryPending.value) {
+      return;
+    }
+    _openResetPasswordPage();
+  }
+
+  Future<void> _openResetPasswordPage() async {
+    _isShowingResetPasswordPage = true;
+
+    final result = await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+    );
+
+    AuthFlowService.clearPasswordRecovery();
+    _isShowingResetPasswordPage = false;
+
+    if (result == true && mounted) {
+      _showAuthResultSheet(
+        title: '\u5bc6\u7801\u5df2\u91cd\u7f6e',
+        description: '\u8bf7\u4f7f\u7528\u65b0\u5bc6\u7801\u91cd\u65b0\u767b\u5f55\u3002',
+        color: Colors.green,
+        icon: Icons.check_circle,
+      );
+    }
+  }
+
+  void _handleAuthNotice() {
+    if (!mounted || _isShowingAuthNotice) return;
+
+    final notice = AuthFlowService.notice.value;
+    if (notice == null) return;
+
+    switch (notice) {
+      case AuthFlowNotice.emailConfirmed:
+        _showAuthResultSheet(
+          title: '\u90ae\u7bb1\u9a8c\u8bc1\u6210\u529f',
+          description: '\u8d26\u6237\u5df2\u5b8c\u6210\u9a8c\u8bc1\uff0c\u8bf7\u624b\u52a8\u767b\u5f55\u3002',
+          color: Colors.green,
+          icon: Icons.mark_email_read,
+        );
+        break;
+    }
+  }
+
+  Future<void> _showAuthResultSheet({
+    required String title,
+    required String description,
+    required Color color,
+    required IconData icon,
+  }) async {
+    _isShowingAuthNotice = true;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetSurface(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 40),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      '\u6211\u77e5\u9053\u4e86',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    AuthFlowService.clearNotice();
+    _isShowingAuthNotice = false;
   }
 
   @override

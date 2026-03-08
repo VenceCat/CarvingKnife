@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/habit.dart';
-import 'backup_page.dart';
-import 'theme_settings_page.dart';
-import 'reminder_settings_page.dart';
-import 'about_page.dart';
-import 'achievement_page.dart';
+import '../services/auth_service.dart';
+import '../services/supabase_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
+import 'about_page.dart';
+import 'achievement_page.dart';
+import 'account_page.dart';
+import 'backup_page.dart';
+import 'reminder_settings_page.dart';
+import 'theme_settings_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final List<Habit> habits;
@@ -41,7 +46,7 @@ class ProfilePage extends StatelessWidget {
               left: 0,
               right: 0,
               child: AppPageTitleBar(
-                title: '我的',
+                title: '\u6211\u7684',
                 visuals: visuals,
               ),
             ),
@@ -54,16 +59,18 @@ class ProfilePage extends StatelessWidget {
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Column(
                         children: [
+                          _buildAccountCard(context, themeColor),
+                          const SizedBox(height: AppSpacing.lg),
                           AppGlassCard(
                             padding: const EdgeInsets.all(AppSpacing.xxl),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _statItem('习惯数', habits.length.toString(), themeColor),
+                                _statItem('\u4e60\u60ef\u6570', habits.length.toString(), themeColor),
                                 Container(width: 1, height: 40, color: Colors.grey[200]),
-                                _statItem('今日完成', todayCheckIns.toString(), themeColor),
+                                _statItem('\u4eca\u65e5\u5b8c\u6210', todayCheckIns.toString(), themeColor),
                                 Container(width: 1, height: 40, color: Colors.grey[200]),
-                                _statItem('累计打卡', totalCheckIns.toString(), themeColor),
+                                _statItem('\u7d2f\u8ba1\u6253\u5361', totalCheckIns.toString(), themeColor),
                               ],
                             ),
                           ),
@@ -71,35 +78,35 @@ class ProfilePage extends StatelessWidget {
                           _menuItem(
                             context,
                             icon: Icons.emoji_events_outlined,
-                            title: '打卡成就',
+                            title: '\u6253\u5361\u6210\u5c31',
                             page: AchievementPage(habits: habits),
                             themeColor: themeColor,
                           ),
                           _menuItem(
                             context,
                             icon: Icons.notifications_none,
-                            title: '提醒设置',
+                            title: '\u63d0\u9192\u8bbe\u7f6e',
                             page: ReminderSettingsPage(habits: habits, onSave: onSave),
                             themeColor: themeColor,
                           ),
                           _menuItem(
                             context,
                             icon: Icons.color_lens_outlined,
-                            title: '主题设置',
+                            title: '\u4e3b\u9898\u8bbe\u7f6e',
                             page: const ThemeSettingsPage(),
                             themeColor: themeColor,
                           ),
                           _menuItem(
                             context,
                             icon: Icons.cloud_outlined,
-                            title: '数据备份',
+                            title: '\u6570\u636e\u5907\u4efd',
                             page: BackupPage(habits: habits, onRestore: onRestore),
                             themeColor: themeColor,
                           ),
                           _menuItem(
                             context,
                             icon: Icons.info_outline,
-                            title: '关于',
+                            title: '\u5173\u4e8e',
                             page: const AboutPage(),
                             themeColor: themeColor,
                           ),
@@ -115,6 +122,123 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildAccountCard(BuildContext context, Color themeColor) {
+    return StreamBuilder<User?>(
+      stream: AuthService.authStateChanges,
+      initialData: AuthService.currentUser,
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        final isConfigured = SupabaseService.isConfigured;
+        final hasInitError = SupabaseService.hasInitializationError;
+        final title = !isConfigured
+            ? '\u8d26\u6237'
+            : hasInitError
+                ? '\u8d26\u6237'
+            : user == null
+                ? '\u672a\u767b\u5f55'
+                : _displayNameOf(user);
+        final subtitle = !isConfigured
+            ? '\u5f53\u524d\u6682\u65f6\u65e0\u6cd5\u4f7f\u7528\u8d26\u6237\u529f\u80fd'
+            : hasInitError
+                ? '\u8d26\u6237\u529f\u80fd\u6b63\u5728\u8c03\u6574\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5'
+            : user == null
+                ? '\u5f00\u542f\u65b0\u4e16\u754c'
+                : user.email ?? '\u5df2\u767b\u5f55';
+        final badge = !isConfigured
+            ? '\u6682\u4e0d\u53ef\u7528'
+            : hasInitError
+                ? '\u7a0d\u540e\u518d\u8bd5'
+            : user == null
+                ? '\u53bb\u767b\u5f55'
+                : user.emailConfirmedAt == null
+                    ? '\u5f85\u9a8c\u8bc1'
+                    : '\u5df2\u767b\u5f55';
+
+        return InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (c) => const AccountPage()),
+          ),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          child: AppGlassCard(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    user == null ? Icons.person_outline : Icons.verified_user_outlined,
+                    color: themeColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: themeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: themeColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _displayNameOf(User user) {
+    final value = user.userMetadata?['display_name'];
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+    return user.email?.split('@').first ?? '\u5df2\u767b\u5f55\u7528\u6237';
   }
 
   Widget _statItem(String label, String value, Color color) {

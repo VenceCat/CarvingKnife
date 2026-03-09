@@ -51,7 +51,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val openAppPendingIntent = PendingIntent.getActivity(
-            context, appWidgetId, openAppIntent,
+            context,
+            appWidgetId,
+            openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -59,7 +61,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val habitsJson = prefs.getString("flutter.simple_habits", null)
 
-            if (habitsJson != null && habitsJson.isNotEmpty() && habitsJson != "[]") {
+            if (!habitsJson.isNullOrEmpty() && habitsJson != "[]") {
                 val habits = JSONArray(habitsJson)
                 val habitCount = habits.length()
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -70,15 +72,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
                 for (i in 0 until habitCount) {
                     val habit = habits.getJSONObject(i)
-
-                    // ===== 获取每日目标次数，默认为1 =====
                     val dailyTarget = habit.optInt("dailyTarget", 1)
-
                     val checkInRecords = habit.optJSONArray("checkInRecords")
 
-                    // ===== 统计今日打卡次数 =====
                     var todayCheckInCount = 0
-
                     if (checkInRecords != null) {
                         for (j in 0 until checkInRecords.length()) {
                             val record = checkInRecords.getJSONObject(j)
@@ -86,8 +83,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                             if (time.length >= 10) {
                                 val dateStr = time.substring(0, 10)
                                 allCheckInDates.add(dateStr)
-
-                                // ===== 统计今天的打卡次数 =====
                                 if (dateStr == today) {
                                     todayCheckInCount++
                                 }
@@ -95,7 +90,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                         }
                     }
 
-                    // ===== 只有当今日打卡次数 >= 每日目标时才算完成 =====
                     if (todayCheckInCount >= dailyTarget) {
                         todayCompleted++
                     }
@@ -142,14 +136,19 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
     private fun calculateStreak(dates: Set<String>, dateFormat: SimpleDateFormat): Int {
         if (dates.isEmpty()) return 0
+
         var streak = 0
         val calendar = Calendar.getInstance()
         val today = dateFormat.format(calendar.time)
-        if (!dates.contains(today)) calendar.add(Calendar.DAY_OF_YEAR, -1)
+        if (!dates.contains(today)) {
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+        }
+
         while (dates.contains(dateFormat.format(calendar.time))) {
             streak++
             calendar.add(Calendar.DAY_OF_YEAR, -1)
         }
+
         return streak
     }
 }

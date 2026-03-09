@@ -41,10 +41,9 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
     private fun loadData() {
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         val habitsJson = prefs.getString("flutter.simple_habits", null)
-
         val list = mutableListOf<HabitItem>()
 
-        if (habitsJson != null && habitsJson.isNotEmpty() && habitsJson != "[]") {
+        if (!habitsJson.isNullOrEmpty() && habitsJson != "[]") {
             try {
                 val habitsArray = JSONArray(habitsJson)
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -53,11 +52,8 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                 for (i in 0 until habitsArray.length()) {
                     val habit = habitsArray.getJSONObject(i)
                     val title = habit.optString("title", "")
-
-                    // ===== 获取每日目标次数，默认为1 =====
                     val dailyTarget = habit.optInt("dailyTarget", 1)
 
-                    // ===== 统计今日打卡次数 =====
                     var todayCheckInCount = 0
                     val checkInDates = mutableSetOf<String>()
 
@@ -69,8 +65,6 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                             if (time.length >= 10) {
                                 val dateStr = time.substring(0, 10)
                                 checkInDates.add(dateStr)
-
-                                // ===== 统计今天的打卡次数 =====
                                 if (dateStr == today) {
                                     todayCheckInCount++
                                 }
@@ -78,23 +72,17 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
                         }
                     }
 
-                    // ===== 只有当今日打卡次数 >= 每日目标时才算完成 =====
-                    val isDone = todayCheckInCount >= dailyTarget
-
-                    val streak = calculateStreak(checkInDates, dateFormat)
-                    val totalCheckIns = checkInDates.size
-
-                    val iconIndex = habit.optInt("iconIndex", 0)
-
-                    list.add(HabitItem(
-                        title = title,
-                        isDone = isDone,
-                        streak = streak,
-                        totalCheckIns = totalCheckIns,
-                        todayCount = todayCheckInCount,
-                        dailyTarget = dailyTarget,
-                        iconIndex = iconIndex
-                    ))
+                    list.add(
+                        HabitItem(
+                            title = title,
+                            isDone = todayCheckInCount >= dailyTarget,
+                            streak = calculateStreak(checkInDates, dateFormat),
+                            totalCheckIns = checkInDates.size,
+                            todayCount = todayCheckInCount,
+                            dailyTarget = dailyTarget,
+                            iconIndex = habit.optInt("iconIndex", 0)
+                        )
+                    )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -117,12 +105,11 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
 
         while (true) {
             val dateStr = dateFormat.format(calendar.time)
-            if (dates.contains(dateStr)) {
-                streak++
-                calendar.add(Calendar.DAY_OF_YEAR, -1)
-            } else {
+            if (!dates.contains(dateStr)) {
                 break
             }
+            streak++
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
         }
 
         return streak
@@ -139,31 +126,33 @@ class HabitRemoteViewsFactory(private val context: Context) : RemoteViewsService
 
         if (position < habits.size) {
             val habit = habits[position]
-
             val displayTitle = if (habit.dailyTarget > 1) {
                 "${habit.title} (${habit.todayCount}/${habit.dailyTarget})"
             } else {
                 habit.title
             }
-            views.setTextViewText(R.id.item_title, displayTitle)
-
             val streakText = if (habit.streak > 0) {
                 "连续${habit.streak}天"
             } else {
-                "共${habit.totalCheckIns}次"
+                "累计${habit.totalCheckIns}次"
             }
+
+            views.setTextViewText(R.id.item_title, displayTitle)
             views.setTextViewText(R.id.item_streak, streakText)
 
             if (habit.isDone) {
-                views.setInt(R.id.item_title, "setTextColor", 0xFF9E9E9E.toInt())
-                views.setInt(R.id.item_streak, "setTextColor", 0xFF4CAF50.toInt())
+                views.setInt(R.id.item_title, "setTextColor", 0xFF4A5F68.toInt())
+                views.setInt(R.id.item_streak, "setTextColor", 0xFF4C8B6E.toInt())
             } else {
-                views.setInt(R.id.item_title, "setTextColor", 0xFF424242.toInt())
-                views.setInt(R.id.item_streak, "setTextColor", 0xFF999999.toInt())
+                views.setInt(R.id.item_title, "setTextColor", 0xFF1F2A33.toInt())
+                views.setInt(R.id.item_streak, "setTextColor", 0xFF647683.toInt())
             }
 
-            val iconColor = if (habit.isDone) 0xFF9E9E9E.toInt() else 0xFF555555.toInt()
-            views.setImageViewBitmap(R.id.item_icon, HabitIconUtils.createIconBitmap(context, habit.iconIndex, iconColor))
+            val iconColor = if (habit.isDone) 0xFF5E917A.toInt() else 0xFF31424F.toInt()
+            views.setImageViewBitmap(
+                R.id.item_icon,
+                HabitIconUtils.createIconBitmap(context, habit.iconIndex, iconColor)
+            )
 
             val fillIntent = Intent()
             views.setOnClickFillInIntent(R.id.item_container, fillIntent)

@@ -299,46 +299,33 @@ class _AccountPageState extends State<AccountPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: AppFormStyle.panelDecoration(
-                          context,
-                          tint: themeColor,
-                          radius: 16,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.badge_outlined,
-                                  size: 18,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '\u65b0\u6635\u79f0',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ],
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.badge_outlined,
+                            size: 18,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '\u65b0\u6635\u79f0',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
                             ),
-                            const SizedBox(height: 12),
-                            _buildTextField(
-                              controller: _profileNameController,
-                              label: '\u8f93\u5165\u6635\u79f0',
-                              prefixIcon: Icons.person_outline,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) {
-                                submit();
-                              },
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _profileNameController,
+                        label: '\u8f93\u5165\u6635\u79f0',
+                        prefixIcon: Icons.person_outline,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) {
+                          submit();
+                        },
                       ),
                       const SizedBox(height: 24),
                       Row(

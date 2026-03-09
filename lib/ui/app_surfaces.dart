@@ -12,7 +12,7 @@ class AppWallpaperBackground extends StatelessWidget {
     super.key,
     required this.child,
     required this.visuals,
-    this.overlayOpacity = 0.03,
+    this.overlayOpacity = 0.06,
   });
 
   @override
@@ -118,7 +118,7 @@ class AppFloatingAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = useGlassEffect
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.76)
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.48 : 0.84)
         : (useWallpaper ? Colors.white.withValues(alpha: 0.92) : themeColor);
     final borderColor = useGlassEffect
         ? themeColor.withValues(alpha: useWallpaper ? 0.22 : 0.16)
@@ -211,7 +211,7 @@ class AppSurfaceDecoration {
     final visuals = AppVisuals.resolve(context);
     return BoxDecoration(
       color: visuals.useGlassEffect
-          ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.32 : 0.7)
+          ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.44 : 0.82)
           : visuals.useWallpaper
               ? Colors.white.withValues(alpha: 0.92)
               : Colors.white,
@@ -234,7 +234,7 @@ class AppFormStyle {
   static Color fieldFillColor(BuildContext context, {Color? tint}) {
     final visuals = AppVisuals.resolve(context);
     final base = visuals.useGlassEffect
-        ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.16 : 0.58)
+        ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.28 : 0.68)
         : Colors.grey.shade50;
     if (tint == null) return base;
     return Color.alphaBlend(
@@ -252,7 +252,7 @@ class AppFormStyle {
     return BorderSide(
       color: color ??
           (visuals.useGlassEffect
-              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.26 : 0.72)
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.38 : 0.82)
               : Colors.grey.shade200),
       width: width,
     );
@@ -287,6 +287,7 @@ class AppFormStyle {
     EdgeInsetsGeometry contentPadding = const EdgeInsets.all(16),
     TextStyle? counterStyle,
   }) {
+    final visuals = AppVisuals.resolve(context);
     return InputDecoration(
       labelText: labelText,
       hintText: hintText,
@@ -294,8 +295,14 @@ class AppFormStyle {
       suffixText: suffixText,
       prefixIcon: prefixIcon,
       isDense: isDense,
-      labelStyle: TextStyle(color: Colors.grey[600]),
-      hintStyle: TextStyle(color: Colors.grey[500]),
+      labelStyle: TextStyle(
+        color: visuals.secondaryTextColor,
+        shadows: visuals.bodyTextShadows,
+      ),
+      hintStyle: TextStyle(
+        color: visuals.mutedTextColor,
+        shadows: visuals.bodyTextShadows,
+      ),
       floatingLabelStyle: TextStyle(
         color: errorText != null ? Colors.red[400] : themeColor,
       ),
@@ -322,7 +329,12 @@ class AppFormStyle {
         radius: radius,
       ),
       errorStyle: TextStyle(color: Colors.red[400]),
-      counterStyle: counterStyle,
+      counterStyle:
+          counterStyle?.copyWith(shadows: visuals.bodyTextShadows) ??
+              TextStyle(
+                color: visuals.mutedTextColor,
+                shadows: visuals.bodyTextShadows,
+              ),
       contentPadding: contentPadding,
     );
   }
@@ -383,7 +395,7 @@ class AppPageTitleBar extends StatelessWidget {
               )
             : null,
         color: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.16 : 0.62)
+            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.24 : 0.72)
             : visuals.useWallpaper
                 ? Colors.transparent
                 : visuals.pageBackgroundColor,
@@ -438,7 +450,7 @@ class AppBottomSheetSurface extends StatelessWidget {
       constraints: constraints,
       decoration: BoxDecoration(
         color: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.36 : 0.86)
+            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.52 : 0.92)
             : Colors.white,
         borderRadius: borderRadius,
       ),
@@ -476,7 +488,7 @@ class AppDialogSurface extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.38 : 0.9)
+            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.54 : 0.94)
             : Colors.white,
         borderRadius: BorderRadius.circular(radius),
       ),

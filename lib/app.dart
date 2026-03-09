@@ -157,14 +157,20 @@ class HabitAppState extends State<HabitApp> {
         ? themeColor.withValues(alpha: useWallpaper ? 0.42 : 0.56)
         : themeColor.withValues(alpha: 0.6);
     final outlinedBackgroundColor = glassEffectEnabled
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.22 : 0.78)
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.34 : 0.84)
         : Colors.grey.shade50;
     final outlinedDisabledBackgroundColor = glassEffectEnabled
-        ? Colors.white.withValues(alpha: useWallpaper ? 0.12 : 0.46)
+        ? Colors.white.withValues(alpha: useWallpaper ? 0.18 : 0.52)
         : Colors.grey.shade100;
     final textButtonBackgroundColor = glassEffectEnabled
-        ? themeColor.withValues(alpha: useWallpaper ? 0.14 : 0.08)
+        ? themeColor.withValues(alpha: useWallpaper ? 0.18 : 0.1)
         : Colors.transparent;
+    final bodyColor = glassEffectEnabled && useWallpaper
+        ? const Color(0xFF24313C)
+        : Colors.black87;
+    final secondaryBodyColor = glassEffectEnabled && useWallpaper
+        ? const Color(0xFF52606D)
+        : Colors.grey.shade700;
 
     return MaterialApp(
       title: '雕刀',
@@ -177,6 +183,19 @@ class HabitAppState extends State<HabitApp> {
           primary: themeColor,
           brightness: Brightness.light,
         ),
+        textTheme: ThemeData.light().textTheme.apply(
+              bodyColor: bodyColor,
+              displayColor: bodyColor,
+            ).copyWith(
+              bodySmall: ThemeData.light().textTheme.bodySmall?.copyWith(
+                    color: secondaryBodyColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+              labelMedium: ThemeData.light().textTheme.labelMedium?.copyWith(
+                    color: secondaryBodyColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
         // 壁纸模式下使用透明背景
         scaffoldBackgroundColor: useWallpaper ? Colors.transparent : bgColor,
         appBarTheme: AppBarTheme(

@@ -301,10 +301,10 @@ class _AccountPageState extends State<AccountPage> {
                       const SizedBox(height: 20),
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey[200]!),
+                        decoration: AppFormStyle.panelDecoration(
+                          context,
+                          tint: themeColor,
+                          radius: 16,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1144,7 +1144,6 @@ class _AccountPageState extends State<AccountPage> {
     TextInputAction? textInputAction,
     ValueChanged<String>? onSubmitted,
   }) {
-    final visuals = AppVisuals.resolve(context);
     final themeColor = Theme.of(context).colorScheme.primary;
 
     return TextField(
@@ -1153,33 +1152,13 @@ class _AccountPageState extends State<AccountPage> {
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       onSubmitted: onSubmitted,
-      decoration: InputDecoration(
+      decoration: AppFormStyle.inputDecoration(
+        context,
+        themeColor: themeColor,
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, size: 20),
-        filled: true,
-        fillColor: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.18 : 0.5)
-            : Colors.grey[50],
+        radius: AppRadii.md,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.22),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.22),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: themeColor.withValues(alpha: 0.7),
-            width: 1.5,
-          ),
-        ),
       ),
     );
   }

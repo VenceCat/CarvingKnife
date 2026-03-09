@@ -1192,22 +1192,11 @@ class _DetailPageState extends State<DetailPage> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: titleController,
-                        decoration: InputDecoration(
+                        decoration: AppFormStyle.inputDecoration(
+                          context,
+                          themeColor: themeColor,
                           labelText: "习惯名称",
                           hintText: "例如：喝水",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                            BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1215,22 +1204,11 @@ class _DetailPageState extends State<DetailPage> {
                         controller: descController,
                         maxLines: 2,
                         maxLength: 100,
-                        decoration: InputDecoration(
+                        decoration: AppFormStyle.inputDecoration(
+                          context,
+                          themeColor: themeColor,
                           labelText: "描述（选填）",
                           hintText: "例如：每天喝8杯水",
-                          labelStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                            BorderSide(color: themeColor, width: 1.5),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
                           counterStyle: TextStyle(color: Colors.grey[400]),
                         ),
                       ),
@@ -1238,9 +1216,9 @@ class _DetailPageState extends State<DetailPage> {
                       // ===== 新增：每日目标次数选择器 =====
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
+                        decoration: AppFormStyle.panelDecoration(
+                          context,
+                          tint: themeColor,
                         ),
                         child: Row(
                           children: [
@@ -1331,9 +1309,9 @@ class _DetailPageState extends State<DetailPage> {
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
+                        decoration: AppFormStyle.panelDecoration(
+                          context,
+                          tint: themeColor,
                         ),
                         child: Column(
                           children: [
@@ -1406,28 +1384,16 @@ class _DetailPageState extends State<DetailPage> {
                                         );
                                         FocusScope.of(context).unfocus();
                                       },
-                                      decoration: InputDecoration(
+                                      decoration: AppFormStyle.inputDecoration(
+                                        context,
+                                        themeColor: themeColor,
                                         isDense: true,
+                                        radius: 10,
                                         suffixText: '分',
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                           horizontal: 10,
                                           vertical: 10,
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          borderSide: BorderSide(
-                                            color: Colors.grey[300]!,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          borderSide:
-                                              BorderSide(color: themeColor),
                                         ),
                                       ),
                                     ),
@@ -1606,17 +1572,10 @@ class _DetailPageState extends State<DetailPage> {
                     maxLines: 3,
                     maxLength: 100,
                     autofocus: true,
-                    decoration: InputDecoration(
+                    decoration: AppFormStyle.inputDecoration(
+                      context,
+                      themeColor: themeColor,
                       hintText: "写点什么记录一下吧...",
-                      hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 14),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.all(16),
                       counterStyle: TextStyle(color: Colors.grey[400]),
                     ),
                   ),
@@ -1791,21 +1750,10 @@ class _DetailPageState extends State<DetailPage> {
                     maxLines: 4,
                     maxLength: 100,
                     autofocus: true,
-                    decoration: InputDecoration(
+                    decoration: AppFormStyle.inputDecoration(
+                      context,
+                      themeColor: themeColor,
                       hintText: "写点什么记录一下吧...",
-                      hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 14),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: themeColor, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.all(16),
                       counterStyle: TextStyle(color: Colors.grey[400]),
                     ),
                   ),

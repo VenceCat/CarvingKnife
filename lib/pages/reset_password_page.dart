@@ -240,7 +240,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     TextInputAction? textInputAction,
     ValueChanged<String>? onSubmitted,
   }) {
-    final visuals = AppVisuals.resolve(context);
     final themeColor = Theme.of(context).colorScheme.primary;
 
     return TextField(
@@ -248,33 +247,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       obscureText: obscureText,
       textInputAction: textInputAction,
       onSubmitted: onSubmitted,
-      decoration: InputDecoration(
+      decoration: AppFormStyle.inputDecoration(
+        context,
+        themeColor: themeColor,
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, size: 20),
-        filled: true,
-        fillColor: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.18 : 0.5)
-            : Colors.grey[50],
+        radius: AppRadii.md,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.22),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.22),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: BorderSide(
-            color: themeColor.withValues(alpha: 0.7),
-            width: 1.5,
-          ),
-        ),
       ),
     );
   }

@@ -230,6 +230,118 @@ class AppSurfaceDecoration {
   }
 }
 
+class AppFormStyle {
+  static Color fieldFillColor(BuildContext context, {Color? tint}) {
+    final visuals = AppVisuals.resolve(context);
+    final base = visuals.useGlassEffect
+        ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.16 : 0.58)
+        : Colors.grey.shade50;
+    if (tint == null) return base;
+    return Color.alphaBlend(
+      tint.withValues(alpha: visuals.useGlassEffect ? 0.05 : 0.03),
+      base,
+    );
+  }
+
+  static BorderSide fieldBorderSide(
+    BuildContext context, {
+    Color? color,
+    double width = 1,
+  }) {
+    final visuals = AppVisuals.resolve(context);
+    return BorderSide(
+      color: color ??
+          (visuals.useGlassEffect
+              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.26 : 0.72)
+              : Colors.grey.shade200),
+      width: width,
+    );
+  }
+
+  static OutlineInputBorder fieldBorder(
+    BuildContext context, {
+    Color? color,
+    double width = 1,
+    double radius = 12,
+  }) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(radius),
+      borderSide: fieldBorderSide(
+        context,
+        color: color,
+        width: width,
+      ),
+    );
+  }
+
+  static InputDecoration inputDecoration(
+    BuildContext context, {
+    required Color themeColor,
+    String? labelText,
+    String? hintText,
+    String? errorText,
+    String? suffixText,
+    Widget? prefixIcon,
+    bool isDense = false,
+    double radius = 12,
+    EdgeInsetsGeometry contentPadding = const EdgeInsets.all(16),
+    TextStyle? counterStyle,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      errorText: errorText,
+      suffixText: suffixText,
+      prefixIcon: prefixIcon,
+      isDense: isDense,
+      labelStyle: TextStyle(color: Colors.grey[600]),
+      hintStyle: TextStyle(color: Colors.grey[500]),
+      floatingLabelStyle: TextStyle(
+        color: errorText != null ? Colors.red[400] : themeColor,
+      ),
+      filled: true,
+      fillColor: fieldFillColor(context, tint: themeColor),
+      border: fieldBorder(context, radius: radius),
+      enabledBorder: fieldBorder(context, radius: radius),
+      focusedBorder: fieldBorder(
+        context,
+        color: themeColor.withValues(alpha: 0.55),
+        width: 1.4,
+        radius: radius,
+      ),
+      errorBorder: fieldBorder(
+        context,
+        color: Colors.red.shade300,
+        width: 1.4,
+        radius: radius,
+      ),
+      focusedErrorBorder: fieldBorder(
+        context,
+        color: Colors.red.shade300,
+        width: 1.4,
+        radius: radius,
+      ),
+      errorStyle: TextStyle(color: Colors.red[400]),
+      counterStyle: counterStyle,
+      contentPadding: contentPadding,
+    );
+  }
+
+  static BoxDecoration panelDecoration(
+    BuildContext context, {
+    Color? tint,
+    double radius = 12,
+  }) {
+    return BoxDecoration(
+      color: fieldFillColor(context, tint: tint),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(
+        color: fieldBorderSide(context).color,
+      ),
+    );
+  }
+}
+
 class AppPageTitleBar extends StatelessWidget {
   final String title;
   final AppVisuals visuals;

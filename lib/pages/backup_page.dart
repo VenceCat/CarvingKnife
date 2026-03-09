@@ -6,8 +6,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/habit.dart';
 import '../services/achievement_service.dart';
+import '../services/auth_service.dart';
+import '../services/cloud_backup_service.dart';
+import '../services/supabase_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_visuals.dart';
 
@@ -28,6 +32,16 @@ class BackupPage extends StatefulWidget {
 class _BackupPageState extends State<BackupPage> {
   bool _isExporting = false;
   bool _isImporting = false;
+  bool _isCloudUploading = false;
+  bool _isCloudRestoring = false;
+  bool _isCloudLoading = false;
+  CloudBackupSnapshot? _cloudSnapshot;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshCloudBackupStatus();
+  }
 
   String _generateFileName() {
     final now = DateTime.now();
@@ -46,6 +60,170 @@ class _BackupPageState extends State<BackupPage> {
       'habits': widget.habits.map((h) => h.toJson()).toList(),
       'achievementStatus': achievementStatus,
     };
+  }
+
+  Future<void> _refreshCloudBackupStatus({bool showError = false}) async {
+    if (!SupabaseService.isConfigured ||
+        SupabaseService.hasInitializationError ||
+        AuthService.currentUser == null) {
+      if (mounted) {
+        setState(() {
+          _cloudSnapshot = null;
+          _isCloudLoading = false;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isCloudLoading = true);
+    try {
+      final snapshot = await CloudBackupService.fetchLatestBackup();
+      if (!mounted) return;
+      setState(() => _cloudSnapshot = snapshot);
+    } catch (e) {
+      if (showError && mounted) {
+        _showMessage('获取云备份信息失败：${_readableCloudError(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCloudLoading = false);
+      }
+    }
+  }
+
+  _ParsedBackupData _parseBackupData(Map<String, dynamic> data) {
+    if (!data.containsKey('habits') || data['habits'] is! List) {
+      throw Exception("无效的备份文件格式");
+    }
+
+    final habits = (data['habits'] as List)
+        .map((item) => Habit.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+
+    final achievementStatusRaw = data['achievementStatus'];
+    final achievementStatus = achievementStatusRaw is Map
+        ? Map<String, dynamic>.from(achievementStatusRaw)
+        : null;
+
+    final backupTime = data['backupTime'] as String?;
+    final backupTimeText = backupTime != null
+        ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(backupTime))
+        : '未知';
+
+    return _ParsedBackupData(
+      habits: habits,
+      backupTimeText: backupTimeText,
+      achievementStatus: achievementStatus,
+    );
+  }
+
+  Future<void> _restoreFromBackupData(
+    Map<String, dynamic> data, {
+    required String sourceLabel,
+    String? bindingEmail,
+  }) async {
+    final parsed = _parseBackupData(data);
+    if (!mounted) return;
+
+    _showImportConfirmDialog(
+      parsed.habits,
+      parsed.backupTimeText,
+      parsed.achievementStatus,
+      sourceLabel: sourceLabel,
+      bindingEmail: bindingEmail,
+    );
+  }
+
+  Future<void> _backupToCloud() async {
+    setState(() => _isCloudUploading = true);
+
+    try {
+      final backupData = await _generateBackupData();
+      await CloudBackupService.uploadLatestBackup(backupData);
+      await _refreshCloudBackupStatus();
+      if (mounted) {
+        _showCloudBackupSuccessDialog(
+          email: AuthService.currentUser?.email ?? '',
+          backupTime: backupData['backupTime'] as String?,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('云备份失败：${_readableCloudError(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCloudUploading = false);
+      }
+    }
+  }
+
+  Future<void> _restoreFromCloud() async {
+    setState(() => _isCloudRestoring = true);
+
+    try {
+      final snapshot = await CloudBackupService.fetchLatestBackup();
+      if (snapshot == null) {
+        if (mounted) {
+          _showMessage('云端暂无可恢复的备份数据。');
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() => _cloudSnapshot = snapshot);
+      }
+
+      await _restoreFromBackupData(
+        snapshot.backupData,
+        sourceLabel: '云端备份',
+        bindingEmail: snapshot.email,
+      );
+    } catch (e) {
+      if (mounted) {
+        _showMessage('恢复云备份失败：${_readableCloudError(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCloudRestoring = false);
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _readableCloudError(Object error) {
+    final authMessage = AuthService.readableMessage(error);
+    if (authMessage != '操作失败，请稍后再试。') {
+      return authMessage;
+    }
+
+    if (error is StateError) {
+      return error.message;
+    }
+
+    if (error is PostgrestException) {
+      final lower = error.message.toLowerCase();
+      if (lower.contains('cloud_backups') &&
+          (lower.contains('does not exist') || lower.contains('not find'))) {
+        return '云备份数据表还未创建，请先执行 supabase/cloud_backup_schema.sql。';
+      }
+      return '云服务请求失败，请稍后再试。';
+    }
+
+    final message = error.toString();
+    if (RegExp(r'[\u4e00-\u9fff]').hasMatch(message)) {
+      return message;
+    }
+    return '请检查网络和云端配置后重试。';
+  }
+
+  String _formatDateTime(DateTime value) {
+    return DateFormat('yyyy-MM-dd HH:mm').format(value.toLocal());
   }
 
   Future<void> _exportToLocal() async {
@@ -238,28 +416,10 @@ class _BackupPageState extends State<BackupPage> {
       final file = File(result.files.single.path!);
       final jsonStr = await file.readAsString();
       final data = jsonDecode(jsonStr) as Map<String, dynamic>;
-
-      if (!data.containsKey('habits')) {
-        throw Exception("无效的备份文件格式");
-      }
-
-      final habitsList = data['habits'] as List;
-      final habits = habitsList.map((h) => Habit.fromJson(h)).toList();
-
-      final achievementStatus = data['achievementStatus'] as Map<String, dynamic>?;
-
-      if (mounted) {
-        final backupTime = data['backupTime'] != null
-            ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(data['backupTime']))
-            : '未知';
-
-        _showImportConfirmDialog(habits, backupTime, achievementStatus);
-      }
+      await _restoreFromBackupData(data, sourceLabel: '备份文件');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("导入失败：$e")),
-        );
+        _showMessage("导入失败：$e");
       }
     } finally {
       setState(() => _isImporting = false);
@@ -270,7 +430,10 @@ class _BackupPageState extends State<BackupPage> {
       List<Habit> habits,
       String backupTime,
       Map<String, dynamic>? achievementStatus,
-      ) {
+      {
+        String sourceLabel = '备份文件',
+        String? bindingEmail,
+      }) {
     final themeColor = Theme.of(context).colorScheme.primary;
     int totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInRecords.length);
 
@@ -316,9 +479,16 @@ class _BackupPageState extends State<BackupPage> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "备份于 $backupTime",
+                            "$sourceLabel · 备份于 $backupTime",
                             style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                           ),
+                          if (bindingEmail != null && bindingEmail.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              "绑定邮箱：$bindingEmail",
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -479,6 +649,136 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
+  void _showCloudBackupSuccessDialog({
+    required String email,
+    String? backupTime,
+  }) {
+    final themeColor = Theme.of(context).colorScheme.primary;
+    final backupTimeText = backupTime == null
+        ? '刚刚'
+        : DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(backupTime));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetSurface(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.cloud_done, color: Colors.green, size: 40),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "云备份成功",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "云端仅保留当前账号最新的一份备份",
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.mail_outline, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            "绑定邮箱",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        email.isEmpty ? "未获取到邮箱" : email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            "备份时间",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        backupTimeText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text("我知道了", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDialogStatItem(String label, String value, Color color) {
     return Column(
       children: [
@@ -495,11 +795,116 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
+  Widget _buildCloudStatusCard({
+    required Color themeColor,
+    required String email,
+  }) {
+    final snapshot = _cloudSnapshot;
+
+    return AppGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud_done_outlined, size: 18, color: themeColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "云端绑定",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+              if (_isCloudLoading)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: themeColor,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            email,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            snapshot == null
+                ? "云端暂无备份，上传后会覆盖该账号之前的旧备份。"
+                : "最近备份：${_formatDateTime(snapshot.backupTime)} · ${snapshot.habitsCount} 个习惯",
+            style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+          ),
+          if (snapshot != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              "云端更新时间：${_formatDateTime(snapshot.updatedAt)}",
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCloudHintCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String description,
+  }) {
+    return AppGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
+    final currentUser = AuthService.currentUser;
+    final cloudAvailable =
+        SupabaseService.isConfigured && !SupabaseService.hasInitializationError;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -513,120 +918,185 @@ class _BackupPageState extends State<BackupPage> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                // 当前数据卡片
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: useWallpaper
-                        ? themeColor.withValues(alpha: 0.15)
-                        : themeColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.folder_outlined, size: 40, color: themeColor),
-                      const SizedBox(height: 12),
-                      Text(
-                        "当前数据",
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "${widget.habits.length} 个习惯",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: themeColor,
+                  // 当前数据卡片
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: useWallpaper
+                          ? themeColor.withValues(alpha: 0.15)
+                          : themeColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              Colors.black.withValues(alpha: useWallpaper ? 0.08 : 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      Text(
-                        "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  "导出备份",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildActionCard(
-                  icon: Icons.download_outlined,
-                  title: "保存到本地",
-                  subtitle: "将备份文件保存到下载目录",
-                  color: themeColor,
-                  isLoading: _isExporting,
-                  onTap: _exportToLocal,
-                ),
-                const SizedBox(height: 12),
-                _buildActionCard(
-                  icon: Icons.share_outlined,
-                  title: "分享备份文件",
-                  subtitle: "通过微信、邮件等方式分享",
-                  color: themeColor,
-                  isLoading: _isExporting,
-                  onTap: _shareBackup,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  "导入备份",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildActionCard(
-                  icon: Icons.upload_outlined,
-                  title: "从文件恢复",
-                  subtitle: "选择备份文件恢复数据",
-                  color: Colors.orange,
-                  isLoading: _isImporting,
-                  onTap: _importBackup,
-                ),
-                const SizedBox(height: 24),
-                // 备份说明卡片
-                AppGlassCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
-                          const SizedBox(width: 8),
-                          Text(
-                            "备份说明",
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.folder_outlined, size: 40, color: themeColor),
+                        const SizedBox(height: 12),
+                        Text(
+                          "当前数据",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "${widget.habits.length} 个习惯",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: themeColor,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildTip("• 备份文件包含所有习惯和打卡记录"),
-                      _buildTip("• 建议定期备份，防止数据丢失"),
-                      _buildTip("• 恢复数据会覆盖当前所有数据"),
-                      _buildTip("• 备份文件可以跨设备使用"),
-                    ],
+                        ),
+                        Text(
+                          "${widget.habits.fold(0, (sum, h) => sum + h.checkInTimes.length)} 次打卡记录",
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "云备份",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (!SupabaseService.isConfigured)
+                    _buildCloudHintCard(
+                      icon: Icons.cloud_off_outlined,
+                      color: Colors.grey,
+                      title: "云服务未配置",
+                      description: "当前应用还没有配置 Supabase，暂时无法使用云备份。",
+                    )
+                  else if (SupabaseService.hasInitializationError)
+                    _buildCloudHintCard(
+                      icon: Icons.error_outline,
+                      color: Colors.redAccent,
+                      title: "云服务初始化失败",
+                      description:
+                          SupabaseService.initializationErrorMessage ?? "请检查云端配置后重试。",
+                    )
+                  else if (currentUser == null)
+                    _buildCloudHintCard(
+                      icon: Icons.lock_outline,
+                      color: Colors.orange,
+                      title: "登录后可用",
+                      description: "云备份会和登录邮箱绑定，登录后可上传和恢复最新备份。",
+                    )
+                  else ...[
+                    _buildCloudStatusCard(
+                      themeColor: themeColor,
+                      email: currentUser.email ?? "未获取到邮箱",
+                    ),
+                    const SizedBox(height: 12),
+                    _buildActionCard(
+                      icon: Icons.cloud_upload_outlined,
+                      title: "备份到云端",
+                      subtitle: "上传当前数据并覆盖云端旧备份",
+                      color: themeColor,
+                      isLoading: _isCloudUploading,
+                      enabled: cloudAvailable && !_isCloudRestoring,
+                      onTap: _backupToCloud,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildActionCard(
+                      icon: Icons.cloud_download_outlined,
+                      title: "恢复云备份",
+                      subtitle: _cloudSnapshot == null
+                          ? "云端暂无备份数据"
+                          : "恢复 ${_formatDateTime(_cloudSnapshot!.backupTime)} 的最新云备份",
+                      color: Colors.orange,
+                      isLoading: _isCloudRestoring,
+                      enabled: !_isCloudLoading &&
+                          !_isCloudUploading &&
+                          _cloudSnapshot != null,
+                      onTap: _restoreFromCloud,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Text(
+                    "导出备份",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionCard(
+                    icon: Icons.download_outlined,
+                    title: "保存到本地",
+                    subtitle: "将备份文件保存到下载目录",
+                    color: themeColor,
+                    isLoading: _isExporting,
+                    enabled: !_isCloudUploading,
+                    onTap: _exportToLocal,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionCard(
+                    icon: Icons.share_outlined,
+                    title: "分享备份文件",
+                    subtitle: "通过微信、邮件等方式分享",
+                    color: themeColor,
+                    isLoading: _isExporting,
+                    enabled: !_isCloudUploading,
+                    onTap: _shareBackup,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "导入备份",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: useWallpaper ? Colors.grey[700] : Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionCard(
+                    icon: Icons.upload_outlined,
+                    title: "从文件恢复",
+                    subtitle: "选择备份文件恢复数据",
+                    color: Colors.orange,
+                    isLoading: _isImporting,
+                    enabled: !_isCloudRestoring,
+                    onTap: _importBackup,
+                  ),
+                  const SizedBox(height: 24),
+                  AppGlassCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 18, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Text(
+                              "备份说明",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTip("• 本地备份文件包含所有习惯和打卡记录"),
+                        _buildTip("• 云端仅保留当前登录邮箱最新上传的一份备份"),
+                        _buildTip("• 恢复数据会覆盖当前所有数据"),
+                        _buildTip("• 更换账号后只能看到对应邮箱的云备份"),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -685,10 +1155,11 @@ class _BackupPageState extends State<BackupPage> {
     required String subtitle,
     required Color color,
     required bool isLoading,
+    bool enabled = true,
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: isLoading ? null : onTap,
+      onTap: isLoading || !enabled ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: AppGlassCard(
         padding: const EdgeInsets.all(16),
@@ -698,7 +1169,9 @@ class _BackupPageState extends State<BackupPage> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: enabled
+                    ? color.withValues(alpha: 0.1)
+                    : Colors.grey.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: isLoading
@@ -706,7 +1179,11 @@ class _BackupPageState extends State<BackupPage> {
                 padding: const EdgeInsets.all(12),
                 child: CircularProgressIndicator(strokeWidth: 2, color: color),
               )
-                  : Icon(icon, color: color, size: 22),
+                  : Icon(
+                      icon,
+                      color: enabled ? color : Colors.grey[400],
+                      size: 22,
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -715,17 +1192,28 @@ class _BackupPageState extends State<BackupPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: enabled ? null : Colors.grey[500],
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: enabled ? Colors.grey[500] : Colors.grey[400],
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+            Icon(
+              Icons.chevron_right,
+              color: enabled ? Colors.grey[300] : Colors.grey[200],
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -741,4 +1229,16 @@ class _BackupPageState extends State<BackupPage> {
       ),
     );
   }
+}
+
+class _ParsedBackupData {
+  final List<Habit> habits;
+  final String backupTimeText;
+  final Map<String, dynamic>? achievementStatus;
+
+  const _ParsedBackupData({
+    required this.habits,
+    required this.backupTimeText,
+    required this.achievementStatus,
+  });
 }

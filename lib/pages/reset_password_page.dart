@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/auth_flow_service.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
@@ -199,7 +200,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isSubmitting ? null : _submit,
+                            onPressed: _isSubmitting
+                                ? null
+                                : () {
+                                    HapticService.mediumImpact();
+                                    _submit();
+                                  },
                             child: _isSubmitting
                                 ? const SizedBox(
                                     width: 18,
@@ -260,7 +266,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,

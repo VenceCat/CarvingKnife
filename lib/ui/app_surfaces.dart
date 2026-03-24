@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import '../services/haptic_service.dart';
 import 'app_tokens.dart';
 import 'app_visuals.dart';
 
@@ -134,7 +135,10 @@ class AppFloatingAddButton extends StatelessWidget {
     final buttonCore = Material(
       color: backgroundColor,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          HapticService.lightImpact();
+          onTap();
+        },
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -360,6 +364,7 @@ class AppPageTitleBar extends StatelessWidget {
   final double left;
   final double right;
   final double bottom;
+  final double? fadeTailHeight;
   final Widget? leading;
   final Widget? trailing;
 
@@ -370,63 +375,113 @@ class AppPageTitleBar extends StatelessWidget {
     this.left = AppSpacing.xl,
     this.right = AppSpacing.xl,
     this.bottom = AppSpacing.lg,
+    this.fadeTailHeight,
     this.leading,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
+    final resolvedFadeTailHeight = fadeTailHeight ??
+        (visuals.useWallpaper
+            ? (visuals.useGlassEffect ? 28.0 : 18.0)
+            : 0.0);
+
     final bar = Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top,
-        bottom: bottom,
-        left: left,
-        right: right,
-      ),
       decoration: BoxDecoration(
         gradient: visuals.useWallpaper
             ? LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.28),
-                  Colors.transparent,
-                ],
+                stops: visuals.useGlassEffect
+                    ? const [0, 0.30, 0.70, 1]
+                    : const [0, 0.38, 0.72, 1],
+                colors: visuals.useGlassEffect
+                    ? [
+                        Colors.black.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0.12),
+                        Colors.white.withValues(alpha: 0.05),
+                        Colors.transparent,
+                      ]
+                    : [
+                        Colors.black.withValues(alpha: 0.30),
+                        Colors.black.withValues(alpha: 0.12),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
               )
             : null,
         color: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.24 : 0.72)
+            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.15 : 0.72)
             : visuals.useWallpaper
                 ? Colors.transparent
                 : visuals.pageBackgroundColor,
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(width: AppSpacing.md),
-          ],
-          Expanded(
-            child: Text(
-              title,
-              style: AppTypography.pageTitle.copyWith(
-                color: visuals.titleColor,
-                shadows: visuals.titleShadows,
-              ),
+          Padding(
+            padding: EdgeInsets.only(
+              top: topInset,
+              bottom: bottom,
+              left: left,
+              right: right,
+            ),
+            child: Row(
+              children: [
+                if (leading != null) ...[
+                  leading!,
+                  const SizedBox(width: AppSpacing.md),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.pageTitle.copyWith(
+                      color: visuals.titleColor,
+                      shadows: visuals.titleShadows,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing!,
+              ],
             ),
           ),
-          if (trailing != null) trailing!,
+          if (resolvedFadeTailHeight > 0) SizedBox(height: resolvedFadeTailHeight),
         ],
       ),
     );
 
     if (!visuals.useGlassEffect) return bar;
 
-    return ClipRect(
+    final blurredBar = ClipRect(
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        filter: ui.ImageFilter.blur(sigmaX: 11, sigmaY: 11),
         child: bar,
       ),
+    );
+
+    if (resolvedFadeTailHeight <= 0) return blurredBar;
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (bounds) {
+        final fadeExtent = (resolvedFadeTailHeight * 1.75).clamp(24.0, bounds.height);
+        final fadeStart = (1 - (fadeExtent / bounds.height)).clamp(0.0, 1.0).toDouble();
+        final fadeSoftStart = (fadeStart - 0.10).clamp(0.0, fadeStart).toDouble();
+        return LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0, fadeSoftStart, fadeStart, 1],
+          colors: [
+            Colors.white,
+            Colors.white,
+            Colors.white.withValues(alpha: 0.72),
+            Colors.transparent,
+          ],
+        ).createShader(bounds);
+      },
+      child: blurredBar,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/haptic_service.dart';
 import '../services/update_service.dart';
 import '../ui/app_surfaces.dart';
 
@@ -170,7 +171,10 @@ class UpdateDialog extends StatelessWidget {
                     if (!forceUpdate)
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            HapticService.selection();
+                            Navigator.pop(context);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.grey[600],
                           ),
@@ -180,7 +184,10 @@ class UpdateDialog extends StatelessWidget {
                     if (!forceUpdate) const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _launchDownload(context),
+                        onPressed: () {
+                          HapticService.mediumImpact();
+                          _launchDownload(context);
+                        },
                         icon: const Icon(Icons.download_outlined, size: 18),
                         label: const Text("立即更新", style: TextStyle(fontSize: 15)),
                         style: ElevatedButton.styleFrom(

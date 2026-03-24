@@ -1,15 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:async';
 import 'dart:math';
 import '../models/habit.dart';
 import '../services/achievement_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/achievement_dialog.dart';
 import '../services/habit_icons.dart';
 import '../services/widget_service.dart';
-import '../services/live_timer_service.dart';
 import '../widgets/icon_selector.dart';
 import 'detail_page.dart';
 import '../ui/app_surfaces.dart';
@@ -103,16 +100,11 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  Habit? _activeTimedHabit;
-  int _activeTimedTotalSeconds = 0;
-  bool _activeTimedResultCommitted = false;
-
   @override
   void initState() {
     super.initState();
     currentQuote = quotes[Random().nextInt(quotes.length)];
     widget.controller?._attach(_showAddDialog);
-    LiveTimerService.registerActionCallback(_handleLiveTimerAction);
   }
 
   @override
@@ -127,28 +119,23 @@ class _CheckInPageState extends State<CheckInPage> {
   @override
   void dispose() {
     widget.controller?._detach(_showAddDialog);
-    LiveTimerService.registerActionCallback(null);
     super.dispose();
   }
 
   void _toggleCheckIn(Habit habit) {
     final todayCount = habit.todayCheckInCount;
     if (todayCount >= habit.dailyTarget) {
+      HapticService.lightImpact();
       _showCancelCheckInDialog(habit);
       return;
     }
-    if (habit.isTimedCheckIn && habit.checkInDurationMinutes > 0) {
-      _startTimedCheckIn(habit);
-      return;
-    }
+    HapticService.mediumImpact();
     _completeCheckIn(habit);
   }
 
   void _completeCheckIn(
     Habit habit, {
     String? initialNote,
-    int? elapsedSeconds,
-    bool? timedCompleted,
     bool showConfirmation = true,
   }) {
     final now = DateTime.now();
@@ -157,281 +144,11 @@ class _CheckInPageState extends State<CheckInPage> {
     final record = CheckInRecord(
       time: timeStr,
       note: normalizedNote == null || normalizedNote.isEmpty ? null : normalizedNote,
-      elapsedSeconds: elapsedSeconds,
-      timedCompleted: timedCompleted,
     );
     habit.checkInRecords.add(record);
     widget.onSave();
     if (showConfirmation) {
       _showCheckInNoteDialog(habit, record);
-    }
-  }
-
-  Future<void> _startTimedCheckIn(Habit habit) async {
-    final themeColor = Theme.of(context).colorScheme.primary;
-    final totalSeconds = habit.checkInDurationMinutes * 60;
-    var remainingSeconds = totalSeconds;
-    final endAt = DateTime.now().add(Duration(seconds: totalSeconds));
-    var completed = false;
-    var stoppedEarly = false;
-    var stoppedElapsedSeconds = 0;
-    var sheetVisible = false;
-    var lastPushedSeconds = -1;
-    Timer? timer;
-
-    String formatTime(int total) {
-      final minutes = (total ~/ 60).toString().padLeft(2, '0');
-      final seconds = (total % 60).toString().padLeft(2, '0');
-      return '$minutes:$seconds';
-    }
-
-    final notificationStatus = await Permission.notification.status;
-    if (!notificationStatus.isGranted && !notificationStatus.isLimited) {
-      await Permission.notification.request();
-    }
-    await LiveTimerService.startTimer(
-      title: habit.title,
-      totalSeconds: totalSeconds,
-      remainingSeconds: remainingSeconds,
-    );
-
-    _activeTimedHabit = habit;
-    _activeTimedTotalSeconds = totalSeconds;
-    _activeTimedResultCommitted = false;
-
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          void onTick() {
-            final next = max(endAt.difference(DateTime.now()).inSeconds, 0);
-            if (next != remainingSeconds) {
-              setModalState(() => remainingSeconds = next);
-            }
-            if (next != lastPushedSeconds) {
-              lastPushedSeconds = next;
-              LiveTimerService.updateTimer(
-                totalSeconds: totalSeconds,
-                remainingSeconds: remainingSeconds,
-              );
-            }
-            if (next <= 0 && !completed) {
-              completed = true;
-              timer?.cancel();
-              if (sheetVisible && ctx.mounted) {
-                Navigator.pop(ctx);
-              }
-            }
-          }
-
-          timer ??= Timer.periodic(const Duration(seconds: 1), (_) => onTick());
-          sheetVisible = true;
-
-          return AppBottomSheetSurface(
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.timer, size: 32, color: themeColor),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      '计时中',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[900],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      habit.title,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      formatTime(remainingSeconds),
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
-                        color: themeColor,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: totalSeconds == 0
-                            ? 0
-                            : (1 - (remainingSeconds / totalSeconds)).clamp(0.0, 1.0),
-                        minHeight: 8,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () async {
-                                timer?.cancel();
-                                await LiveTimerService.stopTimer();
-                                if (ctx.mounted) Navigator.pop(ctx);
-                              },
-                              child: Text(
-                                '放弃本次',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () async {
-                                stoppedElapsedSeconds =
-                                    max(totalSeconds - remainingSeconds, 0);
-                                if (stoppedElapsedSeconds > 0) {
-                                  stoppedEarly = true;
-                                }
-                                timer?.cancel();
-                                await LiveTimerService.stopTimer();
-                                if (ctx.mounted) Navigator.pop(ctx);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.grey[700],
-                              ),
-                              child: const Text(
-                                '停止并记录',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ).whenComplete(() async {
-      timer?.cancel();
-      sheetVisible = false;
-      await LiveTimerService.stopTimer();
-
-      if (completed && mounted) {
-        _commitTimedCheckInResult(
-          habit,
-          elapsedSeconds: totalSeconds,
-          timedCompleted: true,
-        );
-      } else if (stoppedEarly && stoppedElapsedSeconds > 0 && mounted) {
-        _commitTimedCheckInResult(
-          habit,
-          elapsedSeconds: stoppedElapsedSeconds,
-          timedCompleted: false,
-        );
-      }
-    });
-  }
-
-  void _commitTimedCheckInResult(
-    Habit habit, {
-    required int elapsedSeconds,
-    required bool timedCompleted,
-    bool showConfirmation = true,
-  }) {
-    if (_activeTimedResultCommitted) return;
-    _activeTimedResultCommitted = true;
-    _activeTimedHabit = null;
-    _activeTimedTotalSeconds = 0;
-    if (!mounted) return;
-    _completeCheckIn(
-      habit,
-      elapsedSeconds: elapsedSeconds,
-      timedCompleted: timedCompleted,
-      showConfirmation: showConfirmation,
-    );
-  }
-
-  Future<void> _handleLiveTimerAction(
-    String action,
-    int totalSeconds,
-    int remainingSeconds,
-  ) async {
-    final habit = _activeTimedHabit;
-    if (habit == null || _activeTimedResultCommitted) return;
-
-    final safeTotal = totalSeconds > 0 ? totalSeconds : _activeTimedTotalSeconds;
-    final safeRemaining = remainingSeconds.clamp(0, safeTotal);
-    final elapsedSeconds = max(safeTotal - safeRemaining, 0);
-
-    if (mounted) {
-      try {
-        Navigator.of(context, rootNavigator: true).maybePop();
-      } catch (_) {}
-    }
-
-    if (action == 'finish' && elapsedSeconds > 0) {
-      _commitTimedCheckInResult(
-        habit,
-        elapsedSeconds: elapsedSeconds,
-        timedCompleted: false,
-        showConfirmation: false,
-      );
-      await WidgetService.updateWidget(widget.habits);
-      if (mounted) {
-        _showSnackBar(
-          context,
-          icon: Icons.timer_off_outlined,
-          message: '已记录「${habit.title}」${CheckInRecord(time: '', elapsedSeconds: elapsedSeconds).timedSummary ?? ''}',
-          backgroundColor: Colors.orange,
-        );
-      }
-      return;
-    }
-
-    _activeTimedResultCommitted = true;
-    _activeTimedHabit = null;
-    _activeTimedTotalSeconds = 0;
-    if (mounted) {
-      _showSnackBar(
-        context,
-        icon: Icons.close,
-        message: '已放弃本次计时',
-        backgroundColor: Colors.grey[800] ?? Colors.black87,
-      );
     }
   }
 
@@ -463,8 +180,6 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final todayCount = habit.todayCheckInCount;
     final isCompleted = todayCount >= habit.dailyTarget;
-    final isPartialTimedRecord = record.isTimedInterrupted;
-    final timedSummary = record.timedSummary;
 
     showModalBottomSheet(
       context: context,
@@ -496,64 +211,30 @@ class _CheckInPageState extends State<CheckInPage> {
                     width: 70,
                     height: 70,
                     decoration: BoxDecoration(
-                      color: isPartialTimedRecord
-                          ? Colors.orange.withValues(alpha: 0.12)
-                          : isCompleted
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : themeColor.withValues(alpha: 0.1),
+                      color: isCompleted
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : themeColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isPartialTimedRecord
-                          ? Icons.timer_off_outlined
-                          : isCompleted
-                              ? Icons.celebration
-                              : Icons.check_circle,
-                      color: isPartialTimedRecord
-                          ? Colors.orange
-                          : isCompleted
-                              ? Colors.green
-                              : themeColor,
+                      isCompleted ? Icons.celebration : Icons.check_circle,
+                      color: isCompleted ? Colors.green : themeColor,
                       size: 36,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    isPartialTimedRecord
-                        ? "已记录本次坚持"
-                        : isCompleted
-                            ? "太棒了！目标完成 🎉"
-                            : "打卡成功！",
+                    isCompleted ? "太棒了！目标完成 🎉" : "打卡成功！",
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isPartialTimedRecord
-                        ? "「${habit.title}」${timedSummary ?? ''}"
-                        : habit.dailyTarget > 1
-                            ? "「${habit.title}」 $todayCount/${habit.dailyTarget} 次"
-                            : "「${habit.title}」已完成",
+                    habit.dailyTarget > 1
+                        ? "「${habit.title}」 $todayCount/${habit.dailyTarget} 次"
+                        : "「${habit.title}」已完成",
                     style: TextStyle(color: Colors.grey[500], fontSize: 14),
                   ),
-                  if (isPartialTimedRecord && timedSummary != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        timedSummary,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (!isPartialTimedRecord && habit.dailyTarget > 1) ...[
+                  if (habit.dailyTarget > 1) ...[
                     const SizedBox(height: 16),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
@@ -593,16 +274,12 @@ class _CheckInPageState extends State<CheckInPage> {
                         await _checkAndShowAchievements();
                       },
                       icon: const Icon(Icons.check, size: 20),
-                      label: Text(
-                        isPartialTimedRecord ? "保存记录" : "完成",
-                        style: const TextStyle(fontSize: 16),
+                      label: const Text(
+                        "完成",
+                        style: TextStyle(fontSize: 16),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isPartialTimedRecord
-                            ? Colors.orange
-                            : isCompleted
-                                ? Colors.green
-                                : themeColor,
+                        backgroundColor: isCompleted ? Colors.green : themeColor,
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -625,8 +302,7 @@ class _CheckInPageState extends State<CheckInPage> {
     final todayRecords = habit.checkInRecords
         .where((r) => r.time.startsWith(todayStr))
         .toList();
-    final todayCompletedCount =
-        todayRecords.where((r) => r.countsTowardTarget).length;
+    final todayCompletedCount = todayRecords.length;
 
     if (todayRecords.isEmpty) return;
 
@@ -1000,27 +676,9 @@ class _CheckInPageState extends State<CheckInPage> {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final themeColor = Theme.of(context).colorScheme.primary;
-    final durationController = TextEditingController(text: '25');
     String? errorText;
     int selectedIconIndex = 0;
-    int dailyTarget = 1; // 新增：每日目标次数
-    bool isTimedCheckIn = false;
-    int checkInDurationMinutes = 25;
-
-    void syncDurationInput(
-      int value,
-      void Function(void Function()) setModalState,
-    ) {
-      final clamped = value.clamp(1, 180);
-      setModalState(() => checkInDurationMinutes = clamped);
-      final text = clamped.toString();
-      if (durationController.text != text) {
-        durationController.value = TextEditingValue(
-          text: text,
-          selection: TextSelection.collapsed(offset: text.length),
-        );
-      }
-    }
+    int dailyTarget = 1;
 
     showModalBottomSheet(
       context: context,
@@ -1088,7 +746,10 @@ class _CheckInPageState extends State<CheckInPage> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
+                            onTap: () {
+                              HapticService.selection();
+                              Navigator.pop(ctx);
+                            },
                             child: Container(
                               width: 32,
                               height: 32,
@@ -1248,137 +909,12 @@ class _CheckInPageState extends State<CheckInPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: AppFormStyle.panelDecoration(
-                          context,
-                          tint: themeColor,
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.timer_outlined, size: 20, color: Colors.grey[600]),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "计时打卡",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey[800],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        "适用于锻炼、专注等按时长完成的习惯",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Switch(
-                                  value: isTimedCheckIn,
-                                  activeThumbColor: themeColor,
-                                  onChanged: (value) {
-                                    setModalState(() => isTimedCheckIn = value);
-                                  },
-                                ),
-                              ],
-                            ),
-                            if (isTimedCheckIn) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Text(
-                                    "每次时长",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline),
-                                    color: checkInDurationMinutes > 1
-                                        ? themeColor
-                                        : Colors.grey[400],
-                                    onPressed: checkInDurationMinutes > 1
-                                        ? () {
-                                            syncDurationInput(
-                                              checkInDurationMinutes - 1,
-                                              setModalState,
-                                            );
-                                          }
-                                        : null,
-                                  ),
-                                  SizedBox(
-                                    width: 84,
-                                    child: TextField(
-                                      controller: durationController,
-                                      keyboardType: TextInputType.number,
-                                      textAlign: TextAlign.center,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      onChanged: (value) {
-                                        if (value.isEmpty) return;
-                                        final parsed = int.tryParse(value);
-                                        if (parsed != null) {
-                                          syncDurationInput(parsed, setModalState);
-                                        }
-                                      },
-                                      onEditingComplete: () {
-                                        syncDurationInput(
-                                          int.tryParse(durationController.text) ??
-                                              checkInDurationMinutes,
-                                          setModalState,
-                                        );
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                      decoration: AppFormStyle.inputDecoration(
-                                        context,
-                                        themeColor: themeColor,
-                                        isDense: true,
-                                        radius: 10,
-                                        suffixText: '分',
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline),
-                                    color: checkInDurationMinutes < 180
-                                        ? themeColor
-                                        : Colors.grey[400],
-                                    onPressed: checkInDurationMinutes < 180
-                                        ? () {
-                                            syncDurationInput(
-                                              checkInDurationMinutes + 1,
-                                              setModalState,
-                                            );
-                                          }
-                                        : null,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: () async {
+                            HapticService.mediumImpact();
                             if (titleController.text.trim().isEmpty) {
                               errorText = "习惯名称不能为空";
                               setModalState(() {});
@@ -1390,8 +926,6 @@ class _CheckInPageState extends State<CheckInPage> {
                                 description: descController.text.trim(),
                                 iconIndex: selectedIconIndex,
                                 dailyTarget: dailyTarget,
-                                isTimedCheckIn: isTimedCheckIn,
-                                checkInDurationMinutes: checkInDurationMinutes,
                               ));
                               Navigator.pop(ctx);
                               await WidgetService.updateWidget(widget.habits);
@@ -2010,7 +1544,6 @@ class _CheckInPageState extends State<CheckInPage> {
     final streak = _calculateStreak(habit);
     final todayCount = habit.todayCheckInCount;
     final dailyTarget = habit.dailyTarget;
-    final isTimedCheckIn = habit.isTimedCheckIn && habit.checkInDurationMinutes > 0;
     final progress = todayCount / dailyTarget;
 
     // 根据位置确定圆角
@@ -2062,16 +1595,19 @@ class _CheckInPageState extends State<CheckInPage> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (c) => DetailPage(
-                  habit: habit,
-                  allHabits: widget.habits,
-                  onSave: widget.onSave,
+            onTap: () {
+              HapticService.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (c) => DetailPage(
+                    habit: habit,
+                    allHabits: widget.habits,
+                    onSave: widget.onSave,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -2130,27 +1666,6 @@ class _CheckInPageState extends State<CheckInPage> {
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: themeColor,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                if (isTimedCheckIn) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      '${habit.checkInDurationMinutes}分钟',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.orange[700],
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -2221,7 +1736,7 @@ class _CheckInPageState extends State<CheckInPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isTimedCheckIn ? Icons.timer : Icons.check,
+                                Icons.check,
                                 size: 16,
                                 color: Colors.white,
                               ),
@@ -2505,11 +2020,9 @@ class _CheckInPageState extends State<CheckInPage> {
     final todayRecords = habit.checkInRecords
         .where((r) => r.time.startsWith(todayStr))
         .toList();
-    final todayCompletedCount =
-        todayRecords.where((r) => r.countsTowardTarget).length;
-    final todayStatusText = todayRecords.length == todayCompletedCount
-        ? "今日已打卡 ${todayCompletedCount}${habit.dailyTarget > 1 ? '/${habit.dailyTarget}' : ''} 次"
-        : "今日已打卡 ${todayCompletedCount} 次 · 共 ${todayRecords.length} 条记录";
+    final todayCompletedCount = todayRecords.length;
+    final todayStatusText =
+        "今日已打卡 ${todayCompletedCount}${habit.dailyTarget > 1 ? '/${habit.dailyTarget}' : ''} 次";
 
     showModalBottomSheet(
       context: context,
@@ -3060,18 +2573,8 @@ class _CheckInPageState extends State<CheckInPage> {
   }
 
   String _buildRecordPreviewText(CheckInRecord record) {
-    final parts = <String>[];
-    final timedSummary = record.timedSummary;
-    if (timedSummary != null && timedSummary.isNotEmpty) {
-      parts.add(timedSummary);
-    }
-
     final note = record.note == null ? '' : _extractDisplayNote(record.note!);
-    if (note.isNotEmpty) {
-      parts.add(note);
-    }
-
-    return parts.join(' · ');
+    return note;
   }
 }
 

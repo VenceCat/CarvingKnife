@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/habit.dart';
-import '../models/achievement.dart';
 import '../services/achievement_service.dart';
+import '../services/haptic_service.dart';
 import '../widgets/achievement_dialog.dart';
 import '../services/habit_icons.dart';
 import '../widgets/icon_selector.dart';
@@ -142,7 +141,10 @@ class _DetailPageState extends State<DetailPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,
@@ -791,28 +793,9 @@ class _DetailPageState extends State<DetailPage> {
         ...records.reversed.map((record) {
           final dateTime = DateTime.parse(record.time);
           final isMakeUp = record.note != null && record.note!.contains("[补卡于");
-          final isTimedRecord = record.isTimedRecord;
-          final isTimedInterrupted = record.isTimedInterrupted;
-          final timedSummary = record.timedSummary;
-          final accentColor = isMakeUp
-              ? Colors.orange
-              : isTimedInterrupted
-                  ? Colors.deepOrange
-                  : themeColor;
-          final statusIcon = isMakeUp
-              ? Icons.history
-              : isTimedInterrupted
-                  ? Icons.timer_off_outlined
-                  : isTimedRecord
-                      ? Icons.timer_outlined
-                      : Icons.check;
-          final statusText = isMakeUp
-              ? "补卡成功"
-              : isTimedInterrupted
-                  ? "计时已停止"
-                  : isTimedRecord
-                      ? "计时完成"
-                      : "打卡成功";
+          final accentColor = isMakeUp ? Colors.orange : themeColor;
+          final statusIcon = isMakeUp ? Icons.history : Icons.check;
+          final statusText = isMakeUp ? "补卡成功" : "打卡成功";
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -820,8 +803,6 @@ class _DetailPageState extends State<DetailPage> {
               padding: const EdgeInsets.all(16),
               borderColor: isMakeUp
                   ? Colors.orange.withValues(alpha: 0.3)
-                  : isTimedInterrupted
-                      ? Colors.deepOrange.withValues(alpha: 0.25)
                   : themeColor.withValues(alpha: 0.3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -881,27 +862,6 @@ class _DetailPageState extends State<DetailPage> {
                               DateFormat('HH:mm:ss').format(dateTime),
                               style: TextStyle(fontSize: 13, color: Colors.grey[400]),
                             ),
-                            if (timedSummary != null) ...[
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: accentColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  timedSummary,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: accentColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),
@@ -1078,28 +1038,8 @@ class _DetailPageState extends State<DetailPage> {
     final titleController = TextEditingController(text: widget.habit.title);
     final descController = TextEditingController(text: widget.habit.description);
     final themeColor = Theme.of(context).colorScheme.primary;
-    final durationController = TextEditingController(
-      text: widget.habit.checkInDurationMinutes.toString(),
-    );
     int selectedIconIndex = widget.habit.iconIndex;
-    int dailyTarget = widget.habit.dailyTarget; // 新增
-    bool isTimedCheckIn = widget.habit.isTimedCheckIn;
-    int checkInDurationMinutes = widget.habit.checkInDurationMinutes;
-
-    void syncDurationInput(
-      int value,
-      void Function(void Function()) setModalState,
-    ) {
-      final clamped = value.clamp(1, 180);
-      setModalState(() => checkInDurationMinutes = clamped);
-      final text = clamped.toString();
-      if (durationController.text != text) {
-        durationController.value = TextEditingValue(
-          text: text,
-          selection: TextSelection.collapsed(offset: text.length),
-        );
-      }
-    }
+    int dailyTarget = widget.habit.dailyTarget;
 
     showModalBottomSheet(
       context: context,
@@ -1156,7 +1096,10 @@ class _DetailPageState extends State<DetailPage> {
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
+                            onTap: () {
+                              HapticService.selection();
+                              Navigator.pop(ctx);
+                            },
                             child: Container(
                               width: 32,
                               height: 32,
@@ -1306,138 +1249,12 @@ class _DetailPageState extends State<DetailPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: AppFormStyle.panelDecoration(
-                          context,
-                          tint: themeColor,
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.timer_outlined, size: 20, color: Colors.grey[600]),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "计时打卡",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey[800],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        "适用于锻炼、专注等按时长完成的习惯",
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Switch(
-                                  value: isTimedCheckIn,
-                                  activeThumbColor: themeColor,
-                                  onChanged: (value) {
-                                    setModalState(() => isTimedCheckIn = value);
-                                  },
-                                ),
-                              ],
-                            ),
-                            if (isTimedCheckIn) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Text(
-                                    "每次时长",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  SizedBox(
-                                    width: 84,
-                                    child: TextField(
-                                      controller: durationController,
-                                      keyboardType: TextInputType.number,
-                                      textAlign: TextAlign.center,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      onChanged: (value) {
-                                        if (value.isEmpty) return;
-                                        final parsed = int.tryParse(value);
-                                        if (parsed != null) {
-                                          syncDurationInput(parsed, setModalState);
-                                        }
-                                      },
-                                      onEditingComplete: () {
-                                        syncDurationInput(
-                                          int.tryParse(durationController.text) ??
-                                              checkInDurationMinutes,
-                                          setModalState,
-                                        );
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                      decoration: AppFormStyle.inputDecoration(
-                                        context,
-                                        themeColor: themeColor,
-                                        isDense: true,
-                                        radius: 10,
-                                        suffixText: '分',
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline),
-                                    color: checkInDurationMinutes > 1
-                                        ? themeColor
-                                        : Colors.grey[400],
-                                    onPressed: checkInDurationMinutes > 1
-                                        ? () {
-                                            syncDurationInput(
-                                              checkInDurationMinutes - 1,
-                                              setModalState,
-                                            );
-                                          }
-                                        : null,
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline),
-                                    color: checkInDurationMinutes < 180
-                                        ? themeColor
-                                        : Colors.grey[400],
-                                    onPressed: checkInDurationMinutes < 180
-                                        ? () {
-                                            syncDurationInput(
-                                              checkInDurationMinutes + 1,
-                                              setModalState,
-                                            );
-                                          }
-                                        : null,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
+                            HapticService.mediumImpact();
                             if (titleController.text.trim().isNotEmpty) {
                               setState(() {
                                 widget.habit.title = titleController.text.trim();
@@ -1445,8 +1262,6 @@ class _DetailPageState extends State<DetailPage> {
                                     descController.text.trim();
                                 widget.habit.iconIndex = selectedIconIndex;
                                 widget.habit.dailyTarget = dailyTarget;
-                                widget.habit.isTimedCheckIn = isTimedCheckIn;
-                                widget.habit.checkInDurationMinutes = checkInDurationMinutes;
                               });
                               widget.onSave();
                               Navigator.pop(ctx);
@@ -1552,7 +1367,10 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
+                        onTap: () {
+                          HapticService.selection();
+                          Navigator.pop(ctx);
+                        },
                         child: Container(
                           width: 32,
                           height: 32,
@@ -1618,6 +1436,7 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void _performMakeUpCheckIn(String note) {
+    HapticService.mediumImpact();
     final now = DateTime.now();
 
     final makeUpTime = DateTime(
@@ -1730,7 +1549,10 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
+                        onTap: () {
+                          HapticService.selection();
+                          Navigator.pop(ctx);
+                        },
                         child: Container(
                           width: 32,
                           height: 32,
@@ -1764,6 +1586,7 @@ class _DetailPageState extends State<DetailPage> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
+                              HapticService.selection();
                               if (makeUpPrefix.isNotEmpty) {
                                 record.note = makeUpPrefix;
                               } else {
@@ -1796,10 +1619,11 @@ class _DetailPageState extends State<DetailPage> {
                           ),
                         ),
                       if (userNote.isNotEmpty) const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            String newNote = noteController.text.trim();
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              HapticService.mediumImpact();
+                              String newNote = noteController.text.trim();
 
                             if (makeUpPrefix.isNotEmpty) {
                               if (newNote.isNotEmpty) {

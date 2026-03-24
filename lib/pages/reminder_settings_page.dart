@@ -3,6 +3,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'dart:io';
 import '../models/habit.dart';
 import '../services/habit_icons.dart';
+import '../services/haptic_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_visuals.dart';
 
@@ -141,7 +142,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,
@@ -182,7 +186,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _showSetReminderFlow(habit),
+            onTap: () {
+              HapticService.lightImpact();
+              _showSetReminderFlow(habit);
+            },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -339,7 +346,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
+                      onTap: () {
+                        HapticService.selection();
+                        Navigator.pop(ctx);
+                      },
                       child: Container(
                         width: 32,
                         height: 32,
@@ -368,6 +378,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
+                      HapticService.selection();
                       Navigator.pop(ctx);
                       _showDeleteReminderDialog(habit);
                     },
@@ -451,7 +462,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
+                      onPressed: () {
+                        HapticService.selection();
+                        Navigator.pop(ctx);
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.grey[600],
                       ),
@@ -462,6 +476,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        HapticService.mediumImpact();
                         Navigator.pop(ctx);
                         setState(() => habit.reminderTime = timeStr);
                         widget.onSave();
@@ -561,7 +576,10 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          HapticService.selection();
+                          Navigator.pop(ctx);
+                        },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
                         ),
@@ -573,6 +591,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          HapticService.mediumImpact();
                           setState(() => habit.reminderTime = null);
                           widget.onSave();
                           Navigator.pop(ctx);

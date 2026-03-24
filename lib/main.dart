@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/haptic_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -19,6 +20,7 @@ import 'widgets/update_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await HapticService.init();
   await WidgetService.initialize();
   await SupabaseService.initialize();
   AuthFlowService.initialize();
@@ -354,8 +356,12 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   ),
                   child: NavigationBar(
                     selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) =>
-                        setState(() => _currentIndex = index),
+                    onDestinationSelected: (index) {
+                      if (index != _currentIndex) {
+                        HapticService.navigationDoublePulse();
+                      }
+                      setState(() => _currentIndex = index);
+                    },
                     backgroundColor: Colors.transparent,
                     labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                     destinations: const [

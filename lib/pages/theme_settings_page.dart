@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../config/theme_config.dart';
+import '../services/haptic_service.dart';
 import '../services/wallpaper_service.dart';
 import '../app.dart';
 import '../ui/app_surfaces.dart';
@@ -176,7 +177,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,
@@ -340,7 +344,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             // 无壁纸：显示上传按钮
             Center(
               child: InkWell(
-                onTap: () => _pickWallpaper(context, appState),
+                onTap: () {
+                  HapticService.lightImpact();
+                  _pickWallpaper(context, appState);
+                },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   width: double.infinity,
@@ -638,6 +645,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
+          if (!isSelected) {
+            HapticService.selection();
+          }
           await appState?.setThemeColor(index);
           if (mounted) setState(() {});
         },
@@ -735,7 +745,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: onTap,
+        onPressed: () {
+          HapticService.lightImpact();
+          onTap();
+        },
         icon: Icon(icon, size: 18),
         label: Text(label),
         style: _buildPrimaryButtonStyle(color: color),
@@ -848,7 +861,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
+                      onTap: () {
+                        HapticService.selection();
+                        Navigator.pop(ctx);
+                      },
                       child: Container(
                         width: 32,
                         height: 32,
@@ -890,7 +906,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          HapticService.selection();
+                          Navigator.pop(ctx);
+                        },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
                         ),
@@ -901,6 +920,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
+                          HapticService.mediumImpact();
                           Navigator.pop(ctx);
                           setState(() => _isLoading = true);
                           await appState?.clearWallpaper();

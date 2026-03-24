@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/haptic_service.dart';
 import '../services/update_service.dart';
 import '../widgets/update_dialog.dart';
 import '../ui/app_surfaces.dart';
@@ -255,7 +256,10 @@ class _AboutPageState extends State<AboutPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,

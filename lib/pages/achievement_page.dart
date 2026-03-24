@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/habit.dart';
 import '../models/achievement.dart';
 import '../services/achievement_service.dart';
+import '../services/haptic_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_visuals.dart';
 
@@ -131,7 +132,10 @@ class _AchievementPageState extends State<AchievementPage> {
 
   Widget _buildBackButton(AppVisuals visuals) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        HapticService.selection();
+        Navigator.pop(context);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: 40,

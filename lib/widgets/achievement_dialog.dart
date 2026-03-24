@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/achievement.dart';
+import '../services/haptic_service.dart';
 import '../ui/app_surfaces.dart';
 
 class AchievementUnlockDialog extends StatefulWidget {
@@ -213,7 +214,10 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      HapticService.mediumImpact();
+                      Navigator.of(context).pop();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: highlightColor,
                       foregroundColor: Colors.white,

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/habit.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../services/supabase_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
@@ -13,6 +14,7 @@ import 'account_page.dart';
 import 'backup_page.dart';
 import 'reminder_settings_page.dart';
 import 'theme_settings_page.dart';
+import 'other_settings_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final List<Habit> habits;
@@ -98,6 +100,13 @@ class ProfilePage extends StatelessWidget {
                           ),
                           _menuItem(
                             context,
+                            icon: Icons.tune_outlined,
+                            title: '\u5176\u4ed6\u8bbe\u7f6e',
+                            page: const OtherSettingsPage(),
+                            themeColor: themeColor,
+                          ),
+                          _menuItem(
+                            context,
                             icon: Icons.cloud_outlined,
                             title: '\u6570\u636e\u5907\u4efd',
                             page: BackupPage(habits: habits, onRestore: onRestore),
@@ -157,10 +166,13 @@ class ProfilePage extends StatelessWidget {
                     : '\u5df2\u767b\u5f55';
 
         return InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (c) => const AccountPage()),
-          ),
+          onTap: () {
+            HapticService.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const AccountPage()),
+            );
+          },
           borderRadius: BorderRadius.circular(AppRadii.lg),
           child: AppGlassCard(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -271,10 +283,13 @@ class ProfilePage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (c) => page),
-        ),
+        onTap: () {
+          HapticService.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (c) => page),
+          );
+        },
         borderRadius: BorderRadius.circular(AppRadii.md),
         child: AppGlassCard(
           radius: AppRadii.md,

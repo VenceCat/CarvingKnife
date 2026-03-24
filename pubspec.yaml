@@ -2,7 +2,7 @@ name: carving_knife
 description: A new Flutter project.
 publish_to: 'none'
 
-version: 1.13.11+1
+version: 2.0.0+2
 
 environment:
   sdk: ^3.0.0

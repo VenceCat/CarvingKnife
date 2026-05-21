@@ -55,6 +55,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final wallpaperData = appState?.wallpaperData;
     final useWallpaper = appState?.useWallpaper ?? false;
     final glassEffectEnabled = appState?.glassEffectEnabled ?? false;
+    final topInset = MediaQuery.of(context).padding.top + 60;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -64,10 +65,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: Stack(
           children: [
             Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
+              top: topInset,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
                 children: [
                   // ===== 壁纸设置卡片 =====
                   _buildWallpaperCard(

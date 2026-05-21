@@ -98,6 +98,7 @@ class _DetailPageState extends State<DetailPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
+    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -107,7 +108,7 @@ class _DetailPageState extends State<DetailPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+              top: topInset,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [

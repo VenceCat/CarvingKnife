@@ -96,6 +96,7 @@ class _AboutPageState extends State<AboutPage> {
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
+    final topInset = MediaQuery.of(context).padding.top + 60;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -105,9 +106,10 @@ class _AboutPageState extends State<AboutPage> {
         child: Stack(
           children: [
             Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60,
-            child: SingleChildScrollView(
-              child: Column(
+              top: topInset,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 100),
+                child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 40),
@@ -235,7 +237,7 @@ class _AboutPageState extends State<AboutPage> {
                   const SizedBox(height: 100),
                 ],
               ),
-            ),
+              ),
             ),
             Positioned(
               top: 0,
@@ -292,8 +294,22 @@ class _AboutPageState extends State<AboutPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-        Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ),
       ],
     );
   }
@@ -302,7 +318,13 @@ class _AboutPageState extends State<AboutPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          ),
+        ),
+        const SizedBox(width: 12),
         GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: value));
@@ -315,8 +337,18 @@ class _AboutPageState extends State<AboutPage> {
           },
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+              ),
               const SizedBox(width: 6),
               Icon(Icons.copy, size: 14, color: Colors.grey[400]),
             ],

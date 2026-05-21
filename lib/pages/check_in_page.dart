@@ -1189,6 +1189,7 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
+    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
     final floatingButtonBottomOffset = widget.floatingButtonBottomOffset;
     final listBottomSafeSpace = floatingButtonBottomOffset + 58 + 24;
 
@@ -1199,17 +1200,8 @@ class _CheckInPageState extends State<CheckInPage> {
         visuals: visuals,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: AppPageTitleBar(
-                title: '雕刀',
-                visuals: visuals,
-              ),
-            ),
             Positioned.fill(
-              top: MediaQuery.of(context).padding.top + 60, // 标题栏高度 + 状态栏高度
+              top: topInset,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (scrollNotification) {
                   return false;
@@ -1277,6 +1269,15 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '雕刀',
+                visuals: visuals,
               ),
             ),
           ],

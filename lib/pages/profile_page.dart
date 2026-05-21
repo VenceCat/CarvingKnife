@@ -32,6 +32,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
+    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
 
     final totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
     final todayCheckIns = habits.where((h) => h.isTodayCompleted).length;
@@ -43,17 +44,8 @@ class ProfilePage extends StatelessWidget {
         visuals: visuals,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: AppPageTitleBar(
-                title: '\u6211\u7684',
-                visuals: visuals,
-              ),
-            ),
             Positioned.fill(
-              top: MediaQuery.of(context).padding.top + 60,
+              top: topInset,
               child: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
@@ -125,6 +117,15 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '\u6211\u7684',
+                visuals: visuals,
               ),
             ),
           ],

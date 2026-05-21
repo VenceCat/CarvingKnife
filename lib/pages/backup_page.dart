@@ -834,6 +834,8 @@ class _BackupPageState extends State<BackupPage> {
           const SizedBox(height: 12),
           Text(
             email,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -847,6 +849,8 @@ class _BackupPageState extends State<BackupPage> {
             const SizedBox(height: 4),
             Text(
               "云端更新时间：${_formatDateTime(snapshot.updatedAt)}",
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
@@ -879,17 +883,21 @@ class _BackupPageState extends State<BackupPage> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
-                ),
-              ],
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+                  ),
+                ],
             ),
           ),
         ],
@@ -905,6 +913,7 @@ class _BackupPageState extends State<BackupPage> {
     final currentUser = AuthService.currentUser;
     final cloudAvailable =
         SupabaseService.isConfigured && !SupabaseService.hasInitializationError;
+    final topInset = MediaQuery.of(context).padding.top + 60;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -914,7 +923,7 @@ class _BackupPageState extends State<BackupPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              top: MediaQuery.of(context).padding.top + 60,
+              top: topInset,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [

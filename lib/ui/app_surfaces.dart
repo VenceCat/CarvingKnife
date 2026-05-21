@@ -359,6 +359,8 @@ class AppFormStyle {
 }
 
 class AppPageTitleBar extends StatelessWidget {
+  static const double _titleContentHeight = 60;
+
   final String title;
   final AppVisuals visuals;
   final double left;
@@ -383,51 +385,45 @@ class AppPageTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.of(context).padding.top;
-    final resolvedFadeTailHeight = fadeTailHeight ??
-        (visuals.useWallpaper
-            ? (visuals.useGlassEffect ? 28.0 : 18.0)
-            : 0.0);
+    final resolvedFadeTailHeight = fadeTailHeight ?? 0.0;
+    final totalHeight = topInset + _titleContentHeight + resolvedFadeTailHeight;
+    final titleColor = visuals.useGlassEffect
+        ? Theme.of(context).colorScheme.onSurface
+        : visuals.titleColor;
+    final titleShadows = visuals.useGlassEffect ? null : visuals.titleShadows;
 
     final bar = Container(
+      height: totalHeight,
       decoration: BoxDecoration(
-        gradient: visuals.useWallpaper
+        gradient: visuals.useWallpaper && !visuals.useGlassEffect
             ? LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                stops: visuals.useGlassEffect
-                    ? const [0, 0.30, 0.70, 1]
-                    : const [0, 0.38, 0.72, 1],
-                colors: visuals.useGlassEffect
-                    ? [
-                        Colors.black.withValues(alpha: 0.18),
-                        Colors.white.withValues(alpha: 0.12),
-                        Colors.white.withValues(alpha: 0.05),
-                        Colors.transparent,
-                      ]
-                    : [
-                        Colors.black.withValues(alpha: 0.30),
-                        Colors.black.withValues(alpha: 0.12),
-                        Colors.transparent,
-                        Colors.transparent,
-                      ],
+                stops: const [0, 0.38, 0.72, 1],
+                colors: [
+                  Colors.black.withValues(alpha: 0.30),
+                  Colors.black.withValues(alpha: 0.12),
+                  Colors.transparent,
+                  Colors.transparent,
+                ],
               )
             : null,
         color: visuals.useGlassEffect
-            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.15 : 0.72)
+            ? Colors.white
             : visuals.useWallpaper
                 ? Colors.transparent
                 : visuals.pageBackgroundColor,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: topInset,
-              bottom: bottom,
-              left: left,
-              right: right,
-            ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: topInset,
+          left: left,
+          right: right,
+        ),
+        child: SizedBox(
+          height: _titleContentHeight,
+          child: Align(
+            alignment: Alignment.centerLeft,
             child: Row(
               children: [
                 if (leading != null) ...[
@@ -438,8 +434,8 @@ class AppPageTitleBar extends StatelessWidget {
                   child: Text(
                     title,
                     style: AppTypography.pageTitle.copyWith(
-                      color: visuals.titleColor,
-                      shadows: visuals.titleShadows,
+                      color: titleColor,
+                      shadows: titleShadows,
                     ),
                   ),
                 ),
@@ -447,42 +443,23 @@ class AppPageTitleBar extends StatelessWidget {
               ],
             ),
           ),
-          if (resolvedFadeTailHeight > 0) SizedBox(height: resolvedFadeTailHeight),
-        ],
+        ),
       ),
     );
 
     if (!visuals.useGlassEffect) return bar;
 
-    final blurredBar = ClipRect(
+    return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 11, sigmaY: 11),
         child: bar,
       ),
     );
+  }
 
-    if (resolvedFadeTailHeight <= 0) return blurredBar;
-
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (bounds) {
-        final fadeExtent = (resolvedFadeTailHeight * 1.75).clamp(24.0, bounds.height);
-        final fadeStart = (1 - (fadeExtent / bounds.height)).clamp(0.0, 1.0).toDouble();
-        final fadeSoftStart = (fadeStart - 0.10).clamp(0.0, fadeStart).toDouble();
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [0, fadeSoftStart, fadeStart, 1],
-          colors: [
-            Colors.white,
-            Colors.white,
-            Colors.white.withValues(alpha: 0.72),
-            Colors.transparent,
-          ],
-        ).createShader(bounds);
-      },
-      child: blurredBar,
-    );
+  static double contentTopInset(BuildContext context, AppVisuals visuals) {
+    final topInset = MediaQuery.of(context).padding.top;
+    return topInset + _titleContentHeight;
   }
 }
 

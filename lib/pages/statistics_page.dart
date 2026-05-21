@@ -237,6 +237,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
+    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
@@ -245,19 +246,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
         visuals: visuals,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: AppPageTitleBar(
-                title: '统计',
-                visuals: visuals,
-              ),
-            ),
             Positioned.fill(
-            top: MediaQuery.of(context).padding.top + 60,
-            child: CustomScrollView(
-              slivers: [
+              top: topInset,
+              child: CustomScrollView(
+                slivers: [
                 // 概览卡片
                 SliverToBoxAdapter(
                   child: Padding(
@@ -564,9 +556,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
 
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
+                ],
+              ),
             ),
-          ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppPageTitleBar(
+                title: '统计',
+                visuals: visuals,
+              ),
+            ),
           ],
         ),
       ),

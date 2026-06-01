@@ -203,7 +203,8 @@ class AppSurfaceDecoration {
         BoxShadow(
           color: isSelected && selectedColor != null
               ? selectedColor.withValues(alpha: 0.2)
-              : Colors.black.withValues(alpha: visuals.useWallpaper ? 0.08 : 0.05),
+              : Colors.black
+                  .withValues(alpha: visuals.useWallpaper ? 0.08 : 0.05),
           blurRadius: isSelected ? 8 : 10,
           offset: const Offset(0, 2),
         ),
@@ -256,7 +257,8 @@ class AppFormStyle {
     return BorderSide(
       color: color ??
           (visuals.useGlassEffect
-              ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.38 : 0.82)
+              ? Colors.white
+                  .withValues(alpha: visuals.useWallpaper ? 0.38 : 0.82)
               : Colors.grey.shade200),
       width: width,
     );
@@ -333,12 +335,11 @@ class AppFormStyle {
         radius: radius,
       ),
       errorStyle: TextStyle(color: Colors.red[400]),
-      counterStyle:
-          counterStyle?.copyWith(shadows: visuals.bodyTextShadows) ??
-              TextStyle(
-                color: visuals.mutedTextColor,
-                shadows: visuals.bodyTextShadows,
-              ),
+      counterStyle: counterStyle?.copyWith(shadows: visuals.bodyTextShadows) ??
+          TextStyle(
+            color: visuals.mutedTextColor,
+            shadows: visuals.bodyTextShadows,
+          ),
       contentPadding: contentPadding,
     );
   }
@@ -408,11 +409,7 @@ class AppPageTitleBar extends StatelessWidget {
                 ],
               )
             : null,
-        color: visuals.useGlassEffect
-            ? Colors.white
-            : visuals.useWallpaper
-                ? Colors.transparent
-                : visuals.pageBackgroundColor,
+        color: Colors.transparent,
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -447,14 +444,7 @@ class AppPageTitleBar extends StatelessWidget {
       ),
     );
 
-    if (!visuals.useGlassEffect) return bar;
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 11, sigmaY: 11),
-        child: bar,
-      ),
-    );
+    return bar;
   }
 
   static double contentTopInset(BuildContext context, AppVisuals visuals) {

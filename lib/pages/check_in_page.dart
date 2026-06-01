@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import '../models/habit.dart';
@@ -75,12 +75,12 @@ class _CheckInPageState extends State<CheckInPage> {
 
   /// ===== 统一的SnackBar显示方法 =====
   void _showSnackBar(
-      BuildContext context, {
-        required IconData icon,
-        required String message,
-        required Color backgroundColor,
-        Duration duration = const Duration(seconds: 2),
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String message,
+    required Color backgroundColor,
+    Duration duration = const Duration(seconds: 2),
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -143,7 +143,9 @@ class _CheckInPageState extends State<CheckInPage> {
     final normalizedNote = initialNote?.trim();
     final record = CheckInRecord(
       time: timeStr,
-      note: normalizedNote == null || normalizedNote.isEmpty ? null : normalizedNote,
+      note: normalizedNote == null || normalizedNote.isEmpty
+          ? null
+          : normalizedNote,
     );
     habit.checkInRecords.add(record);
     widget.onSave();
@@ -225,7 +227,8 @@ class _CheckInPageState extends State<CheckInPage> {
                   const SizedBox(height: 16),
                   Text(
                     isCompleted ? "太棒了！目标完成 🎉" : "打卡成功！",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -279,7 +282,8 @@ class _CheckInPageState extends State<CheckInPage> {
                         style: TextStyle(fontSize: 16),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isCompleted ? Colors.green : themeColor,
+                        backgroundColor:
+                            isCompleted ? Colors.green : themeColor,
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -299,9 +303,8 @@ class _CheckInPageState extends State<CheckInPage> {
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
     // 获取今日所有打卡记录
-    final todayRecords = habit.checkInRecords
-        .where((r) => r.time.startsWith(todayStr))
-        .toList();
+    final todayRecords =
+        habit.checkInRecords.where((r) => r.time.startsWith(todayStr)).toList();
     final todayCompletedCount = todayRecords.length;
 
     if (todayRecords.isEmpty) return;
@@ -341,7 +344,8 @@ class _CheckInPageState extends State<CheckInPage> {
                         color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.undo, color: Colors.orange, size: 22),
+                      child: const Icon(Icons.undo,
+                          color: Colors.orange, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -350,14 +354,16 @@ class _CheckInPageState extends State<CheckInPage> {
                         children: [
                           const Text(
                             "取消打卡",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             habit.dailyTarget > 1
                                 ? "取消最后一次打卡？"
                                 : "确定要取消今日的打卡吗？",
-                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -371,7 +377,8 @@ class _CheckInPageState extends State<CheckInPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child: Icon(Icons.close,
+                            size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
@@ -383,7 +390,8 @@ class _CheckInPageState extends State<CheckInPage> {
                   decoration: BoxDecoration(
                     color: themeColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: themeColor.withValues(alpha: 0.2)),
+                    border:
+                        Border.all(color: themeColor.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -461,7 +469,8 @@ class _CheckInPageState extends State<CheckInPage> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.format_quote, size: 16, color: Colors.grey[400]),
+                        Icon(Icons.format_quote,
+                            size: 16, color: Colors.grey[400]),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -484,18 +493,21 @@ class _CheckInPageState extends State<CheckInPage> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: Colors.orange[700]),
+                      Icon(Icons.info_outline,
+                          size: 18, color: Colors.orange[700]),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           habit.dailyTarget > 1
                               ? "将取消最后一次打卡记录"
                               : "取消后今日的打卡记录和备注将被删除",
-                          style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.orange[700]),
                         ),
                       ),
                     ],
@@ -510,7 +522,8 @@ class _CheckInPageState extends State<CheckInPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.grey[600],
                         ),
-                        child: const Text("保留打卡", style: TextStyle(fontSize: 15)),
+                        child:
+                            const Text("保留打卡", style: TextStyle(fontSize: 15)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -521,7 +534,8 @@ class _CheckInPageState extends State<CheckInPage> {
 
                           setState(() {
                             // 移除最后一条今日打卡记录
-                            final index = habit.checkInRecords.indexOf(lastRecord);
+                            final index =
+                                habit.checkInRecords.indexOf(lastRecord);
                             if (index != -1) {
                               habit.checkInRecords.removeAt(index);
                             }
@@ -540,24 +554,29 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          backgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? Colors.orange.withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.74
-                                      : 0.9,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.74
+                                          : 0.9,
                                 )
                               : Colors.orange,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          disabledBackgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? Colors.orange.withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.42
-                                      : 0.56,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.42
+                                          : 0.56,
                                 )
                               : Colors.orange.withValues(alpha: 0.6),
                           disabledForegroundColor: Colors.white,
                         ),
-                        child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
+                        child:
+                            const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),
                     ),
                   ],
@@ -572,7 +591,7 @@ class _CheckInPageState extends State<CheckInPage> {
 
   Future<void> _checkAndShowAchievements() async {
     final newAchievements =
-    await AchievementService.checkNewAchievements(widget.habits);
+        await AchievementService.checkNewAchievements(widget.habits);
 
     if (newAchievements.isNotEmpty && mounted) {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -705,261 +724,276 @@ class _CheckInPageState extends State<CheckInPage> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: themeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(HabitIcons.getIcon(selectedIconIndex),
-                                color: themeColor, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "新计划",
-                                  style: TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.w600),
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
-                                SizedBox(height: 2),
-                                Text(
-                                  "开启一个新习惯",
-                                  style:
-                                  TextStyle(fontSize: 13, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              HapticService.selection();
-                              Navigator.pop(ctx);
-                            },
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.close,
-                                  size: 18, color: Colors.grey[500]),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "选择图标",
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      IconSelector(
-                        selectedIndex: selectedIconIndex,
-                        themeColor: themeColor,
-                        onSelect: (index) {
-                          setModalState(() => selectedIconIndex = index);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: titleController,
-                        onChanged: (value) {
-                          if (errorText != null && value.trim().isNotEmpty) {
-                            errorText = null;
-                            setModalState(() {});
-                          }
-                        },
-                        decoration: AppFormStyle.inputDecoration(
-                          context,
-                          themeColor: themeColor,
-                          labelText: "习惯名称",
-                          hintText: "例如：喝水",
-                          errorText: errorText,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: descController,
-                        maxLines: 2,
-                        maxLength: 100,
-                        decoration: AppFormStyle.inputDecoration(
-                          context,
-                          themeColor: themeColor,
-                          labelText: "描述（选填）",
-                          hintText: "例如：每天喝8杯水",
-                          counterStyle: TextStyle(color: Colors.grey[400]),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // ===== 新增：每日目标次数选择器 =====
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: AppFormStyle.panelDecoration(
-                          context,
-                          tint: themeColor,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.repeat, size: 20, color: Colors.grey[600]),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              const SizedBox(height: 20),
+                              Row(
                                 children: [
-                                  Text(
-                                    "每日目标",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey[800],
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: themeColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                        HabitIcons.getIcon(selectedIconIndex),
+                                        color: themeColor,
+                                        size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "新计划",
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          "开启一个新习惯",
+                                          style: TextStyle(
+                                              fontSize: 13, color: Colors.grey),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    "每天需要完成的次数",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
+                                  GestureDetector(
+                                    onTap: () {
+                                      HapticService.selection();
+                                      Navigator.pop(ctx);
+                                    },
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.close,
+                                          size: 18, color: Colors.grey[500]),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            // 减少按钮
-                            GestureDetector(
-                              onTap: () {
-                                if (dailyTarget > 1) {
-                                  setModalState(() => dailyTarget--);
-                                }
-                              },
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: dailyTarget > 1
-                                      ? themeColor.withValues(alpha: 0.1)
-                                      : Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.remove,
-                                  size: 20,
-                                  color: dailyTarget > 1
-                                      ? themeColor
-                                      : Colors.grey[400],
+                              const SizedBox(height: 24),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "选择图标",
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ),
-                            ),
-                            // 次数显示
-                            Container(
-                              width: 50,
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$dailyTarget',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: themeColor,
+                              const SizedBox(height: 10),
+                              IconSelector(
+                                selectedIndex: selectedIconIndex,
+                                themeColor: themeColor,
+                                onSelect: (index) {
+                                  setModalState(
+                                      () => selectedIconIndex = index);
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              TextField(
+                                controller: titleController,
+                                onChanged: (value) {
+                                  if (errorText != null &&
+                                      value.trim().isNotEmpty) {
+                                    errorText = null;
+                                    setModalState(() {});
+                                  }
+                                },
+                                decoration: AppFormStyle.inputDecoration(
+                                  context,
+                                  themeColor: themeColor,
+                                  labelText: "习惯名称",
+                                  hintText: "例如：喝水",
+                                  errorText: errorText,
                                 ),
                               ),
-                            ),
-                            // 增加按钮
-                            GestureDetector(
-                              onTap: () {
-                                if (dailyTarget < 99) {
-                                  setModalState(() => dailyTarget++);
-                                }
-                              },
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: themeColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.add,
-                                  size: 20,
-                                  color: themeColor,
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: descController,
+                                maxLines: 2,
+                                maxLength: 100,
+                                decoration: AppFormStyle.inputDecoration(
+                                  context,
+                                  themeColor: themeColor,
+                                  labelText: "描述（选填）",
+                                  hintText: "例如：每天喝8杯水",
+                                  counterStyle:
+                                      TextStyle(color: Colors.grey[400]),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            HapticService.mediumImpact();
-                            if (titleController.text.trim().isEmpty) {
-                              errorText = "习惯名称不能为空";
-                              setModalState(() {});
-                            } else {
-                              final habitTitle = titleController.text.trim();
-                              widget.onAdd(Habit(
-                                id: DateTime.now().toString(),
-                                title: habitTitle,
-                                description: descController.text.trim(),
-                                iconIndex: selectedIconIndex,
-                                dailyTarget: dailyTarget,
-                              ));
-                              Navigator.pop(ctx);
-                              await WidgetService.updateWidget(widget.habits);
+                              const SizedBox(height: 16),
+                              // ===== 新增：每日目标次数选择器 =====
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: AppFormStyle.panelDecoration(
+                                  context,
+                                  tint: themeColor,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.repeat,
+                                        size: 20, color: Colors.grey[600]),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "每日目标",
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.grey[800],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            "每天需要完成的次数",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[500],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // 减少按钮
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (dailyTarget > 1) {
+                                          setModalState(() => dailyTarget--);
+                                        }
+                                      },
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: dailyTarget > 1
+                                              ? themeColor.withValues(
+                                                  alpha: 0.1)
+                                              : Colors.grey[200],
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          Icons.remove,
+                                          size: 20,
+                                          color: dailyTarget > 1
+                                              ? themeColor
+                                              : Colors.grey[400],
+                                        ),
+                                      ),
+                                    ),
+                                    // 次数显示
+                                    Container(
+                                      width: 50,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$dailyTarget',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                          color: themeColor,
+                                        ),
+                                      ),
+                                    ),
+                                    // 增加按钮
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (dailyTarget < 99) {
+                                          setModalState(() => dailyTarget++);
+                                        }
+                                      },
+                                      child: Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              themeColor.withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 20,
+                                          color: themeColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    HapticService.mediumImpact();
+                                    if (titleController.text.trim().isEmpty) {
+                                      errorText = "习惯名称不能为空";
+                                      setModalState(() {});
+                                    } else {
+                                      final habitTitle =
+                                          titleController.text.trim();
+                                      widget.onAdd(Habit(
+                                        id: DateTime.now().toString(),
+                                        title: habitTitle,
+                                        description: descController.text.trim(),
+                                        iconIndex: selectedIconIndex,
+                                        dailyTarget: dailyTarget,
+                                      ));
+                                      Navigator.pop(ctx);
+                                      await WidgetService.updateWidget(
+                                          widget.habits);
 
-                              _showSnackBar(
-                                context,
-                                icon: Icons.check_circle,
-                                message: "已添加「$habitTitle」",
-                                backgroundColor: Colors.green,
-                                duration: const Duration(seconds: 1),
-                              );
+                                      _showSnackBar(
+                                        context,
+                                        icon: Icons.check_circle,
+                                        message: "已添加「$habitTitle」",
+                                        backgroundColor: Colors.green,
+                                        duration: const Duration(seconds: 1),
+                                      );
 
-                              await _checkAndShowAchievements();
-                            }
-                          },
-                          icon: const Icon(Icons.check, size: 20),
-                          label:
-                          const Text("创建习惯", style: TextStyle(fontSize: 16)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeColor,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
+                                      await _checkAndShowAchievements();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.check, size: 20),
+                                  label: const Text("创建习惯",
+                                      style: TextStyle(fontSize: 16)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     );
                   },
-                  ),
                 ),
               ),
-            );
+            ),
+          );
         },
       ),
     );
@@ -1030,8 +1064,8 @@ class _CheckInPageState extends State<CheckInPage> {
                           const SizedBox(height: 2),
                           Text(
                             "确定要删除这个习惯吗？",
-                            style:
-                            TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -1045,8 +1079,8 @@ class _CheckInPageState extends State<CheckInPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child:
-                        Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child: Icon(Icons.close,
+                            size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
@@ -1084,7 +1118,8 @@ class _CheckInPageState extends State<CheckInPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              habit.checkInRecords.length == habit.completedCheckInCount
+                              habit.checkInRecords.length ==
+                                      habit.completedCheckInCount
                                   ? "已打卡 ${habit.completedCheckInCount} 次"
                                   : "已打卡 ${habit.completedCheckInCount} 次 · 共 ${habit.checkInRecords.length} 条记录",
                               style: TextStyle(
@@ -1103,7 +1138,8 @@ class _CheckInPageState extends State<CheckInPage> {
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                    border:
+                        Border.all(color: Colors.red.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -1114,7 +1150,9 @@ class _CheckInPageState extends State<CheckInPage> {
                         child: Text(
                           "删除后所有打卡记录将一并清除，此操作不可撤销！",
                           style: TextStyle(
-                              color: Colors.red[700], fontSize: 13, height: 1.4),
+                              color: Colors.red[700],
+                              fontSize: 13,
+                              height: 1.4),
                         ),
                       ),
                     ],
@@ -1154,19 +1192,23 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          backgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? const Color(0xFFD32F2F).withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.74
-                                      : 0.9,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.74
+                                          : 0.9,
                                 )
                               : const Color(0xFFD32F2F),
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          disabledBackgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? const Color(0xFFD32F2F).withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.42
-                                      : 0.56,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.42
+                                          : 0.56,
                                 )
                               : const Color(0xFFD32F2F).withValues(alpha: 0.6),
                           disabledForegroundColor: Colors.white,
@@ -1201,13 +1243,13 @@ class _CheckInPageState extends State<CheckInPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              top: topInset,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (scrollNotification) {
                   return false;
                 },
                 child: CustomScrollView(
                   slivers: [
+                    SliverToBoxAdapter(child: SizedBox(height: topInset)),
                     // ===== 名言区域 =====
                     SliverToBoxAdapter(
                       child: Container(
@@ -1218,8 +1260,8 @@ class _CheckInPageState extends State<CheckInPage> {
                           bottom: 12,
                         ),
                         child: GestureDetector(
-                          onTap: () => setState(() =>
-                              currentQuote = quotes[Random().nextInt(quotes.length)]),
+                          onTap: () => setState(() => currentQuote =
+                              quotes[Random().nextInt(quotes.length)]),
                           child: AppGlassCard(
                             radius: AppRadii.lg,
                             padding: const EdgeInsets.symmetric(
@@ -1276,14 +1318,13 @@ class _CheckInPageState extends State<CheckInPage> {
               left: 0,
               right: 0,
               child: AppPageTitleBar(
-                title: '雕刀',
+                title: '打卡',
                 visuals: visuals,
               ),
             ),
           ],
         ),
       ),
-
     );
   }
 
@@ -1502,12 +1543,12 @@ class _CheckInPageState extends State<CheckInPage> {
             color: useWallpaper ? Colors.white : Colors.grey[800],
             shadows: useWallpaper
                 ? [
-              Shadow(
-                offset: const Offset(0, 1),
-                blurRadius: 3,
-                color: Colors.black.withValues(alpha: 0.5),
-              ),
-            ]
+                    Shadow(
+                      offset: const Offset(0, 1),
+                      blurRadius: 3,
+                      color: Colors.black.withValues(alpha: 0.5),
+                    ),
+                  ]
                 : null,
           ),
         ),
@@ -1537,11 +1578,11 @@ class _CheckInPageState extends State<CheckInPage> {
 
   /// 构建待办习惯项（大卡片样式）
   Widget _buildTodoHabitItem(
-      Habit habit,
-      Color themeColor, {
-        bool isFirst = false,
-        bool isLast = false,
-      }) {
+    Habit habit,
+    Color themeColor, {
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
     final streak = _calculateStreak(habit);
     final todayCount = habit.todayCheckInCount;
     final dailyTarget = habit.dailyTarget;
@@ -1614,7 +1655,9 @@ class _CheckInPageState extends State<CheckInPage> {
               decoration: BoxDecoration(
                 border: isLast
                     ? null
-                    : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+                    : Border(
+                        bottom: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.1))),
               ),
               child: Column(
                 children: [
@@ -1651,7 +1694,8 @@ class _CheckInPageState extends State<CheckInPage> {
                                 ),
                                 if (habit.isPinned) ...[
                                   const SizedBox(width: 4),
-                                  Icon(Icons.push_pin, size: 12, color: Colors.blue[400]),
+                                  Icon(Icons.push_pin,
+                                      size: 12, color: Colors.blue[400]),
                                 ],
                                 if (dailyTarget > 1) ...[
                                   const SizedBox(width: 8),
@@ -1721,7 +1765,8 @@ class _CheckInPageState extends State<CheckInPage> {
                       GestureDetector(
                         onTap: () => _toggleCheckIn(habit),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: themeColor,
                             borderRadius: BorderRadius.circular(20),
@@ -1782,19 +1827,18 @@ class _CheckInPageState extends State<CheckInPage> {
 
   /// 构建已完成习惯项（紧凑样式）
   Widget _buildDoneHabitItem(
-      Habit habit,
-      Color themeColor, {
-        bool isFirst = false,
-        bool isLast = false,
-      }) {
+    Habit habit,
+    Color themeColor, {
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
     final streak = _calculateStreak(habit);
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final todayCount = habit.todayCheckInCount;
 
     // 获取今日打卡记录
-    final todayRecords = habit.checkInRecords
-        .where((r) => r.time.startsWith(todayStr))
-        .toList();
+    final todayRecords =
+        habit.checkInRecords.where((r) => r.time.startsWith(todayStr)).toList();
 
     // 获取最后一次打卡时间
     final lastRecord = todayRecords.isNotEmpty ? todayRecords.last : null;
@@ -1864,7 +1908,9 @@ class _CheckInPageState extends State<CheckInPage> {
               decoration: BoxDecoration(
                 border: isLast
                     ? null
-                    : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+                    : Border(
+                        bottom: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.1))),
               ),
               child: Row(
                 children: [
@@ -1898,7 +1944,8 @@ class _CheckInPageState extends State<CheckInPage> {
                         if (habit.dailyTarget > 1) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -1939,7 +1986,8 @@ class _CheckInPageState extends State<CheckInPage> {
                   // 连续天数
                   if (streak > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -2018,9 +2066,8 @@ class _CheckInPageState extends State<CheckInPage> {
   void _showSwipeActions(Habit habit, {required bool hasTodayRecord}) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final todayRecords = habit.checkInRecords
-        .where((r) => r.time.startsWith(todayStr))
-        .toList();
+    final todayRecords =
+        habit.checkInRecords.where((r) => r.time.startsWith(todayStr)).toList();
     final todayCompletedCount = todayRecords.length;
     final todayStatusText =
         "今日已打卡 ${todayCompletedCount}${habit.dailyTarget > 1 ? '/${habit.dailyTarget}' : ''} 次";
@@ -2102,7 +2149,8 @@ class _CheckInPageState extends State<CheckInPage> {
                           color: Colors.grey[100],
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                        child: Icon(Icons.close,
+                            size: 18, color: Colors.grey[500]),
                       ),
                     ),
                   ],
@@ -2114,9 +2162,8 @@ class _CheckInPageState extends State<CheckInPage> {
                   _buildSwipeActionItem(
                     icon: Icons.undo,
                     title: "取消打卡",
-                    subtitle: habit.dailyTarget > 1
-                        ? "选择要取消的打卡记录"
-                        : "取消今日的打卡记录",
+                    subtitle:
+                        habit.dailyTarget > 1 ? "选择要取消的打卡记录" : "取消今日的打卡记录",
                     color: Colors.orange,
                     onTap: () {
                       Navigator.pop(ctx);
@@ -2133,7 +2180,8 @@ class _CheckInPageState extends State<CheckInPage> {
                 ],
                 // 置顶选项
                 _buildSwipeActionItem(
-                  icon: habit.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  icon:
+                      habit.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                   title: habit.isPinned ? "取消置顶" : "置顶习惯",
                   subtitle: habit.isPinned ? "取消后将按默认顺序排列" : "置顶后将显示在列表最前面",
                   color: habit.isPinned ? Colors.grey : Colors.blue,
@@ -2289,7 +2337,8 @@ class _CheckInPageState extends State<CheckInPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.format_quote, size: 16, color: Colors.grey[400]),
+                        Icon(Icons.format_quote,
+                            size: 16, color: Colors.grey[400]),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -2342,24 +2391,29 @@ class _CheckInPageState extends State<CheckInPage> {
                           await _checkAndShowAchievements();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          backgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? Colors.orange.withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.74
-                                      : 0.9,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.74
+                                          : 0.9,
                                 )
                               : Colors.orange,
                           foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppVisuals.resolve(context).useGlassEffect
+                          disabledBackgroundColor: AppVisuals.resolve(context)
+                                  .useGlassEffect
                               ? Colors.orange.withValues(
-                                  alpha: AppVisuals.resolve(context).useWallpaper
-                                      ? 0.42
-                                      : 0.56,
+                                  alpha:
+                                      AppVisuals.resolve(context).useWallpaper
+                                          ? 0.42
+                                          : 0.56,
                                 )
                               : Colors.orange.withValues(alpha: 0.6),
                           disabledForegroundColor: Colors.white,
                         ),
-                        child: const Text("取消打卡", style: TextStyle(fontSize: 15)),
+                        child:
+                            const Text("取消打卡", style: TextStyle(fontSize: 15)),
                       ),
                     ),
                   ],
@@ -2411,7 +2465,8 @@ class _CheckInPageState extends State<CheckInPage> {
                             color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.undo, color: Colors.orange, size: 22),
+                          child: const Icon(Icons.undo,
+                              color: Colors.orange, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2420,12 +2475,14 @@ class _CheckInPageState extends State<CheckInPage> {
                             children: [
                               const Text(
                                 "选择要取消的打卡",
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 "「${habit.title}」今日共 ${records.length} 条记录",
-                                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                                style: TextStyle(
+                                    fontSize: 13, color: Colors.grey[500]),
                               ),
                             ],
                           ),
@@ -2439,7 +2496,8 @@ class _CheckInPageState extends State<CheckInPage> {
                               color: Colors.grey[100],
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.close, size: 18, color: Colors.grey[500]),
+                            child: Icon(Icons.close,
+                                size: 18, color: Colors.grey[500]),
                           ),
                         ),
                       ],
@@ -2493,7 +2551,8 @@ class _CheckInPageState extends State<CheckInPage> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: isMakeUp ? Colors.orange : themeColor,
+                                      color:
+                                          isMakeUp ? Colors.orange : themeColor,
                                     ),
                                   ),
                                 ),
@@ -2518,8 +2577,10 @@ class _CheckInPageState extends State<CheckInPage> {
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.orange.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: Colors.orange
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: const Text(
                                               "补卡",

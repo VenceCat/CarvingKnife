@@ -183,10 +183,13 @@ class HabitAppState extends State<HabitApp> {
           primary: themeColor,
           brightness: Brightness.light,
         ),
-        textTheme: ThemeData.light().textTheme.apply(
+        textTheme: ThemeData.light()
+            .textTheme
+            .apply(
               bodyColor: bodyColor,
               displayColor: bodyColor,
-            ).copyWith(
+            )
+            .copyWith(
               bodySmall: ThemeData.light().textTheme.bodySmall?.copyWith(
                     color: secondaryBodyColor,
                     fontWeight: FontWeight.w500,
@@ -198,13 +201,13 @@ class HabitAppState extends State<HabitApp> {
             ),
         // 壁纸模式下使用透明背景
         scaffoldBackgroundColor: useWallpaper ? Colors.transparent : bgColor,
-        appBarTheme: AppBarTheme(
-          // 壁纸模式下 AppBar 半透明
-          backgroundColor: useWallpaper
-              ? Colors.white.withValues(alpha: 0.9)
-              : bgColor,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.black87,
-          elevation: useWallpaper ? 0.5 : 0,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

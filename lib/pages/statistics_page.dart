@@ -16,7 +16,6 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-
   // 计算总打卡次数
   int get totalCheckIns {
     return widget.habits.fold(0, (sum, h) => sum + h.completedCheckInCount);
@@ -126,7 +125,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     int totalCompleted = 0;
 
     for (int i = 0; i < now.weekday; i++) {
-      final date = DateFormat('yyyy-MM-dd').format(weekStart.add(Duration(days: i)));
+      final date =
+          DateFormat('yyyy-MM-dd').format(weekStart.add(Duration(days: i)));
       for (final habit in widget.habits) {
         if (habit.checkInTimes.any((t) => t.startsWith(date))) {
           totalCompleted++;
@@ -146,7 +146,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     int totalCompleted = 0;
 
     for (int i = 1; i <= now.day; i++) {
-      final date = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, i));
+      final date =
+          DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, i));
       for (final habit in widget.habits) {
         if (habit.checkInTimes.any((t) => t.startsWith(date))) {
           totalCompleted++;
@@ -247,315 +248,344 @@ class _StatisticsPageState extends State<StatisticsPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              top: topInset,
               child: CustomScrollView(
                 slivers: [
-                // 概览卡片
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Row(
-                      children: [
-                        _buildStatCard(
-                          "习惯数",
-                          "${widget.habits.length}",
-                          Icons.flag_outlined,
-                          themeColor,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildStatCard(
-                          "打卡数",
-                          "$totalCheckIns",
-                          Icons.check_circle_outline,
-                          themeColor,
-                        ),
-                        const SizedBox(width: 12),
-                        _buildStatCard(
-                          "连续中",
-                          "$currentStreak天",
-                          Icons.local_fire_department_outlined,
-                          Colors.orange,
-                        ),
-                        const SizedBox(width: 12),
-                        // ===== 修改：最长连续天数 =====
-                        _buildStatCard(
-                          "最长",
-                          "$maxTotalDays天",
-                          Icons.emoji_events_outlined,
-                          Colors.amber,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // 完成率卡片
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: _buildCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  SliverToBoxAdapter(child: SizedBox(height: topInset)),
+                  // 概览卡片
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.pie_chart_outline, size: 20, color: themeColor),
-                              const SizedBox(width: 8),
-                              Text(
-                                "完成率",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ],
+                          _buildStatCard(
+                            "习惯数",
+                            "${widget.habits.length}",
+                            Icons.flag_outlined,
+                            themeColor,
                           ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildProgressRing("今日", todayCompletionRate, themeColor),
-                              _buildProgressRing("本周", weekCompletionRate, Colors.blue),
-                              _buildProgressRing("本月", monthCompletionRate, Colors.purple),
-                            ],
+                          const SizedBox(width: 12),
+                          _buildStatCard(
+                            "打卡数",
+                            "$totalCheckIns",
+                            Icons.check_circle_outline,
+                            themeColor,
+                          ),
+                          const SizedBox(width: 12),
+                          _buildStatCard(
+                            "连续中",
+                            "$currentStreak天",
+                            Icons.local_fire_department_outlined,
+                            Colors.orange,
+                          ),
+                          const SizedBox(width: 12),
+                          // ===== 修改：最长连续天数 =====
+                          _buildStatCard(
+                            "最长",
+                            "$maxTotalDays天",
+                            Icons.emoji_events_outlined,
+                            Colors.amber,
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
 
-                // 打卡热力图
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: _buildCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_month_outlined, size: 20, color: themeColor),
-                              const SizedBox(width: 8),
-                              Text(
-                                "最近30天",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildHeatmap(themeColor),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text("少", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                              const SizedBox(width: 4),
-                              ...List.generate(
-                                5,
-                                    (i) => Container(
-                                  width: 12,
-                                  height: 12,
-                                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  decoration: BoxDecoration(
-                                    color: themeColor.withValues(alpha: 0.2 + i * 0.2),
-                                    borderRadius: BorderRadius.circular(2),
+                  // 完成率卡片
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: _buildCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.pie_chart_outline,
+                                    size: 20, color: themeColor),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "完成率",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[800],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text("多", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildProgressRing(
+                                    "今日", todayCompletionRate, themeColor),
+                                _buildProgressRing(
+                                    "本周", weekCompletionRate, Colors.blue),
+                                _buildProgressRing(
+                                    "本月", monthCompletionRate, Colors.purple),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // 习惯排行
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: _buildCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.leaderboard_outlined, size: 20, color: themeColor),
-                              const SizedBox(width: 8),
-                              Text(
-                                "习惯排行",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
+                  // 打卡热力图
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: _buildCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_month_outlined,
+                                    size: 20, color: themeColor),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "最近30天",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[800],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (habitRanking.isEmpty)
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Text("暂无数据", style: TextStyle(color: Colors.grey[400])),
-                              ),
-                            )
-                          else
-                            ...habitRanking.take(5).toList().asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final item = entry.value;
-                              final habit = item['habit'] as Habit;
-                              final streak = item['streak'] as int;
-                              final maxStreak = item['maxStreak'] as int;
-                              final totalDays = item['totalDays'] as int;
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildHeatmap(themeColor),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text("少",
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.grey[400])),
+                                const SizedBox(width: 4),
+                                ...List.generate(
+                                  5,
+                                  (i) => Container(
+                                    width: 12,
+                                    height: 12,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 2),
+                                    decoration: BoxDecoration(
+                                      color: themeColor.withValues(
+                                          alpha: 0.2 + i * 0.2),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text("多",
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.grey[400])),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
 
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    // 排名
-                                    Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: index == 0
-                                            ? Colors.amber[100]
-                                            : index == 1
-                                            ? Colors.grey[200]
-                                            : index == 2
-                                            ? Colors.orange[100]
-                                            : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          "${index + 1}",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: index == 0
-                                                ? Colors.amber[800]
-                                                : index == 1
-                                                ? Colors.grey[600]
-                                                : index == 2
-                                                ? Colors.orange[800]
-                                                : Colors.grey[500],
+                  // 习惯排行
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: _buildCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.leaderboard_outlined,
+                                    size: 20, color: themeColor),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "习惯排行",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (habitRanking.isEmpty)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Text("暂无数据",
+                                      style:
+                                          TextStyle(color: Colors.grey[400])),
+                                ),
+                              )
+                            else
+                              ...habitRanking
+                                  .take(5)
+                                  .toList()
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                final index = entry.key;
+                                final item = entry.value;
+                                final habit = item['habit'] as Habit;
+                                final streak = item['streak'] as int;
+                                final maxStreak = item['maxStreak'] as int;
+                                final totalDays = item['totalDays'] as int;
+
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      // 排名
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: index == 0
+                                              ? Colors.amber[100]
+                                              : index == 1
+                                                  ? Colors.grey[200]
+                                                  : index == 2
+                                                      ? Colors.orange[100]
+                                                      : Colors.grey[100],
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            "${index + 1}",
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: index == 0
+                                                  ? Colors.amber[800]
+                                                  : index == 1
+                                                      ? Colors.grey[600]
+                                                      : index == 2
+                                                          ? Colors.orange[800]
+                                                          : Colors.grey[500],
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // 图标
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: themeColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(10),
+                                      const SizedBox(width: 12),
+                                      // 图标
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              themeColor.withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          HabitIcons.getIcon(habit.iconIndex),
+                                          color: themeColor,
+                                          size: 18,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        HabitIcons.getIcon(habit.iconIndex),
-                                        color: themeColor,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // 名称和统计
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            habit.title,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
+                                      const SizedBox(width: 12),
+                                      // 名称和统计
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              habit.title,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                "共 $totalDays 天",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey[400],
+                                            const SizedBox(height: 2),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  "共 $totalDays 天",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey[400],
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.emoji_events,
-                                                size: 12,
-                                                color: Colors.amber[600],
-                                              ),
-                                              const SizedBox(width: 2),
-                                              Text(
-                                                "最长 $maxStreak 天",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.amber[700],
+                                                const SizedBox(width: 8),
+                                                Icon(
+                                                  Icons.emoji_events,
+                                                  size: 12,
+                                                  color: Colors.amber[600],
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                                const SizedBox(width: 2),
+                                                Text(
+                                                  "最长 $maxStreak 天",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.amber[700],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    // 当前连续天数
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: streak > 0
-                                            ? Colors.orange[50]
-                                            : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.local_fire_department,
-                                            size: 14,
-                                            color: streak > 0
-                                                ? Colors.orange[600]
-                                                : Colors.grey[400],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            "$streak天",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w500,
+                                      // 当前连续天数
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: streak > 0
+                                              ? Colors.orange[50]
+                                              : Colors.grey[100],
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.local_fire_department,
+                                              size: 14,
                                               color: streak > 0
-                                                  ? Colors.orange[700]
+                                                  ? Colors.orange[600]
                                                   : Colors.grey[400],
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              "$streak天",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: streak > 0
+                                                    ? Colors.orange[700]
+                                                    : Colors.grey[400],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                        ],
+                                    ],
+                                  ),
+                                );
+                              }),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               ),
             ),
@@ -586,11 +616,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 构建统计卡片
   Widget _buildStatCard(
-      String label,
-      String value,
-      IconData icon,
-      Color color,
-      ) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: AppGlassCard(
         radius: AppRadii.md,
@@ -669,7 +699,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
       children: data.map((item) {
         final count = item['count'] as int;
         final date = item['date'] as DateTime;
-        final opacity = habitCount > 0 ? (count / habitCount).clamp(0.0, 1.0) : 0.0;
+        final opacity =
+            habitCount > 0 ? (count / habitCount).clamp(0.0, 1.0) : 0.0;
 
         return Tooltip(
           message: "${DateFormat('M/d').format(date)}: $count/$habitCount",

@@ -34,7 +34,8 @@ class ProfilePage extends StatelessWidget {
     final visuals = AppVisuals.resolve(context);
     final topInset = AppPageTitleBar.contentTopInset(context, visuals);
 
-    final totalCheckIns = habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
+    final totalCheckIns =
+        habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
     final todayCheckIns = habits.where((h) => h.isTodayCompleted).length;
 
     return Scaffold(
@@ -45,9 +46,9 @@ class ProfilePage extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              top: topInset,
               child: CustomScrollView(
                 slivers: [
+                  SliverToBoxAdapter(child: SizedBox(height: topInset)),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -60,11 +61,20 @@ class ProfilePage extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _statItem('\u4e60\u60ef\u6570', habits.length.toString(), themeColor),
-                                Container(width: 1, height: 40, color: Colors.grey[200]),
-                                _statItem('\u4eca\u65e5\u5b8c\u6210', todayCheckIns.toString(), themeColor),
-                                Container(width: 1, height: 40, color: Colors.grey[200]),
-                                _statItem('\u7d2f\u8ba1\u6253\u5361', totalCheckIns.toString(), themeColor),
+                                _statItem('\u4e60\u60ef\u6570',
+                                    habits.length.toString(), themeColor),
+                                Container(
+                                    width: 1,
+                                    height: 40,
+                                    color: Colors.grey[200]),
+                                _statItem('\u4eca\u65e5\u5b8c\u6210',
+                                    todayCheckIns.toString(), themeColor),
+                                Container(
+                                    width: 1,
+                                    height: 40,
+                                    color: Colors.grey[200]),
+                                _statItem('\u7d2f\u8ba1\u6253\u5361',
+                                    totalCheckIns.toString(), themeColor),
                               ],
                             ),
                           ),
@@ -80,7 +90,8 @@ class ProfilePage extends StatelessWidget {
                             context,
                             icon: Icons.notifications_none,
                             title: '\u63d0\u9192\u8bbe\u7f6e',
-                            page: ReminderSettingsPage(habits: habits, onSave: onSave),
+                            page: ReminderSettingsPage(
+                                habits: habits, onSave: onSave),
                             themeColor: themeColor,
                           ),
                           _menuItem(
@@ -101,7 +112,8 @@ class ProfilePage extends StatelessWidget {
                             context,
                             icon: Icons.cloud_outlined,
                             title: '\u6570\u636e\u5907\u4efd',
-                            page: BackupPage(habits: habits, onRestore: onRestore),
+                            page: BackupPage(
+                                habits: habits, onRestore: onRestore),
                             themeColor: themeColor,
                           ),
                           _menuItem(
@@ -146,25 +158,25 @@ class ProfilePage extends StatelessWidget {
             ? '\u8d26\u6237'
             : hasInitError
                 ? '\u8d26\u6237'
-            : user == null
-                ? '\u672a\u767b\u5f55'
-                : _displayNameOf(user);
+                : user == null
+                    ? '\u672a\u767b\u5f55'
+                    : _displayNameOf(user);
         final subtitle = !isConfigured
             ? '\u5f53\u524d\u6682\u65f6\u65e0\u6cd5\u4f7f\u7528\u8d26\u6237\u529f\u80fd'
             : hasInitError
                 ? '\u8d26\u6237\u529f\u80fd\u6b63\u5728\u8c03\u6574\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5'
-            : user == null
-                ? '\u5f00\u542f\u65b0\u4e16\u754c'
-                : user.email ?? '\u5df2\u767b\u5f55';
+                : user == null
+                    ? '\u5f00\u542f\u65b0\u4e16\u754c'
+                    : user.email ?? '\u5df2\u767b\u5f55';
         final badge = !isConfigured
             ? '\u6682\u4e0d\u53ef\u7528'
             : hasInitError
                 ? '\u7a0d\u540e\u518d\u8bd5'
-            : user == null
-                ? '\u53bb\u767b\u5f55'
-                : user.emailConfirmedAt == null
-                    ? '\u5f85\u9a8c\u8bc1'
-                    : '\u5df2\u767b\u5f55';
+                : user == null
+                    ? '\u53bb\u767b\u5f55'
+                    : user.emailConfirmedAt == null
+                        ? '\u5f85\u9a8c\u8bc1'
+                        : '\u5df2\u767b\u5f55';
 
         return InkWell(
           onTap: () {
@@ -187,7 +199,9 @@ class ProfilePage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Icon(
-                    user == null ? Icons.person_outline : Icons.verified_user_outlined,
+                    user == null
+                        ? Icons.person_outline
+                        : Icons.verified_user_outlined,
                     color: themeColor,
                     size: 28,
                   ),
@@ -220,7 +234,8 @@ class ProfilePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: themeColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
@@ -235,7 +250,8 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+                    Icon(Icons.chevron_right,
+                        color: Colors.grey[300], size: 20),
                   ],
                 ),
               ],
@@ -294,7 +310,8 @@ class ProfilePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.md),
         child: AppGlassCard(
           radius: AppRadii.md,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: 14),
           child: Row(
             children: [
               Icon(icon, color: themeColor, size: 22),

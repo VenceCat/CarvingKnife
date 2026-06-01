@@ -11,6 +11,7 @@ import 'services/update_service.dart';
 import 'services/widget_service.dart';
 import 'app.dart';
 import 'pages/check_in_page.dart';
+import 'pages/atomic_habit_page.dart';
 import 'pages/reset_password_page.dart';
 import 'pages/statistics_page.dart';
 import 'pages/profile_page.dart';
@@ -299,6 +300,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   floatingButtonBottomOffset: fabBottomOffset,
                   controller: _checkInPageController,
                 ),
+                AtomicHabitPage(bottomPadding: navOverlayHeight + 18),
                 StatisticsPage(habits: habits),
                 ProfilePage(
                   habits: habits,
@@ -369,6 +371,11 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                         icon: Icon(Icons.check_circle_outline),
                         selectedIcon: Icon(Icons.check_circle),
                         label: '\u6253\u5361',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.route_outlined),
+                        selectedIcon: Icon(Icons.auto_awesome_motion),
+                        label: '\u539f\u5b50',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.bar_chart_outlined),

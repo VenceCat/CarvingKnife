@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
+import 'dart:ui' as ui;
 import '../models/habit.dart';
 import '../services/achievement_service.dart';
 import '../services/haptic_service.dart';
@@ -12,6 +13,7 @@ import 'detail_page.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
+import '../widgets/neumorphic_navbar.dart';
 
 class CheckInPageController {
   VoidCallback? _openAddDialog;
@@ -1231,88 +1233,74 @@ class _CheckInPageState extends State<CheckInPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
-    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
     final floatingButtonBottomOffset = widget.floatingButtonBottomOffset;
     final listBottomSafeSpace = floatingButtonBottomOffset + 58 + 24;
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
-      extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
+      extendBodyBehindAppBar: true,
       body: AppWallpaperBackground(
         visuals: visuals,
         child: Stack(
           children: [
-            Positioned.fill(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (scrollNotification) {
-                  return false;
-                },
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: topInset)),
-                    // ===== 名言区域 =====
-                    SliverToBoxAdapter(
-                      child: Container(
-                        margin: const EdgeInsets.only(
-                          top: 8,
-                          left: 20,
-                          right: 20,
-                          bottom: 12,
+            // 内容区域 - 从顶部延伸
+            ListView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.of(context).padding.top + 60 + 8,
+                20,
+                listBottomSafeSpace,
+              ),
+              children: [
+                // 名言区域
+                GestureDetector(
+                  onTap: () => setState(() =>
+                      currentQuote = quotes[Random().nextInt(quotes.length)]),
+                  child: AppGlassCard(
+                    radius: AppRadii.lg,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 18,
+                      horizontal: 20,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: themeColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.auto_awesome,
+                            size: 18,
+                            color: themeColor,
+                          ),
                         ),
-                        child: GestureDetector(
-                          onTap: () => setState(() => currentQuote =
-                              quotes[Random().nextInt(quotes.length)]),
-                          child: AppGlassCard(
-                            radius: AppRadii.lg,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 18,
-                              horizontal: 20,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: themeColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    Icons.auto_awesome,
-                                    size: 18,
-                                    color: themeColor,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Text(
-                                    currentQuote,
-                                    textAlign: TextAlign.left,
-                                    style: TextStyle(
-                                      color: themeColor.withValues(alpha: 0.9),
-                                      fontSize: 14,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Text(
+                            currentQuote,
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              color: themeColor.withValues(alpha: 0.9),
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-
-                    // ===== 习惯列表（分组式） =====
-                    ..._buildGroupedHabitList(themeColor, useWallpaper),
-
-                    // ===== 底部空白占位 =====
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: listBottomSafeSpace),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+
+                // 习惯列表分组
+                ..._buildGroupedHabitListWidgets(themeColor, useWallpaper),
+              ],
             ),
+
+            // 标题栏
             Positioned(
               top: 0,
               left: 0,
@@ -1320,6 +1308,7 @@ class _CheckInPageState extends State<CheckInPage> {
               child: AppPageTitleBar(
                 title: '打卡',
                 visuals: visuals,
+                left: 16,
               ),
             ),
           ],
@@ -1328,9 +1317,8 @@ class _CheckInPageState extends State<CheckInPage> {
     );
   }
 
-  /// 构建分组习惯列表
-  List<Widget> _buildGroupedHabitList(Color themeColor, bool useWallpaper) {
-    // 分组：待办 vs 已完成（使用新的判断逻辑）
+  /// 构建分组习惯列表（转为Widget列表）
+  List<Widget> _buildGroupedHabitListWidgets(Color themeColor, bool useWallpaper) {
     final todoHabits = widget.habits.where((h) => !h.isTodayCompleted).toList()
       ..sort((a, b) {
         if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
@@ -1340,182 +1328,159 @@ class _CheckInPageState extends State<CheckInPage> {
 
     return [
       // ===== 今日待办 =====
-      if (todoHabits.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: _buildSectionHeader(
-              icon: Icons.radio_button_unchecked,
-              title: "今日待办",
-              count: todoHabits.length,
-              color: themeColor,
-              useWallpaper: useWallpaper,
-            ),
+      if (todoHabits.isNotEmpty) ...[
+        _buildSectionHeader(
+          icon: Icons.radio_button_unchecked,
+          title: "今日待办",
+          count: todoHabits.length,
+          color: themeColor,
+          useWallpaper: useWallpaper,
+        ),
+        const SizedBox(height: 12),
+        AppGlassCard(
+          radius: 20,
+          borderColor: useWallpaper
+              ? themeColor.withValues(alpha: 0.14)
+              : Colors.grey[100],
+          child: ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            padding: EdgeInsets.zero,
+            onReorder: (oldIndex, newIndex) =>
+                _reorderHabits(todoHabits, oldIndex, newIndex),
+            children: todoHabits.asMap().entries.map((entry) {
+              final index = entry.key;
+              final habit = entry.value;
+              return ReorderableDelayedDragStartListener(
+                key: Key('reorder_${habit.id}'),
+                index: index,
+                child: _buildTodoHabitItem(
+                  habit,
+                  themeColor,
+                  isFirst: index == 0,
+                  isLast: index == todoHabits.length - 1,
+                ),
+              );
+            }).toList(),
           ),
         ),
-
-      if (todoHabits.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: AppGlassCard(
-              radius: 20,
-              borderColor: useWallpaper
-                  ? themeColor.withValues(alpha: 0.14)
-                  : Colors.grey[100],
-              child: ReorderableListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: false,
-                padding: EdgeInsets.zero,
-                onReorder: (oldIndex, newIndex) =>
-                    _reorderHabits(todoHabits, oldIndex, newIndex),
-                children: todoHabits.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final habit = entry.value;
-                  return ReorderableDelayedDragStartListener(
-                    key: Key('reorder_${habit.id}'),
-                    index: index,
-                    child: _buildTodoHabitItem(
-                      habit,
-                      themeColor,
-                      isFirst: index == 0,
-                      isLast: index == todoHabits.length - 1,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
+      ],
 
       // ===== 今日已完成 =====
-      if (doneHabits.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-            child: _buildSectionHeader(
-              icon: Icons.check_circle_outline,
-              title: "今日已完成",
-              count: doneHabits.length,
-              color: Colors.green,
-              useWallpaper: useWallpaper,
-            ),
+      if (doneHabits.isNotEmpty) ...[
+        const SizedBox(height: 24),
+        _buildSectionHeader(
+          icon: Icons.check_circle_outline,
+          title: "今日已完成",
+          count: doneHabits.length,
+          color: Colors.green,
+          useWallpaper: useWallpaper,
+        ),
+        const SizedBox(height: 12),
+        AppGlassCard(
+          radius: 20,
+          borderColor: useWallpaper
+              ? themeColor.withValues(alpha: 0.14)
+              : Colors.grey[100],
+          child: Column(
+            children: doneHabits.asMap().entries.map((entry) {
+              final index = entry.key;
+              final habit = entry.value;
+              return _buildDoneHabitItem(
+                habit,
+                themeColor,
+                isFirst: index == 0,
+                isLast: index == doneHabits.length - 1,
+              );
+            }).toList(),
           ),
         ),
-
-      if (doneHabits.isNotEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: AppGlassCard(
-              radius: 20,
-              borderColor: useWallpaper
-                  ? themeColor.withValues(alpha: 0.14)
-                  : Colors.grey[100],
-              child: Column(
-                children: doneHabits.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final habit = entry.value;
-                  return _buildDoneHabitItem(
-                    habit,
-                    themeColor,
-                    isFirst: index == 0,
-                    isLast: index == doneHabits.length - 1,
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
+      ],
 
       // ===== 空状态 =====
       if (widget.habits.isEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(40),
-            child: AppGlassCard(
-              radius: AppRadii.lg,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 64,
-                    color: useWallpaper ? Colors.white54 : Colors.grey[300],
+        Padding(
+          padding: const EdgeInsets.all(40),
+          child: AppGlassCard(
+            radius: AppRadii.lg,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 64,
+                  color: useWallpaper ? Colors.white54 : Colors.grey[300],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "还没有习惯",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: useWallpaper ? Colors.white70 : Colors.grey[500],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "还没有习惯",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: useWallpaper ? Colors.white70 : Colors.grey[500],
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "点击右下角圆形 + 按钮创建第一个习惯",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: useWallpaper ? Colors.white54 : Colors.grey[400],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "点击右下角圆形 + 按钮创建第一个习惯",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: useWallpaper ? Colors.white54 : Colors.grey[400],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
 
       // ===== 全部完成提示 =====
       if (widget.habits.isNotEmpty && todoHabits.isEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: AppGlassCard(
-              radius: 16,
-              borderColor: Colors.green.withValues(alpha: 0.3),
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.celebration,
-                      color: Colors.green,
-                      size: 24,
-                    ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: AppGlassCard(
+            radius: 16,
+            borderColor: Colors.green.withValues(alpha: 0.3),
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "太棒了！今日目标已全部完成 🎉",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "坚持就是胜利，明天继续加油！",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: const Icon(
+                    Icons.celebration,
+                    color: Colors.green,
+                    size: 24,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "太棒了！今日目标已全部完成 🎉",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "坚持就是胜利，明天继续加油！",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

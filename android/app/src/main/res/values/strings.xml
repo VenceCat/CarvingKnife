@@ -1,6 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">雕刀</string>
-    <string name="widget_medium_description">中尺寸 (2×2)</string>
-    <string name="widget_large_description">大尺寸 (2×3+)</string>
+    <string name="widget_medium_description">中尺寸 (2x2)</string>
+    <string name="widget_large_description">大尺寸 (2x3+)</string>
+    <string name="widget_habit_placeholder">习惯</string>
+    <string name="widget_checkin_empty">暂无习惯，请先在雕刀中添加</string>
 </resources>

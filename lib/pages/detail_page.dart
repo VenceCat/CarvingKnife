@@ -98,17 +98,16 @@ class _DetailPageState extends State<DetailPage> {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final useWallpaper = visuals.useWallpaper;
-    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
 
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
-      extendBodyBehindAppBar: true, // 始终让内容延伸到AppBar下面
+      extendBodyBehindAppBar: true,
       body: AppWallpaperBackground(
         visuals: visuals,
         child: Stack(
           children: [
             Positioned.fill(
-              top: topInset,
+              top: MediaQuery.of(context).padding.top + 60,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
@@ -119,7 +118,7 @@ class _DetailPageState extends State<DetailPage> {
                   _buildRecordHeader(themeColor, useWallpaper),
                   const SizedBox(height: 12),
                   _buildRecordList(themeColor, useWallpaper),
-                  const SizedBox(height: 100), // 底部留白
+                  const SizedBox(height: 100),
                 ],
               ),
             ),

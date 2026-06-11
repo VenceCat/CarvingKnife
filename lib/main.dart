@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'services/haptic_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:ui' as ui;
 import 'models/habit.dart';
 import 'services/achievement_service.dart';
 import 'services/auth_flow_service.dart';
@@ -18,6 +17,7 @@ import 'pages/profile_page.dart';
 import 'ui/app_surfaces.dart';
 import 'ui/app_visuals.dart';
 import 'widgets/update_dialog.dart';
+import 'widgets/neumorphic_navbar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,6 @@ void main() async {
   final colorIndex = prefs.getInt('theme_color_index') ?? 0;
   runApp(HabitApp(initialColorIndex: colorIndex, home: const MainPage()));
 }
-
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -164,7 +163,8 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     if (result == true && mounted) {
       _showAuthResultSheet(
         title: '\u5bc6\u7801\u5df2\u91cd\u7f6e',
-        description: '\u8bf7\u4f7f\u7528\u65b0\u5bc6\u7801\u91cd\u65b0\u767b\u5f55\u3002',
+        description:
+            '\u8bf7\u4f7f\u7528\u65b0\u5bc6\u7801\u91cd\u65b0\u767b\u5f55\u3002',
         color: Colors.green,
         icon: Icons.check_circle,
       );
@@ -181,7 +181,8 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
       case AuthFlowNotice.emailConfirmed:
         _showAuthResultSheet(
           title: '\u90ae\u7bb1\u9a8c\u8bc1\u6210\u529f',
-          description: '\u8d26\u6237\u5df2\u5b8c\u6210\u9a8c\u8bc1\uff0c\u8bf7\u624b\u52a8\u767b\u5f55\u3002',
+          description:
+              '\u8d26\u6237\u5df2\u5b8c\u6210\u9a8c\u8bc1\uff0c\u8bf7\u624b\u52a8\u767b\u5f55\u3002',
           color: Colors.green,
           icon: Icons.mark_email_read,
         );
@@ -275,10 +276,11 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
-    const navBarHeight = 64.0;
-    const navOuterBottomPadding = 12.0;
+    const navBarHeight = 72.0;
+    const navOuterBottomPadding = 20.0;
     const fabGapAboveNav = 10.0;
-    final navOverlayHeight = bottomSafeInset + navBarHeight + navOuterBottomPadding;
+    final navOverlayHeight =
+        bottomSafeInset + navBarHeight + navOuterBottomPadding;
     final fabBottomOffset = navOverlayHeight + fabGapAboveNav;
 
     return Scaffold(
@@ -323,78 +325,81 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: visuals.useGlassEffect
-                  ? ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)
-                  : ui.ImageFilter.blur(sigmaX: 0.01, sigmaY: 0.01),
-              child: Container(
-                decoration: AppSurfaceDecoration.bottomBar(context).copyWith(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: NavigationBarTheme(
-                  data: NavigationBarThemeData(
-                    backgroundColor: Colors.transparent,
-                    indicatorColor: themeColor.withValues(
-                      alpha: visuals.useWallpaper ? 0.24 : 0.14,
-                    ),
-                    surfaceTintColor: Colors.transparent,
-                    elevation: 0,
-                    height: 64,
-                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                      final isSelected = states.contains(WidgetState.selected);
-                      return TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected ? themeColor : Colors.grey[600],
-                      );
-                    }),
-                  ),
-                  child: NavigationBar(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      if (index != _currentIndex) {
-                        HapticService.navigationDoublePulse();
-                      }
-                      setState(() => _currentIndex = index);
-                    },
-                    backgroundColor: Colors.transparent,
-                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.check_circle_outline),
-                        selectedIcon: Icon(Icons.check_circle),
-                        label: '\u6253\u5361',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.route_outlined),
-                        selectedIcon: Icon(Icons.auto_awesome_motion),
-                        label: '\u539f\u5b50',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.bar_chart_outlined),
-                        selectedIcon: Icon(Icons.bar_chart),
-                        label: '\u7edf\u8ba1',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person_outline),
-                        selectedIcon: Icon(Icons.person),
-                        label: '\u6211\u7684',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+      bottomNavigationBar: NeumorphicPillNavBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          if (index != _currentIndex) {
+            HapticService.navigationDoublePulse();
+          }
+          setState(() => _currentIndex = index);
+        },
+        destinations: [
+          NavigationDestination(
+            icon: _AnimatedNavIcon(
+              icon: Icons.check_circle_outline,
+              isSelected: _currentIndex == 0,
             ),
+            selectedIcon: _AnimatedNavIcon(
+              icon: Icons.check_circle,
+              isSelected: true,
+            ),
+            label: '\u6253\u5361',
           ),
-        ),
+          NavigationDestination(
+            icon: _AnimatedNavIcon(
+              icon: Icons.route_outlined,
+              isSelected: _currentIndex == 1,
+            ),
+            selectedIcon: _AnimatedNavIcon(
+              icon: Icons.auto_awesome_motion,
+              isSelected: true,
+            ),
+            label: '\u539f\u5b50',
+          ),
+          NavigationDestination(
+            icon: _AnimatedNavIcon(
+              icon: Icons.bar_chart_outlined,
+              isSelected: _currentIndex == 2,
+            ),
+            selectedIcon: _AnimatedNavIcon(
+              icon: Icons.bar_chart,
+              isSelected: true,
+            ),
+            label: '\u7edf\u8ba1',
+          ),
+          NavigationDestination(
+            icon: _AnimatedNavIcon(
+              icon: Icons.person_outline,
+              isSelected: _currentIndex == 3,
+            ),
+            selectedIcon: _AnimatedNavIcon(
+              icon: Icons.person,
+              isSelected: true,
+            ),
+            label: '\u6211\u7684',
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _AnimatedNavIcon extends StatelessWidget {
+  final IconData icon;
+  final bool isSelected;
+
+  const _AnimatedNavIcon({
+    required this.icon,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: isSelected ? 1.1 : 1.0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutBack,
+      child: Icon(icon),
     );
   }
 }

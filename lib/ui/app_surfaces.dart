@@ -216,7 +216,7 @@ class AppSurfaceDecoration {
     final visuals = AppVisuals.resolve(context);
     return BoxDecoration(
       color: visuals.useGlassEffect
-          ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.44 : 0.82)
+          ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.20 : 0.65)
           : visuals.useWallpaper
               ? Colors.white.withValues(alpha: 0.92)
               : Colors.white,
@@ -526,5 +526,114 @@ class AppDialogSurface extends StatelessWidget {
         child: content,
       ),
     );
+  }
+}
+
+class AppIOSNavigationBar extends StatelessWidget {
+  final String title;
+  final Widget? leading;
+  final Widget? trailing;
+  final bool useLargeTitle;
+
+  const AppIOSNavigationBar({
+    super.key,
+    required this.title,
+    this.leading,
+    this.trailing,
+    this.useLargeTitle = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = AppVisuals.resolve(context);
+    final topInset = MediaQuery.of(context).padding.top;
+    final navBarHeight = useLargeTitle ? 96.0 : 44.0;
+    final totalHeight = topInset + navBarHeight;
+
+    final titleColor = visuals.useGlassEffect && visuals.useWallpaper
+        ? Colors.white
+        : Theme.of(context).colorScheme.onSurface;
+    final titleShadows = visuals.useGlassEffect && visuals.useWallpaper
+        ? [
+            Shadow(
+              offset: const Offset(0, 1),
+              blurRadius: 4,
+              color: Colors.black.withValues(alpha: 0.45),
+            ),
+          ]
+        : null;
+
+    final container = Container(
+      height: totalHeight,
+      decoration: BoxDecoration(
+        color: visuals.useGlassEffect
+            ? Colors.white.withValues(alpha: visuals.useWallpaper ? 0.20 : 0.70)
+            : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.black.withValues(alpha: 0.12),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(top: topInset),
+        child: Stack(
+          children: [
+            // Leading (返回按钮等)
+            if (leading != null)
+              Positioned(
+                left: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(child: leading!),
+              ),
+            // Title
+            Positioned(
+              left: leading != null ? 56 : 16,
+              right: trailing != null ? 56 : 16,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: useLargeTitle ? 28 : 17,
+                    fontWeight: useLargeTitle ? FontWeight.w700 : FontWeight.w600,
+                    color: titleColor,
+                    shadows: titleShadows,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            // Trailing
+            if (trailing != null)
+              Positioned(
+                right: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(child: trailing!),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (!visuals.useGlassEffect) return container;
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        child: container,
+      ),
+    );
+  }
+
+  static double height(BuildContext context, {bool useLargeTitle = false}) {
+    final topInset = MediaQuery.of(context).padding.top;
+    final navBarHeight = useLargeTitle ? 96.0 : 44.0;
+    return topInset + navBarHeight;
   }
 }

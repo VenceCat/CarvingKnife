@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:ui' as ui;
 
 import '../models/habit.dart';
 import '../services/auth_service.dart';
@@ -8,6 +9,7 @@ import '../services/supabase_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
+import '../widgets/neumorphic_navbar.dart';
 import 'about_page.dart';
 import 'achievement_page.dart';
 import 'account_page.dart';
@@ -32,7 +34,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
     final visuals = AppVisuals.resolve(context);
-    final topInset = AppPageTitleBar.contentTopInset(context, visuals);
+    final navBarHeight = MediaQuery.of(context).padding.top + 60;
 
     final totalCheckIns =
         habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
@@ -45,99 +47,96 @@ class ProfilePage extends StatelessWidget {
         visuals: visuals,
         child: Stack(
           children: [
-            Positioned.fill(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: SizedBox(height: topInset)),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      child: Column(
-                        children: [
-                          _buildAccountCard(context, themeColor),
-                          const SizedBox(height: AppSpacing.lg),
-                          AppGlassCard(
-                            padding: const EdgeInsets.all(AppSpacing.xxl),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _statItem('\u4e60\u60ef\u6570',
-                                    habits.length.toString(), themeColor),
-                                Container(
-                                    width: 1,
-                                    height: 40,
-                                    color: Colors.grey[200]),
-                                _statItem('\u4eca\u65e5\u5b8c\u6210',
-                                    todayCheckIns.toString(), themeColor),
-                                Container(
-                                    width: 1,
-                                    height: 40,
-                                    color: Colors.grey[200]),
-                                _statItem('\u7d2f\u8ba1\u6253\u5361',
-                                    totalCheckIns.toString(), themeColor),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xxl),
-                          _menuItem(
-                            context,
-                            icon: Icons.emoji_events_outlined,
-                            title: '\u6253\u5361\u6210\u5c31',
-                            page: AchievementPage(habits: habits),
-                            themeColor: themeColor,
-                          ),
-                          _menuItem(
-                            context,
-                            icon: Icons.notifications_none,
-                            title: '\u63d0\u9192\u8bbe\u7f6e',
-                            page: ReminderSettingsPage(
-                                habits: habits, onSave: onSave),
-                            themeColor: themeColor,
-                          ),
-                          _menuItem(
-                            context,
-                            icon: Icons.color_lens_outlined,
-                            title: '\u4e3b\u9898\u8bbe\u7f6e',
-                            page: const ThemeSettingsPage(),
-                            themeColor: themeColor,
-                          ),
-                          _menuItem(
-                            context,
-                            icon: Icons.tune_outlined,
-                            title: '\u5176\u4ed6\u8bbe\u7f6e',
-                            page: const OtherSettingsPage(),
-                            themeColor: themeColor,
-                          ),
-                          _menuItem(
-                            context,
-                            icon: Icons.cloud_outlined,
-                            title: '\u6570\u636e\u5907\u4efd',
-                            page: BackupPage(
-                                habits: habits, onRestore: onRestore),
-                            themeColor: themeColor,
-                          ),
-                          _menuItem(
-                            context,
-                            icon: Icons.info_outline,
-                            title: '\u5173\u4e8e',
-                            page: const AboutPage(),
-                            themeColor: themeColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
+            // 内容区域 - 从顶部延伸
+            ListView(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                navBarHeight + AppSpacing.xl,
+                AppSpacing.xl,
+                100,
               ),
+              children: [
+                _buildAccountCard(context, themeColor),
+                const SizedBox(height: AppSpacing.lg),
+                AppGlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.xxl),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _statItem('\u4e60\u60ef\u6570',
+                          habits.length.toString(), themeColor),
+                      Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey[200]),
+                      _statItem('\u4eca\u65e5\u5b8c\u6210',
+                          todayCheckIns.toString(), themeColor),
+                      Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey[200]),
+                      _statItem('\u7d2f\u8ba1\u6253\u5361',
+                          totalCheckIns.toString(), themeColor),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                _menuItem(
+                  context,
+                  icon: Icons.emoji_events_outlined,
+                  title: '\u6253\u5361\u6210\u5c31',
+                  page: AchievementPage(habits: habits),
+                  themeColor: themeColor,
+                ),
+                _menuItem(
+                  context,
+                  icon: Icons.notifications_none,
+                  title: '\u63d0\u9192\u8bbe\u7f6e',
+                  page: ReminderSettingsPage(
+                      habits: habits, onSave: onSave),
+                  themeColor: themeColor,
+                ),
+                _menuItem(
+                  context,
+                  icon: Icons.color_lens_outlined,
+                  title: '\u4e3b\u9898\u8bbe\u7f6e',
+                  page: const ThemeSettingsPage(),
+                  themeColor: themeColor,
+                ),
+                _menuItem(
+                  context,
+                  icon: Icons.tune_outlined,
+                  title: '\u5176\u4ed6\u8bbe\u7f6e',
+                  page: const OtherSettingsPage(),
+                  themeColor: themeColor,
+                ),
+                _menuItem(
+                  context,
+                  icon: Icons.cloud_outlined,
+                  title: '\u6570\u636e\u5907\u4efd',
+                  page: BackupPage(
+                      habits: habits, onRestore: onRestore),
+                  themeColor: themeColor,
+                ),
+                _menuItem(
+                  context,
+                  icon: Icons.info_outline,
+                  title: '\u5173\u4e8e',
+                  page: const AboutPage(),
+                  themeColor: themeColor,
+                ),
+              ],
             ),
+
+            // 标题栏
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: AppPageTitleBar(
-                title: '\u6211\u7684',
+                title: '我的',
                 visuals: visuals,
+                left: 16,
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'package:fl_chart/fl_chart.dart';
 import '../models/habit.dart';
 import '../services/habit_icons.dart';
 import '../ui/app_surfaces.dart';
@@ -236,6 +237,37 @@ class _StatisticsPageState extends State<StatisticsPage> {
     return data;
   }
 
+  // 获取最近30天的完成率趋势数据
+  List<Map<String, dynamic>> get completionTrendData {
+    final data = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+
+    for (int i = 29; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      int completedCount = 0;
+
+      for (final habit in widget.habits) {
+        if (habit.checkInTimes.any((t) => t.startsWith(dateStr))) {
+          completedCount++;
+        }
+      }
+
+      final rate = widget.habits.isNotEmpty
+          ? completedCount / widget.habits.length
+          : 0.0;
+
+      data.add({
+        'date': date,
+        'rate': rate,
+        'count': completedCount,
+        'total': widget.habits.length,
+      });
+    }
+
+    return data;
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColor = Theme.of(context).colorScheme.primary;
@@ -287,18 +319,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // 完成率卡片
+                // 30天完成率趋势图
                 _buildCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.pie_chart_outline,
+                          Icon(Icons.show_chart_rounded,
                               size: 20, color: themeColor),
                           const SizedBox(width: 8),
                           Text(
-                            "完成率",
+                            "30天完成率趋势",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -308,17 +340,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildProgressRing(
-                              "今日", todayCompletionRate, themeColor),
-                          _buildProgressRing(
-                              "本周", weekCompletionRate, Colors.blue),
-                          _buildProgressRing(
-                              "本月", monthCompletionRate, Colors.purple),
-                        ],
-                      ),
+                      if (completionTrendData.isEmpty || widget.habits.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              '暂无数据',
+                              style: TextStyle(color: Colors.grey[400]),
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 180,
+                          child: _buildCompletionTrendChart(themeColor),
+                        ),
                     ],
                   ),
                 ),
@@ -628,46 +664,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // 构建进度环
-  Widget _buildProgressRing(String label, double progress, Color color) {
-    return Column(
-      children: [
-        SizedBox(
-          width: 70,
-          height: 70,
-          child: Stack(
-            children: [
-              Center(
-                child: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 6,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-              ),
-              Center(
-                child: Text(
-                  "${(progress * 100).toInt()}%",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-      ],
-    );
-  }
-
   // 构建热力图
   Widget _buildHeatmap(Color themeColor) {
     final data = heatmapData;
@@ -706,6 +702,120 @@ class _StatisticsPageState extends State<StatisticsPage> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  // 构建30天完成率趋势图
+  Widget _buildCompletionTrendChart(Color themeColor) {
+    final data = completionTrendData;
+    final spots = data
+        .asMap()
+        .entries
+        .map((entry) => FlSpot(
+              entry.key.toDouble(),
+              (entry.value['rate'] as double) * 100,
+            ))
+        .toList();
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 25,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withValues(alpha: 0.1),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              interval: 25,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[500],
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 5,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= data.length) return const SizedBox();
+                final date = data[value.toInt()]['date'] as DateTime;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    DateFormat('M/d').format(date),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: (data.length - 1).toDouble(),
+        minY: 0,
+        maxY: 100,
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: themeColor,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: themeColor.withValues(alpha: 0.1),
+            ),
+          ),
+        ],
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final dataPoint = data[spot.x.toInt()];
+                final date = dataPoint['date'] as DateTime;
+                final rate = spot.y.toInt();
+                final count = dataPoint['count'] as int;
+                final total = dataPoint['total'] as int;
+                return LineTooltipItem(
+                  '${DateFormat('M月d日').format(date)}\n$rate% ($count/$total)',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList();
+            },
+          ),
+        ),
+      ),
     );
   }
 }

@@ -32,12 +32,14 @@ class HabitApp extends StatefulWidget {
 
 class HabitAppState extends State<HabitApp> {
   static const String _glassEffectKey = 'glass_effect_enabled';
+  static const String _floatingNavGlassKey = 'floating_nav_glass_enabled';
   late int _currentColorIndex;
 
   // ===== 新增：壁纸相关状态 =====
   WallpaperData? _wallpaperData;
   bool _useWallpaper = false;
   bool _glassEffectEnabled = false;
+  bool _floatingNavGlassEnabled = false;
   bool _isInitialized = false;
 
   @override
@@ -53,6 +55,7 @@ class HabitAppState extends State<HabitApp> {
     _wallpaperData = await WallpaperService.getSavedWallpaper();
     _useWallpaper = _wallpaperData != null;
     _glassEffectEnabled = prefs.getBool(_glassEffectKey) ?? false;
+    _floatingNavGlassEnabled = prefs.getBool(_floatingNavGlassKey) ?? false;
     setState(() {
       _isInitialized = true;
     });
@@ -76,6 +79,7 @@ class HabitAppState extends State<HabitApp> {
   WallpaperData? get wallpaperData => _wallpaperData;
   bool get useWallpaper => _useWallpaper && _wallpaperData != null;
   bool get glassEffectEnabled => _glassEffectEnabled;
+  bool get floatingNavGlassEnabled => _floatingNavGlassEnabled;
 
   /// 当前使用的主题色（优先壁纸提取色）
   Color get currentColor {
@@ -144,6 +148,14 @@ class HabitAppState extends State<HabitApp> {
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_glassEffectKey, enabled);
+  }
+
+  Future<void> setFloatingNavGlassEnabled(bool enabled) async {
+    setState(() {
+      _floatingNavGlassEnabled = enabled;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_floatingNavGlassKey, enabled);
   }
 
   @override

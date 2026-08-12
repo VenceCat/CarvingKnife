@@ -88,6 +88,15 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     useWallpaper,
                   ),
 
+                  const SizedBox(height: 12),
+
+                  _buildFloatingNavGlassCard(
+                    appState,
+                    appState?.floatingNavGlassEnabled ?? false,
+                    themeColor,
+                    useWallpaper,
+                  ),
+
                   const SizedBox(height: 24),
 
                   // ===== 预览效果 =====
@@ -436,7 +445,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 Row(
                   children: [
                     const Text(
-                      '\u6bdb\u73bb\u7483\u6548\u679c',
+                      '\u5168\u5c40\u6bdb\u73bb\u7483\u6548\u679c',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -466,7 +475,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  '\u5f00\u542f\u540e\u5361\u7247\u4e0e\u5bfc\u822a\u6761\u4f7f\u7528\u6a21\u7cca\u900f\u660e\u6837\u5f0f',
+                  '\u63a7\u5236\u5361\u7247\u3001\u6309\u94ae\u548c\u9875\u9762\u7684\u6bdb\u73bb\u7483\u6837\u5f0f',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -485,6 +494,66 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 message: value
                     ? '\u5df2\u5f00\u542f\u6bdb\u73bb\u7483\u6548\u679c'
                     : '\u5df2\u5173\u95ed\u6bdb\u73bb\u7483\u6548\u679c',
+                backgroundColor: value
+                    ? (useWallpaper ? Colors.blueGrey : themeColor)
+                    : Colors.grey,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingNavGlassCard(
+      HabitAppState? appState,
+      bool enabled,
+      Color themeColor,
+      bool useWallpaper,
+      ) {
+    return AppGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: themeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.space_bar, color: themeColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '悬浮底栏液态玻璃',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  '仅控制悬浮底栏的液态玻璃样式',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: enabled,
+            activeThumbColor: themeColor,
+            onChanged: (value) async {
+              await appState?.setFloatingNavGlassEnabled(value);
+              if (!mounted) return;
+              setState(() {});
+              _showSnackBar(
+                context,
+                icon: value ? Icons.water_drop_outlined : Icons.toggle_off_outlined,
+                message: value ? '已启用悬浮底栏液态玻璃' : '已恢复原有悬浮底栏效果',
                 backgroundColor: value
                     ? (useWallpaper ? Colors.blueGrey : themeColor)
                     : Colors.grey,

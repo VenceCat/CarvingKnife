@@ -303,7 +303,10 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   controller: _checkInPageController,
                 ),
                 AtomicHabitPage(bottomPadding: navOverlayHeight + 18),
-                StatisticsPage(habits: habits),
+                StatisticsPage(
+                  habits: habits,
+                  bottomPadding: navOverlayHeight + 18,
+                ),
                 ProfilePage(
                   habits: habits,
                   onSave: _refreshAndSave,
@@ -339,7 +342,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               icon: Icons.check_circle_outline,
               isSelected: _currentIndex == 0,
             ),
-            selectedIcon: _AnimatedNavIcon(
+            selectedIcon: const _AnimatedNavIcon(
               icon: Icons.check_circle,
               isSelected: true,
             ),
@@ -350,7 +353,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               icon: Icons.route_outlined,
               isSelected: _currentIndex == 1,
             ),
-            selectedIcon: _AnimatedNavIcon(
+            selectedIcon: const _AnimatedNavIcon(
               icon: Icons.auto_awesome_motion,
               isSelected: true,
             ),
@@ -361,7 +364,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               icon: Icons.bar_chart_outlined,
               isSelected: _currentIndex == 2,
             ),
-            selectedIcon: _AnimatedNavIcon(
+            selectedIcon: const _AnimatedNavIcon(
               icon: Icons.bar_chart,
               isSelected: true,
             ),
@@ -372,7 +375,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               icon: Icons.person_outline,
               isSelected: _currentIndex == 3,
             ),
-            selectedIcon: _AnimatedNavIcon(
+            selectedIcon: const _AnimatedNavIcon(
               icon: Icons.person,
               isSelected: true,
             ),

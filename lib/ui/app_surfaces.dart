@@ -88,12 +88,13 @@ class AppGlassCard extends StatelessWidget {
       child: child,
     );
 
+    // 优化：只在需要时应用模糊
     if (!visuals.useGlassEffect) return card;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: card,
       ),
     );
@@ -147,11 +148,11 @@ class AppFloatingAddButton extends StatelessWidget {
               BoxShadow(
                 color: Colors.black.withValues(
                   alpha: useGlassEffect
-                      ? (useWallpaper ? 0.12 : 0.08)
-                      : (useWallpaper ? 0.12 : 0.2),
+                      ? (useWallpaper ? 0.10 : 0.06)
+                      : (useWallpaper ? 0.10 : 0.15),
                 ),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -160,6 +161,7 @@ class AppFloatingAddButton extends StatelessWidget {
       ),
     );
 
+    // 优化：只在玻璃效果模式下使用模糊，且降低模糊强度
     if (!useGlassEffect) {
       return SizedBox(
         width: size,
@@ -173,7 +175,7 @@ class AppFloatingAddButton extends StatelessWidget {
       height: size,
       child: ClipOval(
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
+          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: buttonCore,
         ),
       ),
@@ -484,7 +486,7 @@ class AppBottomSheetSurface extends StatelessWidget {
     return ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
+        filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: container,
       ),
     );
@@ -522,7 +524,7 @@ class AppDialogSurface extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: content,
       ),
     );
@@ -625,7 +627,7 @@ class AppIOSNavigationBar extends StatelessWidget {
 
     return ClipRect(
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: container,
       ),
     );

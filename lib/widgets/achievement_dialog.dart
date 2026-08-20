@@ -15,18 +15,20 @@ class AchievementUnlockDialog extends StatefulWidget {
       barrierDismissible: true,
       barrierLabel: '',
       barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (context, animation, secondaryAnimation) {
         return AchievementUnlockDialog(achievement: achievement);
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
+        // 优化：使用单一动画而非叠加多个动画
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
         return ScaleTransition(
-          scale: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutBack,
-          ),
+          scale: Tween<double>(begin: 0.85, end: 1.0).animate(curvedAnimation),
           child: FadeTransition(
-            opacity: animation,
+            opacity: curvedAnimation,
             child: child,
           ),
         );
@@ -54,13 +56,14 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   @override
   void initState() {
     super.initState();
+    // 优化：缩短动画时长，使用更简单的曲线
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     _controller.forward();
@@ -120,41 +123,36 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 ),
                 const SizedBox(height: 24),
 
-                // 成就图标（带动画）
-                AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              highlightColor.withValues(alpha: 0.8),
-                              highlightColor,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: highlightColor.withValues(alpha: 0.4),
-                              blurRadius: 15,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          widget.achievement.icon,
-                          size: 48,
-                          color: Colors.white,
-                        ),
+                // 成就图标（带动画）- 优化：减少阴影，使用 ScaleTransition
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          highlightColor.withValues(alpha: 0.8),
+                          highlightColor,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    );
-                  },
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: highlightColor.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      widget.achievement.icon,
+                      size: 48,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
 

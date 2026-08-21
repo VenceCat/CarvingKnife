@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:ui' as ui;
 
 import '../models/habit.dart';
+import '../models/user_level.dart';
 import '../services/auth_service.dart';
 import '../services/haptic_service.dart';
 import '../services/supabase_service.dart';
+import '../services/level_service.dart';
 import '../ui/app_surfaces.dart';
 import '../ui/app_tokens.dart';
 import '../ui/app_visuals.dart';
-import '../widgets/neumorphic_navbar.dart';
 import 'about_page.dart';
 import 'achievement_page.dart';
 import 'account_page.dart';
@@ -17,6 +17,7 @@ import 'backup_page.dart';
 import 'reminder_settings_page.dart';
 import 'theme_settings_page.dart';
 import 'other_settings_page.dart';
+import 'level_detail_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final List<Habit> habits;
@@ -36,10 +37,6 @@ class ProfilePage extends StatelessWidget {
     final visuals = AppVisuals.resolve(context);
     final navBarHeight = MediaQuery.of(context).padding.top + 60;
 
-    final totalCheckIns =
-        habits.fold(0, (sum, h) => sum + h.checkInTimes.length);
-    final todayCheckIns = habits.where((h) => h.isTodayCompleted).length;
-
     return Scaffold(
       backgroundColor: visuals.pageBackgroundColor,
       extendBodyBehindAppBar: true,
@@ -47,7 +44,7 @@ class ProfilePage extends StatelessWidget {
         visuals: visuals,
         child: Stack(
           children: [
-            // 内容区域 - 从顶部延伸
+            // 内容区域
             ListView(
               padding: EdgeInsets.fromLTRB(
                 AppSpacing.xl,
@@ -56,72 +53,50 @@ class ProfilePage extends StatelessWidget {
                 100,
               ),
               children: [
-                _buildAccountCard(context, themeColor),
-                const SizedBox(height: AppSpacing.lg),
-                AppGlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.xxl),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _statItem('\u4e60\u60ef\u6570',
-                          habits.length.toString(), themeColor),
-                      Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.grey[200]),
-                      _statItem('\u4eca\u65e5\u5b8c\u6210',
-                          todayCheckIns.toString(), themeColor),
-                      Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.grey[200]),
-                      _statItem('\u7d2f\u8ba1\u6253\u5361',
-                          totalCheckIns.toString(), themeColor),
-                    ],
-                  ),
-                ),
+                // 账户卡片（包含等级信息）
+                _buildAccountCardWithLevel(context, themeColor),
                 const SizedBox(height: AppSpacing.xxl),
+
+                // 菜单项
                 _menuItem(
                   context,
                   icon: Icons.emoji_events_outlined,
-                  title: '\u6253\u5361\u6210\u5c31',
+                  title: '打卡成就',
                   page: AchievementPage(habits: habits),
                   themeColor: themeColor,
                 ),
                 _menuItem(
                   context,
                   icon: Icons.notifications_none,
-                  title: '\u63d0\u9192\u8bbe\u7f6e',
-                  page: ReminderSettingsPage(
-                      habits: habits, onSave: onSave),
+                  title: '提醒设置',
+                  page: ReminderSettingsPage(habits: habits, onSave: onSave),
                   themeColor: themeColor,
                 ),
                 _menuItem(
                   context,
                   icon: Icons.color_lens_outlined,
-                  title: '\u4e3b\u9898\u8bbe\u7f6e',
+                  title: '主题设置',
                   page: const ThemeSettingsPage(),
                   themeColor: themeColor,
                 ),
                 _menuItem(
                   context,
                   icon: Icons.tune_outlined,
-                  title: '\u5176\u4ed6\u8bbe\u7f6e',
+                  title: '其他设置',
                   page: const OtherSettingsPage(),
                   themeColor: themeColor,
                 ),
                 _menuItem(
                   context,
                   icon: Icons.cloud_outlined,
-                  title: '\u6570\u636e\u5907\u4efd',
-                  page: BackupPage(
-                      habits: habits, onRestore: onRestore),
+                  title: '数据备份',
+                  page: BackupPage(habits: habits, onRestore: onRestore),
                   themeColor: themeColor,
                 ),
                 _menuItem(
                   context,
                   icon: Icons.info_outline,
-                  title: '\u5173\u4e8e',
+                  title: '关于',
                   page: const AboutPage(),
                   themeColor: themeColor,
                 ),
@@ -145,7 +120,8 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountCard(BuildContext context, Color themeColor) {
+  // 账户卡片（整合等级信息）
+  Widget _buildAccountCardWithLevel(BuildContext context, Color themeColor) {
     return StreamBuilder<User?>(
       stream: AuthService.authStateChanges,
       initialData: AuthService.currentUser,
@@ -153,29 +129,22 @@ class ProfilePage extends StatelessWidget {
         final user = snapshot.data;
         final isConfigured = SupabaseService.isConfigured;
         final hasInitError = SupabaseService.hasInitializationError;
+
         final title = !isConfigured
-            ? '\u8d26\u6237'
+            ? '账户'
             : hasInitError
-                ? '\u8d26\u6237'
+                ? '账户'
                 : user == null
-                    ? '\u672a\u767b\u5f55'
+                    ? '未登录'
                     : _displayNameOf(user);
+
         final subtitle = !isConfigured
-            ? '\u5f53\u524d\u6682\u65f6\u65e0\u6cd5\u4f7f\u7528\u8d26\u6237\u529f\u80fd'
+            ? '当前暂时无法使用账户功能'
             : hasInitError
-                ? '\u8d26\u6237\u529f\u80fd\u6b63\u5728\u8c03\u6574\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5'
+                ? '账户功能正在调整，请稍后再试'
                 : user == null
-                    ? '\u5f00\u542f\u65b0\u4e16\u754c'
-                    : user.email ?? '\u5df2\u767b\u5f55';
-        final badge = !isConfigured
-            ? '\u6682\u4e0d\u53ef\u7528'
-            : hasInitError
-                ? '\u7a0d\u540e\u518d\u8bd5'
-                : user == null
-                    ? '\u53bb\u767b\u5f55'
-                    : user.emailConfirmedAt == null
-                        ? '\u5f85\u9a8c\u8bc1'
-                        : '\u5df2\u767b\u5f55';
+                    ? '开启新世界'
+                    : user.email ?? '已登录';
 
         return InkWell(
           onTap: () {
@@ -188,70 +157,164 @@ class ProfilePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.lg),
           child: AppGlassCard(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Row(
+            child: Column(
               children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(
-                    user == null
-                        ? Icons.person_outline
-                        : Icons.verified_user_outlined,
-                    color: themeColor,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                // 第一行：账户信息
+                Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                      width: 54,
+                      height: 54,
                       decoration: BoxDecoration(
                         color: themeColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      child: Text(
-                        badge,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: themeColor,
-                        ),
+                      child: Icon(
+                        user == null
+                            ? Icons.person_outline
+                            : Icons.verified_user_outlined,
+                        color: themeColor,
+                        size: 28,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Icon(Icons.chevron_right,
-                        color: Colors.grey[300], size: 20),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
                   ],
+                ),
+
+                // 分隔线
+                const SizedBox(height: AppSpacing.lg),
+                Divider(height: 1, color: Colors.grey[200]),
+                const SizedBox(height: AppSpacing.lg),
+
+                // 第二行：等级信息
+                FutureBuilder<UserLevel>(
+                  future: LevelService.getCurrentLevel(),
+                  builder: (context, levelSnapshot) {
+                    if (!levelSnapshot.hasData) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final level = levelSnapshot.data!;
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LevelDetailPage(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Row(
+                          children: [
+                            // 等级图标
+                            Text(
+                              level.icon,
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // 等级信息
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        level.title,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: themeColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Lv.${level.currentLevel}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // 经验进度条
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${level.currentExp} / ${level.expToNextLevel}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          Text(
+                                            '${(level.levelProgress * 100).toStringAsFixed(0)}%',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: themeColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: LinearProgressIndicator(
+                                          value: level.levelProgress,
+                                          minHeight: 6,
+                                          backgroundColor: Colors.grey[200],
+                                          valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+                            Icon(Icons.chevron_right, color: Colors.grey[300], size: 18),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -266,27 +329,7 @@ class ProfilePage extends StatelessWidget {
     if (value is String && value.trim().isNotEmpty) {
       return value.trim();
     }
-    return user.email?.split('@').first ?? '\u5df2\u767b\u5f55\u7528\u6237';
-  }
-
-  Widget _statItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w400,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-        ),
-      ],
-    );
+    return user.email?.split('@').first ?? '已登录用户';
   }
 
   Widget _menuItem(

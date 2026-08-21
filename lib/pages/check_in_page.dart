@@ -5,7 +5,9 @@ import 'dart:ui' as ui;
 import '../models/habit.dart';
 import '../services/achievement_service.dart';
 import '../services/haptic_service.dart';
+import '../services/level_service.dart';
 import '../widgets/achievement_dialog.dart';
+import '../widgets/level_widgets.dart';
 import '../services/habit_icons.dart';
 import '../services/widget_service.dart';
 import '../widgets/icon_selector.dart';
@@ -139,7 +141,7 @@ class _CheckInPageState extends State<CheckInPage> {
     Habit habit, {
     String? initialNote,
     bool showConfirmation = true,
-  }) {
+  }) async {
     final now = DateTime.now();
     final timeStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
     final normalizedNote = initialNote?.trim();
@@ -151,6 +153,38 @@ class _CheckInPageState extends State<CheckInPage> {
     );
     habit.checkInRecords.add(record);
     widget.onSave();
+
+    // ========== 添加经验值逻辑 ==========
+    final todayCount = habit.todayCheckInCount;
+    final streak = _calculateStreak(habit);
+
+    try {
+      final result = await LevelService.addCheckInExp(
+        habit: habit,
+        todayCheckInCount: todayCount,
+        streak: streak,
+      );
+
+      // 显示经验值获得提示
+      if (mounted && result.expGained > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          ExpGainedSnackBar(exp: result.expGained),
+        );
+      }
+
+      // 如果升级了，延迟显示升级弹窗
+      if (mounted && result.leveledUp) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          await LevelUpDialog.show(context, result);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to add exp: $e');
+      // 静默失败，不影响打卡流程
+    }
+    // ========== 经验值逻辑结束 ==========
+
     if (showConfirmation) {
       _showCheckInNoteDialog(habit, record);
     }

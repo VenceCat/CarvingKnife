@@ -8,6 +8,7 @@ import 'services/auth_flow_service.dart';
 import 'services/supabase_service.dart';
 import 'services/update_service.dart';
 import 'services/widget_service.dart';
+import 'services/level_service.dart';
 import 'app.dart';
 import 'pages/check_in_page.dart';
 import 'pages/atomic_habit_page.dart';
@@ -25,6 +26,7 @@ void main() async {
   await WidgetService.initialize();
   await SupabaseService.initialize();
   AuthFlowService.initialize();
+  await LevelService.initialize();
   final prefs = await SharedPreferences.getInstance();
   final colorIndex = prefs.getInt('theme_color_index') ?? 0;
   runApp(HabitApp(initialColorIndex: colorIndex, home: const MainPage()));

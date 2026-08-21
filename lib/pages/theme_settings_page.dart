@@ -537,7 +537,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  '仅控制悬浮底栏的液态玻璃样式',
+                  '切换悬浮底栏为液态玻璃样式',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
